@@ -1,6 +1,6 @@
-# 👶 BabyTrack (LittleRoutine)
+# 👶 LittleRoutine
 
-**BabyTrack** is a modern iOS app for tracking your baby’s daily routines, health, and developmental progress — designed to be fast, intuitive, and parent-friendly, day and night.
+**LittleRoutine** is a modern iOS app for tracking your baby’s daily routines, health, and developmental progress — designed to be fast, intuitive, and parent-friendly, day and night.
 
 Built with **SwiftUI** and **SwiftData**, the app focuses on clarity, reliability, and thoughtful UX for new parents.
 
@@ -77,7 +77,7 @@ Built with **SwiftUI** and **SwiftData**, the app focuses on clarity, reliabilit
 ## 🗂 Project Structure
 
 ```text
-BabyTrack/
+LittleRoutine/
 ├── Models/              # SwiftData models
 ├── ViewModels/          # MVVM business logic
 ├── Views/               # SwiftUI views
@@ -85,8 +85,8 @@ BabyTrack/
 ├── AppIntents/          # Siri shortcuts
 └── Assets/              # Images, colors, icons
 
-BabyTrack Widget/        # Widget extension
-BabyTrackWidgets/        # Additional widgets
+LittleRoutine Widget/        # Widget extension
+LittleRoutineWidgets/        # Additional widgets
 ```
 
 ---
@@ -111,9 +111,9 @@ The app follows the **MVVM (Model–View–ViewModel)** architecture:
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/AmitAvigdor/BabyTrack.git
+   git clone https://github.com/AmitAvigdor/LittleRoutine.git
    ```
-2. Open `BabyTrack.xcodeproj` in Xcode
+2. Open `LittleRoutine.xcodeproj` in Xcode
 3. Select your development team under **Signing & Capabilities**
 4. Build and run on a simulator or physical device
 
