@@ -1,8 +1,15 @@
 # 👶 LittleRoutine
 
-**LittleRoutine** is a modern iOS app for tracking your baby’s daily routines, health, and developmental progress — designed to be fast, intuitive, and parent-friendly, day and night.
+**LittleRoutine** is a thoughtfully designed iOS app for parents and caregivers to track a baby’s daily routines, health, and developmental milestones — with a strong focus on privacy, clarity, and ease of use, day and night.
 
-Built with **SwiftUI** and **SwiftData**, the app focuses on clarity, reliability, and thoughtful UX for new parents.
+Built using **SwiftUI** and **SwiftData**, the app provides a fully offline, ad-free experience tailored for modern families.
+
+---
+
+![iOS 17.0+](https://img.shields.io/badge/iOS-17.0+-blue.svg)
+![Swift 5.9+](https://img.shields.io/badge/Swift-5.9+-orange.svg)
+![SwiftUI](https://img.shields.io/badge/SwiftUI-blue.svg)
+![SwiftData](https://img.shields.io/badge/SwiftData-green.svg)
 
 ---
 
@@ -10,48 +17,59 @@ Built with **SwiftUI** and **SwiftData**, the app focuses on clarity, reliabilit
 
 ### 🍼 Core Tracking
 
-* **Feeding**
-
-  * Breastfeeding with timer and left/right side tracking
-  * Bottle feeding with volume logging (breast milk, formula, or mixed)
-  * Pumping sessions with duration, volume, and side tracking
-* **Sleep**
-
-  * Nap and night-sleep tracking with duration calculation
-* **Diapers**
-
-  * Wet, dirty, or mixed diaper logs with timestamps and notes
+| Feature            | Description                                                              |
+| ------------------ | ------------------------------------------------------------------------ |
+| **Breastfeeding**  | Timer-based tracking with left/right side monitoring and session history |
+| **Bottle Feeding** | Log volume (oz / ml) and milk type (breast milk, formula, mixed)         |
+| **Pumping**        | Track duration, volume, and side with automatic milk-stash integration   |
+| **Sleep**          | Monitor naps and nighttime sleep with duration calculations              |
+| **Diapers**        | Log wet, dirty, and mixed diaper changes with notes                      |
+| **Growth**         | Track weight, height, and head circumference with visual charts          |
 
 ---
 
-### 🩺 Health & Growth
+### 🩺 Health & Development
 
-* **Growth Tracking** – Weight, height, and head circumference
-* **Medicines & Vitamins** – Dosing schedules and reminders
-* **Pediatrician Notes** – Track concerns and resolutions for doctor visits
-* **Milestones** – Developmental milestones across:
-
-  * Motor
-  * Cognitive
-  * Social
-  * Language
-  * Feeding
+| Feature                 | Description                                                          |
+| ----------------------- | -------------------------------------------------------------------- |
+| **Vaccination Tracker** | Schedule immunizations, receive reminders, and track completion      |
+| **Solid Food Journal**  | Log food introductions, reactions, and preferences                   |
+| **Teething Tracker**    | Interactive tooth chart with symptom tracking                        |
+| **Milestones**          | Track progress across motor, cognitive, social, and language domains |
+| **Medicine & Vitamins** | Medication schedules with dosage reminders                           |
+| **Pediatrician Notes**  | Store questions, concerns, and visit summaries                       |
 
 ---
 
-### 🚀 Advanced Features
+### 📊 Memories & Export
 
-* **Milk Stash Management** – Pumped milk storage with automatic expiration tracking
-* **Statistics Dashboard**
+| Feature                  | Description                                            |
+| ------------------------ | ------------------------------------------------------ |
+| **Photo Diary**          | Capture memories with photos, notes, and mood tracking |
+| **Statistics Dashboard** | Daily timelines, charts, and summarized insights       |
+| **PDF Reports**          | Generate shareable reports for healthcare providers    |
+| **Data Export**          | Export data as CSV or JSON for backup or analysis      |
+| **Apple Health Sync**    | Sync growth measurements via HealthKit                 |
 
-  * Daily timeline
-  * Feeding balance charts
-  * Summary insights
-* **PDF Export** – Share or archive your baby’s data
-* **Night Mode** – Warm, eye-friendly dark theme
-* **Multi-Baby Support** – Color-coded profiles for multiple children
-* **Widgets** – Quick access from the Home Screen
-* **Siri Shortcuts** – Log activities hands-free using the Shortcuts app
+---
+
+### 🌙 User Experience
+
+| Feature                   | Description                                              |
+| ------------------------- | -------------------------------------------------------- |
+| **Multi-Baby Support**    | Manage multiple children with color-coded profiles       |
+| **Night Mode**            | Eye-friendly dim red interface for nighttime use         |
+| **Daily Summaries**       | Morning and evening notification digests                 |
+| **Milk Stash Management** | Track frozen and refrigerated milk with expiration logic |
+| **Widgets**               | Home screen widgets for quick logging                    |
+| **Siri Shortcuts**        | Voice-activated quick actions via Shortcuts              |
+
+---
+
+### 🌍 Localization
+
+* English (base language)
+* Hebrew (full RTL support)
 
 ---
 
@@ -65,78 +83,202 @@ Built with **SwiftUI** and **SwiftData**, the app focuses on clarity, reliabilit
 
 ## 🛠 Tech Stack
 
-* **SwiftUI** – Declarative UI
-* **SwiftData** – Local persistence
-* **WidgetKit** – Home screen widgets
-* **App Intents** – Siri & Shortcuts integration
-* **Charts** – Data visualization
-* **UserNotifications** – Reminders and alerts
+| Technology            | Purpose                       |
+| --------------------- | ----------------------------- |
+| **SwiftUI**           | Declarative UI framework      |
+| **SwiftData**         | On-device persistent storage  |
+| **WidgetKit**         | Home screen widgets           |
+| **App Intents**       | Siri Shortcuts integration    |
+| **Charts**            | Data visualization            |
+| **HealthKit**         | Apple Health synchronization  |
+| **PhotosUI**          | Photo picker integration      |
+| **UserNotifications** | Reminders and daily summaries |
 
 ---
 
 ## 🗂 Project Structure
 
 ```text
-LittleRoutine/
-├── Models/              # SwiftData models
-├── ViewModels/          # MVVM business logic
-├── Views/               # SwiftUI views
-├── Utilities/           # Helpers & formatters
-├── AppIntents/          # Siri shortcuts
-└── Assets/              # Images, colors, icons
+BabyTrack/
+├── BabyTrackApp.swift          # App entry point
+├── Models/                     # SwiftData models
+├── Views/                      # SwiftUI views
+├── ViewModels/                 # MVVM business logic
+├── Utilities/                  # Helpers & managers
+├── AppIntents/                 # Siri Shortcuts
+└── Localizable.xcstrings       # Localization
 
-LittleRoutine Widget/        # Widget extension
-LittleRoutineWidgets/        # Additional widgets
+BabyTrackTests/                 # Unit tests
+BabyTrackUITests/               # UI tests
+BabyTrack Widget/               # Widget extension
 ```
 
 ---
 
 ## 🧱 Architecture
 
-The app follows the **MVVM (Model–View–ViewModel)** architecture:
+LittleRoutine follows the **MVVM (Model–View–ViewModel)** architecture:
 
-* **Models**
-  SwiftData `@Model` objects with relationships and computed properties
-
-* **ViewModels**
-  `@Observable` classes handling business logic, timers, and state
-
-* **Views**
-  Stateless SwiftUI views driven by reactive data
+* **Models** — SwiftData `@Model` entities with relationships
+* **ViewModels** — `@Observable` classes handling state, logic, and timers
+* **Views** — Stateless SwiftUI components driven by reactive data
 
 ---
 
 ## 🚀 Getting Started
 
-1. Clone the repository:
+1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/AmitAvigdor/LittleRoutine.git
+   git clone https://github.com/yourusername/LittleRoutine.git
+   cd LittleRoutine
    ```
-2. Open `LittleRoutine.xcodeproj` in Xcode
-3. Select your development team under **Signing & Capabilities**
-4. Build and run on a simulator or physical device
+
+2. **Open in Xcode**
+
+   ```bash
+   open BabyTrack.xcodeproj
+   ```
+
+3. **Configure signing**
+
+   * Select your development team under *Signing & Capabilities*
+   * Update the bundle identifier if needed
+
+4. **Build and run**
+
+   * Choose a simulator or physical device
+   * Press **Cmd + R**
 
 ---
 
 ## ⚙️ Configuration
 
-The app supports user-customizable preferences:
+Customizable user preferences include:
 
-* Volume units (oz / ml)
-* Weight units (lbs / kg)
-* Length units (in / cm)
-* Reminder intervals for:
+| Setting         | Options                             |
+| --------------- | ----------------------------------- |
+| Volume units    | oz / ml                             |
+| Weight units    | lbs / kg                            |
+| Length units    | inches / cm                         |
+| Night mode      | Manual / Scheduled / Automatic      |
+| Daily summaries | Morning / Evening                   |
+| Reminders       | Feeding, diaper, medicine intervals |
 
-  * Feeding
-  * Diapers
-  * Medicine
+---
+
+## 🧪 Testing
+
+```bash
+# Unit tests
+xcodebuild test -scheme BabyTrack \
+  -destination 'platform=iOS Simulator,name=iPhone 15'
+
+# UI tests
+xcodebuild test -scheme BabyTrackUITests \
+  -destination 'platform=iOS Simulator,name=iPhone 15'
+```
+
+---
+
+## 🔒 Privacy & Security
+
+Privacy is a core design principle:
+
+| Aspect           | Implementation              |
+| ---------------- | --------------------------- |
+| **Data Storage** | Fully local, on-device only |
+| **Analytics**    | None                        |
+| **Cloud Sync**   | None                        |
+| **Advertising**  | None                        |
+| **COPPA**        | Designed for parental use   |
+| **GDPR**         | Explicit consent mechanisms |
+
+---
+
+## ⚖️ Legal Compliance
+
+* Terms of Service (medical disclaimer included)
+* Privacy Policy
+* First-launch consent flow
+* GDPR consent for EU users
+* Clear non-medical device disclaimer
+
+---
+
+## 📦 Before App Store Submission
+
+### Required
+
+1. **Update support email**
+
+   ```swift
+   private let supportEmail = "your-real-email@yourdomain.com"
+   ```
+
+2. **Update legal document dates** if modified
+
+3. **App Store privacy labels**
+
+   * Data Collected: None
+   * Data Linked to User: None
+   * Tracking: No
+
+4. **Prepare marketing assets**
+
+   * App icon
+   * Screenshots
+   * Description & keywords
+
+### Recommended
+
+* Test on physical devices
+* Verify notification flows
+* Validate HealthKit permissions
+* Test photo access permissions
+* Legal review (recommended)
+
+---
+
+## 🌍 Adding Localization
+
+1. Open `Localizable.xcstrings`
+2. Add a new language
+3. Translate all strings
+4. Verify RTL layout (if applicable)
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push and open a Pull Request
 
 ---
 
 ## 📄 License
 
 **All rights reserved.**
-This project is currently not licensed for redistribution or commercial use.
 
 ---
+
+## 💬 Support
+
+For questions or issues, please open a GitHub issue or contact the development team.
+
+---
+
+**Built with SwiftUI & SwiftData for iOS 17+**
+
+---
+
+אם תרצה, אני יכול גם:
+
+* לקצר לגרסת **portfolio / recruiter**
+* להכין גרסת **open-source**
+* להוסיף **screenshots placeholders**
+* לבדוק אם זה נראה “App Store ready”
+
+רק תגיד.
