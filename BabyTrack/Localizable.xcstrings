@@ -1,0 +1,5712 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+
+    },
+    "%@" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@"
+          }
+        }
+      }
+    },
+    "%@ breast" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שד %@"
+          }
+        }
+      }
+    },
+    "%@ diaper logged!" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חיתול %@ נרשם!"
+          }
+        }
+      }
+    },
+    "%lld" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
+        }
+      }
+    },
+    "%lld bags" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld שקיות"
+          }
+        }
+      }
+    },
+    "%lld days left" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נותרו %lld ימים"
+          }
+        }
+      }
+    },
+    "%lld entries" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld רשומות"
+          }
+        }
+      }
+    },
+    "%lld sessions" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld הנקות"
+          }
+        }
+      }
+    },
+    "%lld-%lld months" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld-%2$lld months"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld-%2$lld חודשים"
+          }
+        }
+      }
+    },
+    "%lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "•" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "•"
+          }
+        }
+      }
+    },
+    "• %@" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "• %@"
+          }
+        }
+      }
+    },
+    "• %lld symptoms" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "• %lld תסמינים"
+          }
+        }
+      }
+    },
+    "+ %lld more" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+ %lld נוספים"
+          }
+        }
+      }
+    },
+    "~%lld-%lld mo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "~%1$lld-%2$lld mo"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "~%1$lld-%2$lld חודשים"
+          }
+        }
+      }
+    },
+    "0.0" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "0.0"
+          }
+        }
+      }
+    },
+    "1 hour" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שעה אחת"
+          }
+        }
+      }
+    },
+    "1 hour before" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שעה לפני"
+          }
+        }
+      }
+    },
+    "1.0.0" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1.0.0"
+          }
+        }
+      }
+    },
+    "1.5 hours" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שעה וחצי"
+          }
+        }
+      }
+    },
+    "2 hours" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שעתיים"
+          }
+        }
+      }
+    },
+    "2.5 hours" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שעתיים וחצי"
+          }
+        }
+      }
+    },
+    "3 hours" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3 שעות"
+          }
+        }
+      }
+    },
+    "3x Daily" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3 פעמים ביום"
+          }
+        }
+      }
+    },
+    "4 hours" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4 שעות"
+          }
+        }
+      }
+    },
+    "4x Daily" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4 פעמים ביום"
+          }
+        }
+      }
+    },
+    "5 minutes before" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 דקות לפני"
+          }
+        }
+      }
+    },
+    "15 minutes before" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "15 דקות לפני"
+          }
+        }
+      }
+    },
+    "30 minutes before" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 דקות לפני"
+          }
+        }
+      }
+    },
+    "About" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אודות"
+          }
+        }
+      }
+    },
+    "Accent" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "צבע הדגשה"
+          }
+        }
+      }
+    },
+    "Activate" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הפעל"
+          }
+        }
+      }
+    },
+    "Active" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פעיל"
+          }
+        }
+      }
+    },
+    "Active Medications:" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תרופות פעילות:"
+          }
+        }
+      }
+    },
+    "Add" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוסף"
+          }
+        }
+      }
+    },
+    "Add a Baby" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוסף תינוק"
+          }
+        }
+      }
+    },
+    "Add any questions or concerns you want to remember for your next doctor visit" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוסף שאלות או חששות שתרצה לזכור לביקור הבא אצל הרופא"
+          }
+        }
+      }
+    },
+    "Add Baby" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוסף תינוק"
+          }
+        }
+      }
+    },
+    "Add Birth Date" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוסף תאריך לידה"
+          }
+        }
+      }
+    },
+    "Add common developmental milestones to track your baby's progress" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוסף אבני דרך התפתחותיות נפוצות למעקב אחר התקדמות התינוק"
+          }
+        }
+      }
+    },
+    "Add Common Milestones" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוסף אבני דרך נפוצות"
+          }
+        }
+      }
+    },
+    "Add Concern" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוסף חשש"
+          }
+        }
+      }
+    },
+    "Add diary entries with photos to see them here" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוסף רשומות יומן עם תמונות כדי לראות אותן כאן"
+          }
+        }
+      }
+    },
+    "Add Measurement" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוסף מדידה"
+          }
+        }
+      }
+    },
+    "Add Medication" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוסף תרופה"
+          }
+        }
+      }
+    },
+    "Add medications and vitamins to track doses and get reminders" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוסף תרופות וויטמינים למעקב מינונים וקבלת תזכורות"
+          }
+        }
+      }
+    },
+    "Add Milestone" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוסף אבן דרך"
+          }
+        }
+      }
+    },
+    "Add notes..." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוסף הערות..."
+          }
+        }
+      }
+    },
+    "Add Photo" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוסף תמונה"
+          }
+        }
+      }
+    },
+    "Add to Stash" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוסף למלאי"
+          }
+        }
+      }
+    },
+    "Add Vaccination" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוסף חיסון"
+          }
+        }
+      }
+    },
+    "Added %@" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נוסף %@"
+          }
+        }
+      }
+    },
+    "Additional notes" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הערות נוספות"
+          }
+        }
+      }
+    },
+    "Additional notes (optional)" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הערות נוספות (אופציונלי)"
+          }
+        }
+      }
+    },
+    "All data is stored locally on your device only. We do not transmit, upload, or store your data on any external servers. Your information never leaves your device unless you explicitly choose to export it." : {
+      "comment" : "Explanation of how user data is stored on their device.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "כל הנתונים נשמרים מקומית במכשיר שלך בלבד. איננו מעבירים, מעלים או מאחסנים את הנתונים שלך בשרתים חיצוניים. המידע שלך לעולם לא עוזב את המכשיר שלך אלא אם כן תבחר במפורש לייצא אותו."
+          }
+        }
+      }
+    },
+    "All Time" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "כל הזמן"
+          }
+        }
+      }
+    },
+    "Already Achieved" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "כבר הושג"
+          }
+        }
+      }
+    },
+    "Always consult with a qualified healthcare provider for any health-related concerns about your child. Never disregard professional medical advice or delay seeking it because of information logged in this App." : {
+      "comment" : "A piece of text within the Terms of Service that reminds users to consult healthcare professionals for health-related issues.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "התייעץ תמיד עם ספק שירותי בריאות מוסמך לגבי כל חשש בריאותי הנוגע לילדך. לעולם אל תתעלם מייעוץ רפואי מקצועי או תעכב את קבלתו בגלל מידע שנרשם באפליקציה זו."
+          }
+        }
+      }
+    },
+    "App Settings" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הגדרות אפליקציה"
+          }
+        }
+      }
+    },
+    "Apple Health" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "בריאות Apple"
+          }
+        }
+      }
+    },
+    "Apply" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "החל"
+          }
+        }
+      }
+    },
+    "As Needed" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לפי הצורך"
+          }
+        }
+      }
+    },
+    "At due time" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "בזמן המתוכנן"
+          }
+        }
+      }
+    },
+    "Authorization Status" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סטטוס הרשאה"
+          }
+        }
+      }
+    },
+    "Auto-enable at night" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הפעלה אוטומטית בלילה"
+          }
+        }
+      }
+    },
+    "Automatic Schedule" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לוח זמנים אוטומטי"
+          }
+        }
+      }
+    },
+    "Babies" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תינוקות"
+          }
+        }
+      }
+    },
+    "Baby Info" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פרטי תינוק"
+          }
+        }
+      }
+    },
+    "Baby Information" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מידע על התינוק"
+          }
+        }
+      }
+    },
+    "Baby is sleeping..." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "התינוק ישן..."
+          }
+        }
+      }
+    },
+    "Baby Profile" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פרופיל תינוק"
+          }
+        }
+      }
+    },
+    "Baby's Mood" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מצב רוח התינוק"
+          }
+        }
+      }
+    },
+    "Baby's Name" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שם התינוק"
+          }
+        }
+      }
+    },
+    "Baby's Response" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תגובת התינוק"
+          }
+        }
+      }
+    },
+    "Back" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חזור"
+          }
+        }
+      }
+    },
+    "Background" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רקע"
+          }
+        }
+      }
+    },
+    "Before you begin, please review and accept our Terms of Service and Privacy Policy." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לפני שתתחיל, אנא עיין וקבל את תנאי השירות ומדיניות הפרטיות שלנו."
+          }
+        }
+      }
+    },
+    "Best for backup and restoration" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הטוב ביותר לגיבוי ושחזור"
+          }
+        }
+      }
+    },
+    "Best for spreadsheets and analysis" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הטוב ביותר לגיליונות אלקטרוניים וניתוח"
+          }
+        }
+      }
+    },
+    "Birth Date" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תאריך לידה"
+          }
+        }
+      }
+    },
+    "Biting/Chewing" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נשיכה/לעיסה"
+          }
+        }
+      }
+    },
+    "Both" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שניהם"
+          }
+        }
+      }
+    },
+    "Bottle" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "בקבוק"
+          }
+        }
+      }
+    },
+    "Bottle volume" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נפח בקבוק"
+          }
+        }
+      }
+    },
+    "Breast" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שד"
+          }
+        }
+      }
+    },
+    "Breast Balance" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "איזון שדיים"
+          }
+        }
+      }
+    },
+    "Breast Milk" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חלב אם"
+          }
+        }
+      }
+    },
+    "Breast Side" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "צד השד"
+          }
+        }
+      }
+    },
+    "Breastfeeding" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הנקה"
+          }
+        }
+      }
+    },
+    "Breastfeeding time" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "זמן הנקה"
+          }
+        }
+      }
+    },
+    "By downloading, installing, or using LittleRoutine (\"the App\"), you agree to be bound by these Terms of Service (\"Terms\"). If you do not agree to these Terms, do not use the App." : {
+      "comment" : "A section header with a title and a description.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "על ידי הורדה, התקנה או שימוש ב-LittleRoutine (\"האפליקציה\"), אתה מסכים להיות כפוף לתנאי שירות אלה (\"התנאים\"). אם אינך מסכים לתנאים אלה, אל תשתמש באפליקציה."
+          }
+        }
+      }
+    },
+    "By using LittleRoutine, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service." : {
+      "comment" : "Acknowledgment text displayed at the bottom of the Terms of Service view.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "על ידי שימוש ב-LittleRoutine, אתה מאשר שקראת, הבנת ומסכים להיות כפוף לתנאי שירות אלה."
+          }
+        }
+      }
+    },
+    "By using LittleRoutine, you consent to this Privacy Policy." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "על ידי שימוש ב-LittleRoutine, אתה מסכים למדיניות פרטיות זו."
+          }
+        }
+      }
+    },
+    "Calm" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רגוע"
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ביטול"
+          }
+        }
+      }
+    },
+    "Canine" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ניב"
+          }
+        }
+      }
+    },
+    "Capture precious moments with photos and notes. Tap + to add your first entry." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תעד רגעים יקרים עם תמונות והערות. לחץ + להוספת הרשומה הראשונה."
+          }
+        }
+      }
+    },
+    "Category" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "קטגוריה"
+          }
+        }
+      }
+    },
+    "Central Incisor" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חותכת מרכזית"
+          }
+        }
+      }
+    },
+    "Change Photo" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שנה תמונה"
+          }
+        }
+      }
+    },
+    "Cheek Rubbing" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שפשוף לחיים"
+          }
+        }
+      }
+    },
+    "Clear" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נקה"
+          }
+        }
+      }
+    },
+    "Close" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סגור"
+          }
+        }
+      }
+    },
+    "cm" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ס״מ"
+          }
+        }
+      }
+    },
+    "Cognitive" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "קוגניטיבי"
+          }
+        }
+      }
+    },
+    "Collapse" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "כווץ"
+          }
+        }
+      }
+    },
+    "Color" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "צבע"
+          }
+        }
+      }
+    },
+    "Completed" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הושלם"
+          }
+        }
+      }
+    },
+    "Confirm" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אשר"
+          }
+        }
+      }
+    },
+    "Connected to iCloud" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מחובר ל-iCloud"
+          }
+        }
+      }
+    },
+    "Connection Status" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סטטוס חיבור"
+          }
+        }
+      }
+    },
+    "Content Type" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סוג תוכן"
+          }
+        }
+      }
+    },
+    "Continue" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "המשך"
+          }
+        }
+      }
+    },
+    "Crying" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "בוכה"
+          }
+        }
+      }
+    },
+    "CSV Format" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פורמט CSV"
+          }
+        }
+      }
+    },
+    "Currently Teething" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "כרגע בוקעות שיניים"
+          }
+        }
+      }
+    },
+    "Daily Summary" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סיכום יומי"
+          }
+        }
+      }
+    },
+    "Dairy" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מוצרי חלב"
+          }
+        }
+      }
+    },
+    "Data & Privacy" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נתונים ופרטיות"
+          }
+        }
+      }
+    },
+    "Data Processing Consent" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הסכמה לעיבוד נתונים"
+          }
+        }
+      }
+    },
+    "Data Summary" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סיכום נתונים"
+          }
+        }
+      }
+    },
+    "Date" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תאריך"
+          }
+        }
+      }
+    },
+    "Date & Time" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תאריך ושעה"
+          }
+        }
+      }
+    },
+    "Date Achieved" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תאריך השגה"
+          }
+        }
+      }
+    },
+    "Date Administered" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תאריך מתן"
+          }
+        }
+      }
+    },
+    "Date Range" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "טווח תאריכים"
+          }
+        }
+      }
+    },
+    "Deactivate" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "השבת"
+          }
+        }
+      }
+    },
+    "Delete" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מחק"
+          }
+        }
+      }
+    },
+    "Delete Entry" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מחק רשומה"
+          }
+        }
+      }
+    },
+    "Delete Tooth Record" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מחק רשומת שן"
+          }
+        }
+      }
+    },
+    "Delete Vaccination" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מחק חיסון"
+          }
+        }
+      }
+    },
+    "Deleting" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מוחק"
+          }
+        }
+      }
+    },
+    "Deselect All" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "בטל בחירת הכל"
+          }
+        }
+      }
+    },
+    "Details" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פרטים"
+          }
+        }
+      }
+    },
+    "Diaper" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חיתול"
+          }
+        }
+      }
+    },
+    "Diaper Changes" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "החלפות חיתול"
+          }
+        }
+      }
+    },
+    "Diaper Reminders" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תזכורות חיתול"
+          }
+        }
+      }
+    },
+    "Diaper Type" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סוג חיתול"
+          }
+        }
+      }
+    },
+    "Diapers" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חיתולים"
+          }
+        }
+      }
+    },
+    "Did Baby Like It?" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "האם התינוק אהב?"
+          }
+        }
+      }
+    },
+    "Dirty" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מלוכלך"
+          }
+        }
+      }
+    },
+    "Disabled" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מושבת"
+          }
+        }
+      }
+    },
+    "Discard" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "בטל"
+          }
+        }
+      }
+    },
+    "Disliked" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לא אהב"
+          }
+        }
+      }
+    },
+    "Don't Track Milk" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אל תעקוב אחר חלב"
+          }
+        }
+      }
+    },
+    "Done" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סיום"
+          }
+        }
+      }
+    },
+    "Dosage" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מינון"
+          }
+        }
+      }
+    },
+    "Dosage (e.g., 5ml, 1 drop)" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מינון (לדוגמה: 5 מ״ל, טיפה אחת)"
+          }
+        }
+      }
+    },
+    "Dose History" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "היסטוריית מינונים"
+          }
+        }
+      }
+    },
+    "Drooling" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ריור"
+          }
+        }
+      }
+    },
+    "Due today" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מתוכנן להיום"
+          }
+        }
+      }
+    },
+    "Due tomorrow" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מתוכנן למחר"
+          }
+        }
+      }
+    },
+    "Duration" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "משך"
+          }
+        }
+      }
+    },
+    "Duration (minutes)" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "משך (דקות)"
+          }
+        }
+      }
+    },
+    "Ear Pulling" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "משיכת אוזניים"
+          }
+        }
+      }
+    },
+    "Edit" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ערוך"
+          }
+        }
+      }
+    },
+    "Edit Baby" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ערוך תינוק"
+          }
+        }
+      }
+    },
+    "Edit Baby Profile" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ערוך פרופיל תינוק"
+          }
+        }
+      }
+    },
+    "Edit Entry" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ערוך רשומה"
+          }
+        }
+      }
+    },
+    "Edit Food" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ערוך מזון"
+          }
+        }
+      }
+    },
+    "Edit Tooth" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ערוך שן"
+          }
+        }
+      }
+    },
+    "Edit Vaccination" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ערוך חיסון"
+          }
+        }
+      }
+    },
+    "Enable" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הפעל"
+          }
+        }
+      }
+    },
+    "Enable Daily Summaries" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הפעל סיכומים יומיים"
+          }
+        }
+      }
+    },
+    "Enable iCloud Sync" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הפעל סנכרון iCloud"
+          }
+        }
+      }
+    },
+    "Enable Night Mode" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הפעל מצב לילה"
+          }
+        }
+      }
+    },
+    "Enable Reminder" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הפעל תזכורת"
+          }
+        }
+      }
+    },
+    "Enabled" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מופעל"
+          }
+        }
+      }
+    },
+    "End Time" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שעת סיום"
+          }
+        }
+      }
+    },
+    "Energized" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אנרגטי"
+          }
+        }
+      }
+    },
+    "Error" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שגיאה"
+          }
+        }
+      }
+    },
+    "Erupted" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "בקעה"
+          }
+        }
+      }
+    },
+    "Erupted Teeth" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שיניים שבקעו"
+          }
+        }
+      }
+    },
+    "Eruption Date" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תאריך בקיעה"
+          }
+        }
+      }
+    },
+    "Evening Summary" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סיכום ערב"
+          }
+        }
+      }
+    },
+    "Every X Hours" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "כל X שעות"
+          }
+        }
+      }
+    },
+    "Expand" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הרחב"
+          }
+        }
+      }
+    },
+    "EXPIRED" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פג תוקף"
+          }
+        }
+      }
+    },
+    "Expires %@" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פג תוקף %@"
+          }
+        }
+      }
+    },
+    "Expires soon!" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פג תוקף בקרוב!"
+          }
+        }
+      }
+    },
+    "Expiring Soon" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פג תוקף בקרוב"
+          }
+        }
+      }
+    },
+    "Export Data" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ייצוא נתונים"
+          }
+        }
+      }
+    },
+    "Export Data (CSV/JSON)" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ייצוא נתונים (CSV/JSON)"
+          }
+        }
+      }
+    },
+    "Export Error" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שגיאת ייצוא"
+          }
+        }
+      }
+    },
+    "Export Format" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פורמט ייצוא"
+          }
+        }
+      }
+    },
+    "Export PDF Report" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ייצוא דוח PDF"
+          }
+        }
+      }
+    },
+    "Export Report" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ייצוא דוח"
+          }
+        }
+      }
+    },
+    "Exporting Data For" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מייצא נתונים עבור"
+          }
+        }
+      }
+    },
+    "Features" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תכונות"
+          }
+        }
+      }
+    },
+    "Feed" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "האכלה"
+          }
+        }
+      }
+    },
+    "Feeding" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "האכלה"
+          }
+        }
+      }
+    },
+    "Feeding Reminders" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תזכורות האכלה"
+          }
+        }
+      }
+    },
+    "Feeding Sessions" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הנקות"
+          }
+        }
+      }
+    },
+    "Feeding Type" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סוג האכלה"
+          }
+        }
+      }
+    },
+    "Filter" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סנן"
+          }
+        }
+      }
+    },
+    "Finished" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הסתיים"
+          }
+        }
+      }
+    },
+    "FIRST" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ראשון"
+          }
+        }
+      }
+    },
+    "First Molar" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "טוחנת ראשונה"
+          }
+        }
+      }
+    },
+    "First Signs Noticed" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סימנים ראשונים שהבחנתי"
+          }
+        }
+      }
+    },
+    "First Time Trying" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פעם ראשונה שמנסה"
+          }
+        }
+      }
+    },
+    "Food Details" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פרטי מזון"
+          }
+        }
+      }
+    },
+    "Food Name" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שם המזון"
+          }
+        }
+      }
+    },
+    "Foods with Reactions" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מזונות עם תגובות"
+          }
+        }
+      }
+    },
+    "For questions about these Terms, contact us at:" : {
+      "comment" : "A section header in the Terms of Service view that instructs users on how to contact the developers.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לשאלות בנוגע לתנאים אלה, פנה אלינו:"
+          }
+        }
+      }
+    },
+    "Format" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פורמט"
+          }
+        }
+      }
+    },
+    "Formula" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תרכובת"
+          }
+        }
+      }
+    },
+    "Freezer" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מקפיא"
+          }
+        }
+      }
+    },
+    "Frequency" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תדירות"
+          }
+        }
+      }
+    },
+    "Fridge" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מקרר"
+          }
+        }
+      }
+    },
+    "From" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מתאריך"
+          }
+        }
+      }
+    },
+    "Fruit" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פרי"
+          }
+        }
+      }
+    },
+    "Fussiness" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עצבנות"
+          }
+        }
+      }
+    },
+    "Fussy" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עצבני"
+          }
+        }
+      }
+    },
+    "GDPR Consent (EU Users)" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הסכמת GDPR (משתמשי האיחוד האירופי)"
+          }
+        }
+      }
+    },
+    "Generate PDF Report" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "צור דוח PDF"
+          }
+        }
+      }
+    },
+    "Generating..." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "יוצר..."
+          }
+        }
+      }
+    },
+    "Get a daily overview of your baby's activities delivered as notifications." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "קבל סקירה יומית של פעילויות התינוק כהתראות."
+          }
+        }
+      }
+    },
+    "Get a recap of today's activities." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "קבל סיכום של פעילויות היום."
+          }
+        }
+      }
+    },
+    "Get information about the last feeding" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "קבל מידע על ההאכלה האחרונה"
+          }
+        }
+      }
+    },
+    "Get Last Feeding" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "קבל האכלה אחרונה"
+          }
+        }
+      }
+    },
+    "Given by %@" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ניתן על ידי %@"
+          }
+        }
+      }
+    },
+    "Good for 4 days" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "טוב ל-4 ימים"
+          }
+        }
+      }
+    },
+    "Good for 6 months" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "טוב ל-6 חודשים"
+          }
+        }
+      }
+    },
+    "Got it" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הבנתי"
+          }
+        }
+      }
+    },
+    "Grain" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "דגנים"
+          }
+        }
+      }
+    },
+    "Growth Data" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נתוני גדילה"
+          }
+        }
+      }
+    },
+    "Growth measurements from the Growth Tracking section will be saved to Apple Health automatically." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מדידות גדילה ממעקב הגדילה יישמרו אוטומטית ב-Apple Health."
+          }
+        }
+      }
+    },
+    "Growth Tracking" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מעקב גדילה"
+          }
+        }
+      }
+    },
+    "Happy" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שמח"
+          }
+        }
+      }
+    },
+    "Head Circumference" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "היקף ראש"
+          }
+        }
+      }
+    },
+    "HealthKit is not available on this device" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HealthKit אינו זמין במכשיר זה"
+          }
+        }
+      }
+    },
+    "Height" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "גובה"
+          }
+        }
+      }
+    },
+    "Height/Length" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "גובה/אורך"
+          }
+        }
+      }
+    },
+    "History" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "היסטוריה"
+          }
+        }
+      }
+    },
+    "Hours between doses" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שעות בין מינונים"
+          }
+        }
+      }
+    },
+    "How are you feeling?" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "איך את מרגישה?"
+          }
+        }
+      }
+    },
+    "How It Works" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "איך זה עובד"
+          }
+        }
+      }
+    },
+    "I Accept" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אני מסכים/ה"
+          }
+        }
+      }
+    },
+    "I consent to the processing of the personal data I enter into this app for the purpose of tracking my baby's activities. I understand that all data is stored locally on my device and is not transmitted to any servers." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אני מסכים/ה לעיבוד הנתונים האישיים שאני מזין/ה באפליקציה זו לצורך מעקב אחר הפעילויות של התינוק שלי. אני מבין/ה שכל הנתונים נשמרים מקומית במכשיר שלי ואינם מועברים לשרתים כלשהם."
+          }
+        }
+      }
+    },
+    "If you have any questions about this Privacy Policy, please contact us at:" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אם יש לך שאלות לגבי מדיניות פרטיות זו, אנא פנה אלינו:"
+          }
+        }
+      }
+    },
+    "IMPORTANT: LittleRoutine is NOT a medical device and should NOT be used for medical purposes. The information provided by the App is for informational and tracking purposes only." : {
+      "comment" : "A disclaimer within the Terms of Service that highlights the App's non-medical nature.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חשוב: LittleRoutine אינה מכשיר רפואי ואין להשתמש בה למטרות רפואיות. המידע שמספקת האפליקציה הוא למטרות מידע ומעקב בלבד."
+          }
+        }
+      }
+    },
+    "in" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אינץ׳"
+          }
+        }
+      }
+    },
+    "In case of a medical emergency, call emergency services immediately." : {
+      "comment" : "A bolded and red text that reads \"In case of a medical emergency, call emergency services immediately.\"",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "במקרה של מצב חירום רפואי, התקשר לשירותי חירום מיד."
+          }
+        }
+      }
+    },
+    "In Use Now" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "בשימוש כעת"
+          }
+        }
+      }
+    },
+    "Inactive" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לא פעיל"
+          }
+        }
+      }
+    },
+    "Include" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "כלול"
+          }
+        }
+      }
+    },
+    "Instructions" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוראות"
+          }
+        }
+      }
+    },
+    "JSON Format" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פורמט JSON"
+          }
+        }
+      }
+    },
+    "Keep track of questions and concerns for your next pediatrician visit" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עקוב אחר שאלות וחששות לביקור הבא אצל רופא הילדים"
+          }
+        }
+      }
+    },
+    "kg" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ק״ג"
+          }
+        }
+      }
+    },
+    "Language" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שפה"
+          }
+        }
+      }
+    },
+    "Last 7 Days" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 ימים אחרונים"
+          }
+        }
+      }
+    },
+    "Last change" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "החלפה אחרונה"
+          }
+        }
+      }
+    },
+    "Last feeding" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "האכלה אחרונה"
+          }
+        }
+      }
+    },
+    "Last Feeding" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "האכלה אחרונה"
+          }
+        }
+      }
+    },
+    "Last feeding was 2 hours ago on the left breast" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ההאכלה האחרונה הייתה לפני שעתיים בשד שמאל"
+          }
+        }
+      }
+    },
+    "Last Month" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חודש אחרון"
+          }
+        }
+      }
+    },
+    "Last synced" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סונכרן לאחרונה"
+          }
+        }
+      }
+    },
+    "Last updated: %@" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עודכן לאחרונה: %@"
+          }
+        }
+      }
+    },
+    "Lateral Incisor" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חותכת צדית"
+          }
+        }
+      }
+    },
+    "Latest Measurements" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מדידות אחרונות"
+          }
+        }
+      }
+    },
+    "lbs" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ליברות"
+          }
+        }
+      }
+    },
+    "Learn More" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "למד עוד"
+          }
+        }
+      }
+    },
+    "Left" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שמאל"
+          }
+        }
+      }
+    },
+    "Legal" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "משפטי"
+          }
+        }
+      }
+    },
+    "Length" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אורך"
+          }
+        }
+      }
+    },
+    "LittleRoutine (\"we\", \"our\", or \"us\") is committed to protecting your privacy. This Privacy Policy explains how your personal information is collected, used, and disclosed by LittleRoutine." : {
+      "comment" : "A section header for the \"Introduction\" section of the Privacy Policy.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LittleRoutine (\"אנחנו\", \"שלנו\", או \"אותנו\") מחויבת להגן על הפרטיות שלך. מדיניות פרטיות זו מסבירה כיצד המידע האישי שלך נאסף, נעשה בו שימוש ונחשף על ידי LittleRoutine."
+          }
+        }
+      }
+    },
+    "LittleRoutine collects information that you voluntarily provide when using our app, including:" : {
+      "comment" : "A bullet point in the \"Information We Collect\" section of the Privacy Policy.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LittleRoutine אוספת מידע שאתה מספק מרצונך בעת השימוש באפליקציה שלנו, כולל:"
+          }
+        }
+      }
+    },
+    "LittleRoutine does not use any third-party analytics, advertising, or tracking services. We do not share your data with any third parties." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LittleRoutine אינה משתמשת בשירותי ניתוח, פרסום או מעקב של צד שלישי. איננו משתפים את הנתונים שלך עם צדדים שלישיים."
+          }
+        }
+      }
+    },
+    "LittleRoutine is a personal baby tracking application designed to help parents and caregivers log and monitor their baby's daily activities including feeding, sleeping, diaper changes, growth, and health information." : {
+      "comment" : "A description of the purpose of the app.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LittleRoutine היא אפליקציית מעקב תינוקות אישית שנועדה לעזור להורים ומטפלים לרשום ולעקוב אחר הפעילויות היומיות של התינוק כולל האכלה, שינה, החלפת חיתולים, צמיחה ומידע בריאותי."
+          }
+        }
+      }
+    },
+    "LittleRoutine is designed for parents and caregivers to track information about their children. The app is operated by parents/guardians, not by children. We comply with the Children's Online Privacy Protection Act (COPPA) and do not knowingly collect information directly from children under 13." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LittleRoutine מיועדת להורים ומטפלים לעקוב אחר מידע על ילדיהם. האפליקציה מופעלת על ידי הורים/אפוטרופוסים, לא על ידי ילדים. אנו עומדים בחוק הגנת הפרטיות המקוונת של ילדים (COPPA) ואיננו אוספים ביודעין מידע ישירות מילדים מתחת לגיל 13."
+          }
+        }
+      }
+    },
+    "Loading" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "טוען"
+          }
+        }
+      }
+    },
+    "Location" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מיקום"
+          }
+        }
+      }
+    },
+    "Location/Clinic (optional)" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מיקום/מרפאה (אופציונלי)"
+          }
+        }
+      }
+    },
+    "Log ${type} diaper" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רשום חיתול ${type}"
+          }
+        }
+      }
+    },
+    "Log a breastfeeding session" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רשום הנקה"
+          }
+        }
+      }
+    },
+    "Log a diaper change" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רשום החלפת חיתול"
+          }
+        }
+      }
+    },
+    "Log Bottle Feeding" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רשום האכלת בקבוק"
+          }
+        }
+      }
+    },
+    "Log Diaper" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רשום חיתול"
+          }
+        }
+      }
+    },
+    "Log Diaper Change" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רשום החלפת חיתול"
+          }
+        }
+      }
+    },
+    "Log Dose" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רשום מינון"
+          }
+        }
+      }
+    },
+    "Log Dose Now" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רשום מינון עכשיו"
+          }
+        }
+      }
+    },
+    "Log Feeding" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רשום האכלה"
+          }
+        }
+      }
+    },
+    "Log feeding on ${side}" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רשום הנקה על ${side}"
+          }
+        }
+      }
+    },
+    "Log Food" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רשום מזון"
+          }
+        }
+      }
+    },
+    "Log Pump Session" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רשום שאיבה"
+          }
+        }
+      }
+    },
+    "Logged %@ diaper change" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נרשמה החלפת חיתול %@"
+          }
+        }
+      }
+    },
+    "Logged feeding on %@ breast%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Logged feeding on %1$@ breast%2$@"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נרשמה הנקה בשד %1$@%2$@"
+          }
+        }
+      }
+    },
+    "Loved" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אהב"
+          }
+        }
+      }
+    },
+    "Lower" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תחתון"
+          }
+        }
+      }
+    },
+    "Lower Teeth" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שיניים תחתונות"
+          }
+        }
+      }
+    },
+    "Manage All Babies" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נהל את כל התינוקות"
+          }
+        }
+      }
+    },
+    "Manage Babies" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נהל תינוקות"
+          }
+        }
+      }
+    },
+    "Mark as Complete" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סמן כהושלם"
+          }
+        }
+      }
+    },
+    "Mark as Completed" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סמן כהושלם"
+          }
+        }
+      }
+    },
+    "Mark as Done" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סמן כבוצע"
+          }
+        }
+      }
+    },
+    "Medication" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תרופה"
+          }
+        }
+      }
+    },
+    "Medications Due" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תרופות מתוכננות"
+          }
+        }
+      }
+    },
+    "Medicine & Vitamins" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תרופות וויטמינים"
+          }
+        }
+      }
+    },
+    "Medicine & Vitamins Reminders" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תזכורות תרופות וויטמינים"
+          }
+        }
+      }
+    },
+    "Mild" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "קל"
+          }
+        }
+      }
+    },
+    "Mild Fever" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חום קל"
+          }
+        }
+      }
+    },
+    "Milestone" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אבן דרך"
+          }
+        }
+      }
+    },
+    "Milestone Progress" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "התקדמות אבני דרך"
+          }
+        }
+      }
+    },
+    "Milestones" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אבני דרך"
+          }
+        }
+      }
+    },
+    "Milk Stash" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מלאי חלב"
+          }
+        }
+      }
+    },
+    "Mixed" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מעורב"
+          }
+        }
+      }
+    },
+    "ml" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מ״ל"
+          }
+        }
+      }
+    },
+    "Moderate" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "בינוני"
+          }
+        }
+      }
+    },
+    "Mood" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מצב רוח"
+          }
+        }
+      }
+    },
+    "More" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עוד"
+          }
+        }
+      }
+    },
+    "Morning Summary" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סיכום בוקר"
+          }
+        }
+      }
+    },
+    "Motor Skills" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מיומנויות מוטוריות"
+          }
+        }
+      }
+    },
+    "Name" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שם"
+          }
+        }
+      }
+    },
+    "Nap" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תנומה"
+          }
+        }
+      }
+    },
+    "Naps" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תנומות"
+          }
+        }
+      }
+    },
+    "Neutral" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ניטרלי"
+          }
+        }
+      }
+    },
+    "New Entry" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רשומה חדשה"
+          }
+        }
+      }
+    },
+    "Next" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הבא"
+          }
+        }
+      }
+    },
+    "Next: %@" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הבא: %@"
+          }
+        }
+      }
+    },
+    "Night" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לילה"
+          }
+        }
+      }
+    },
+    "Night Mode" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מצב לילה"
+          }
+        }
+      }
+    },
+    "Night mode uses dim red tones to protect your eyes during nighttime feedings." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מצב לילה משתמש בגוונים אדומים עמומים להגנה על העיניים במהלך הנקות לילה."
+          }
+        }
+      }
+    },
+    "Night Sleep" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שינת לילה"
+          }
+        }
+      }
+    },
+    "No" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לא"
+          }
+        }
+      }
+    },
+    "No activities recorded yet today" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לא נרשמו פעילויות היום"
+          }
+        }
+      }
+    },
+    "No baby selected" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לא נבחר תינוק"
+          }
+        }
+      }
+    },
+    "No Baby Selected" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לא נבחר תינוק"
+          }
+        }
+      }
+    },
+    "No bottle feedings yet" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עדיין אין האכלות בקבוק"
+          }
+        }
+      }
+    },
+    "No concerns to discuss" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אין חששות לדיון"
+          }
+        }
+      }
+    },
+    "No diaper changes logged yet" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עדיין לא נרשמו החלפות חיתול"
+          }
+        }
+      }
+    },
+    "No Diary Entries" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אין רשומות יומן"
+          }
+        }
+      }
+    },
+    "No doses logged yet" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עדיין לא נרשמו מינונים"
+          }
+        }
+      }
+    },
+    "No feeding sessions yet" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עדיין אין הנקות"
+          }
+        }
+      }
+    },
+    "No Foods Logged" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לא נרשמו מזונות"
+          }
+        }
+      }
+    },
+    "No growth entries yet" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עדיין אין רשומות גדילה"
+          }
+        }
+      }
+    },
+    "No Medications" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אין תרופות"
+          }
+        }
+      }
+    },
+    "No milk in %@" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אין חלב ב%@"
+          }
+        }
+      }
+    },
+    "No photos yet" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עדיין אין תמונות"
+          }
+        }
+      }
+    },
+    "No pump sessions yet" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עדיין אין שאיבות"
+          }
+        }
+      }
+    },
+    "No sleep sessions yet" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עדיין אין רשומות שינה"
+          }
+        }
+      }
+    },
+    "No Teeth Tracked" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לא נרשמו שיניים"
+          }
+        }
+      }
+    },
+    "No Vaccinations" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אין חיסונים"
+          }
+        }
+      }
+    },
+    "None" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ללא"
+          }
+        }
+      }
+    },
+    "Not specified" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לא צוין"
+          }
+        }
+      }
+    },
+    "Not Started" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לא התחיל"
+          }
+        }
+      }
+    },
+    "Not Sure" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לא בטוח"
+          }
+        }
+      }
+    },
+    "Notes" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הערות"
+          }
+        }
+      }
+    },
+    "Notes (optional)" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הערות (אופציונלי)"
+          }
+        }
+      }
+    },
+    "Notes for Doctor" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הערות לרופא"
+          }
+        }
+      }
+    },
+    "Notes for Pediatrician" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הערות לרופא ילדים"
+          }
+        }
+      }
+    },
+    "of pumped milk?" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "של חלב שנשאב?"
+          }
+        }
+      }
+    },
+    "Off" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "כבוי"
+          }
+        }
+      }
+    },
+    "OK" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אישור"
+          }
+        }
+      }
+    },
+    "On" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פעיל"
+          }
+        }
+      }
+    },
+    "Once Daily" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פעם ביום"
+          }
+        }
+      }
+    },
+    "Optional" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אופציונלי"
+          }
+        }
+      }
+    },
+    "Optional instructions..." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוראות אופציונליות..."
+          }
+        }
+      }
+    },
+    "Optional notes..." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הערות אופציונליות..."
+          }
+        }
+      }
+    },
+    "Options" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אפשרויות"
+          }
+        }
+      }
+    },
+    "Other" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אחר"
+          }
+        }
+      }
+    },
+    "Overdue" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "באיחור"
+          }
+        }
+      }
+    },
+    "Overwhelmed" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מוצף"
+          }
+        }
+      }
+    },
+    "oz" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אונקיות"
+          }
+        }
+      }
+    },
+    "Parents" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הורים"
+          }
+        }
+      }
+    },
+    "Partner Sharing" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שיתוף עם בן/בת זוג"
+          }
+        }
+      }
+    },
+    "Partner Sync" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סנכרון בן/בת זוג"
+          }
+        }
+      }
+    },
+    "Partner's Name" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שם בן/בת הזוג"
+          }
+        }
+      }
+    },
+    "Pause" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "השהה"
+          }
+        }
+      }
+    },
+    "Pediatrician Notes" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הערות רופא ילדים"
+          }
+        }
+      }
+    },
+    "Pending" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ממתין"
+          }
+        }
+      }
+    },
+    "Photo" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תמונה"
+          }
+        }
+      }
+    },
+    "Photo Diary" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "יומן תמונות"
+          }
+        }
+      }
+    },
+    "Please add or select a baby profile before logging a diaper change." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אנא הוסף או בחר פרופיל תינוק לפני רישום החלפת חיתול."
+          }
+        }
+      }
+    },
+    "Please add or select a baby profile before starting a timer." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אנא הוסף או בחר פרופיל תינוק לפני הפעלת טיימר."
+          }
+        }
+      }
+    },
+    "Please read both documents to continue" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אנא קרא את שני המסמכים כדי להמשיך"
+          }
+        }
+      }
+    },
+    "Preferred Units" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "יחידות מועדפות"
+          }
+        }
+      }
+    },
+    "Preview" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תצוגה מקדימה"
+          }
+        }
+      }
+    },
+    "Previous" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הקודם"
+          }
+        }
+      }
+    },
+    "Privacy Policy" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מדיניות פרטיות"
+          }
+        }
+      }
+    },
+    "Processing" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מעבד"
+          }
+        }
+      }
+    },
+    "Protein" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חלבון"
+          }
+        }
+      }
+    },
+    "Pump" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שאיבה"
+          }
+        }
+      }
+    },
+    "Pumped %@" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נשאב %@"
+          }
+        }
+      }
+    },
+    "Pumped Date" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תאריך שאיבה"
+          }
+        }
+      }
+    },
+    "Pumping" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שאיבה"
+          }
+        }
+      }
+    },
+    "Quick Add Common Vaccines" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוספה מהירה של חיסונים נפוצים"
+          }
+        }
+      }
+    },
+    "Quick Log" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רישום מהיר"
+          }
+        }
+      }
+    },
+    "Quick Suggestions" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הצעות מהירות"
+          }
+        }
+      }
+    },
+    "Range" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "טווח"
+          }
+        }
+      }
+    },
+    "Reaction" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תגובה"
+          }
+        }
+      }
+    },
+    "Reaction Notes" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הערות תגובה"
+          }
+        }
+      }
+    },
+    "Read Full Privacy Policy" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "קרא מדיניות פרטיות מלאה"
+          }
+        }
+      }
+    },
+    "Read Terms of Service" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "קרא תנאי שימוש"
+          }
+        }
+      }
+    },
+    "Receive yesterday's summary to start your day." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "קבל סיכום של אתמול כדי להתחיל את היום."
+          }
+        }
+      }
+    },
+    "Reduced Appetite" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ירידה בתיאבון"
+          }
+        }
+      }
+    },
+    "Refresh" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רענן"
+          }
+        }
+      }
+    },
+    "remaining" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נותר"
+          }
+        }
+      }
+    },
+    "Remedies Used" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "טיפולים שנוסו"
+          }
+        }
+      }
+    },
+    "Remind before due" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הזכר לפני הזמן"
+          }
+        }
+      }
+    },
+    "Remind every" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הזכר כל"
+          }
+        }
+      }
+    },
+    "Reminder" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תזכורת"
+          }
+        }
+      }
+    },
+    "Reminders" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תזכורות"
+          }
+        }
+      }
+    },
+    "Reminders will be sent based on each medication's schedule. Add medications in the Medicine section." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תזכורות יישלחו לפי לוח הזמנים של כל תרופה. הוסף תרופות בחלק התרופות."
+          }
+        }
+      }
+    },
+    "Remove Photo" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הסר תמונה"
+          }
+        }
+      }
+    },
+    "Reports" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "דוחות"
+          }
+        }
+      }
+    },
+    "Required for users in the European Union under the General Data Protection Regulation." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נדרש למשתמשים באיחוד האירופי על פי תקנת הגנת הנתונים הכללית."
+          }
+        }
+      }
+    },
+    "Reset" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אפס"
+          }
+        }
+      }
+    },
+    "Resolve" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פתור"
+          }
+        }
+      }
+    },
+    "Resolved" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נפתר"
+          }
+        }
+      }
+    },
+    "Resume" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "המשך"
+          }
+        }
+      }
+    },
+    "Retry" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נסה שוב"
+          }
+        }
+      }
+    },
+    "Right" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ימין"
+          }
+        }
+      }
+    },
+    "Save" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שמור"
+          }
+        }
+      }
+    },
+    "Save Preferences" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שמור העדפות"
+          }
+        }
+      }
+    },
+    "Save Reminders" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שמור תזכורות"
+          }
+        }
+      }
+    },
+    "Save Settings" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שמור הגדרות"
+          }
+        }
+      }
+    },
+    "Saving" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שומר"
+          }
+        }
+      }
+    },
+    "Schedule" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לוח זמנים"
+          }
+        }
+      }
+    },
+    "Scheduled Date" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תאריך מתוכנן"
+          }
+        }
+      }
+    },
+    "Search" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חפש"
+          }
+        }
+      }
+    },
+    "Second Molar" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "טוחנת שנייה"
+          }
+        }
+      }
+    },
+    "See All" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ראה הכל"
+          }
+        }
+      }
+    },
+    "Select All" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "בחר הכל"
+          }
+        }
+      }
+    },
+    "Select Baby" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "בחר תינוק"
+          }
+        }
+      }
+    },
+    "Select Tooth" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "בחר שן"
+          }
+        }
+      }
+    },
+    "Session Details" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פרטי הפעלה"
+          }
+        }
+      }
+    },
+    "Settings" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הגדרות"
+          }
+        }
+      }
+    },
+    "Severe" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חמור"
+          }
+        }
+      }
+    },
+    "Share Report" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שתף דוח"
+          }
+        }
+      }
+    },
+    "Share with a different Apple ID" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שתף עם Apple ID אחר"
+          }
+        }
+      }
+    },
+    "Show Less" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הצג פחות"
+          }
+        }
+      }
+    },
+    "Show More" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הצג עוד"
+          }
+        }
+      }
+    },
+    "Side" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "צד"
+          }
+        }
+      }
+    },
+    "Silent Mode (no sounds)" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מצב שקט (ללא צלילים)"
+          }
+        }
+      }
+    },
+    "Skip" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "דלג"
+          }
+        }
+      }
+    },
+    "Sleep" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שינה"
+          }
+        }
+      }
+    },
+    "Sleep Disruption" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הפרעות שינה"
+          }
+        }
+      }
+    },
+    "Sleep Sessions" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רשומות שינה"
+          }
+        }
+      }
+    },
+    "Sleep Type" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סוג שינה"
+          }
+        }
+      }
+    },
+    "Sleepy" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ישנוני"
+          }
+        }
+      }
+    },
+    "Social" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חברתי"
+          }
+        }
+      }
+    },
+    "Solid Foods" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מזון מוצק"
+          }
+        }
+      }
+    },
+    "Sort" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מיין"
+          }
+        }
+      }
+    },
+    "Start" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "התחל"
+          }
+        }
+      }
+    },
+    "Start ${type} timer" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "התחל טיימר ${type}"
+          }
+        }
+      }
+    },
+    "Start 4-hour room temp timer" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "התחל טיימר 4 שעות לטמפרטורת חדר"
+          }
+        }
+      }
+    },
+    "Start Sleep" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "התחל שינה"
+          }
+        }
+      }
+    },
+    "Start Sleep Timer" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "התחל טיימר שינה"
+          }
+        }
+      }
+    },
+    "Start Time" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שעת התחלה"
+          }
+        }
+      }
+    },
+    "Start tracking baby's sleep" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "התחל לעקוב אחר שינת התינוק"
+          }
+        }
+      }
+    },
+    "Start Tracking Milestones" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "התחל לעקוב אחר אבני דרך"
+          }
+        }
+      }
+    },
+    "Started %@ timer" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הופעל טיימר %@"
+          }
+        }
+      }
+    },
+    "Statistics" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סטטיסטיקה"
+          }
+        }
+      }
+    },
+    "Stats" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סטטיסטיקה"
+          }
+        }
+      }
+    },
+    "Status" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סטטוס"
+          }
+        }
+      }
+    },
+    "Stop" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עצור"
+          }
+        }
+      }
+    },
+    "Storage" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אחסון"
+          }
+        }
+      }
+    },
+    "Store in Freezer" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אחסן בהקפאה"
+          }
+        }
+      }
+    },
+    "Store in Fridge" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אחסן במקרר"
+          }
+        }
+      }
+    },
+    "Store Milk" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אחסן חלב"
+          }
+        }
+      }
+    },
+    "Stressed" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לחוץ"
+          }
+        }
+      }
+    },
+    "Submit" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שלח"
+          }
+        }
+      }
+    },
+    "support@littleroutineapp.com" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "support@littleroutineapp.com"
+          }
+        }
+      }
+    },
+    "Switch" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "החלף"
+          }
+        }
+      }
+    },
+    "Swollen Gums" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חניכיים נפוחות"
+          }
+        }
+      }
+    },
+    "Symptoms" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תסמינים"
+          }
+        }
+      }
+    },
+    "Sync growth data with Apple Health" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סנכרן נתוני גדילה עם Apple Health"
+          }
+        }
+      }
+    },
+    "Synced Data" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נתונים מסונכרנים"
+          }
+        }
+      }
+    },
+    "Syncs automatically between your own devices signed into the same iCloud account." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מסתנכרן אוטומטית בין המכשירים שלך המחוברים לאותו חשבון iCloud."
+          }
+        }
+      }
+    },
+    "Tap + to add your baby's vaccinations and track their schedule." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לחץ + להוספת חיסוני התינוק ומעקב אחר לוח הזמנים."
+          }
+        }
+      }
+    },
+    "Tap + to start tracking your baby's solid food journey." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לחץ + להתחיל לעקוב אחר מסע המזון המוצק של התינוק."
+          }
+        }
+      }
+    },
+    "Tap on a tooth in the chart above or tap + to start tracking your baby's teeth." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לחץ על שן בתרשים למעלה או לחץ + להתחיל לעקוב אחר שיני התינוק."
+          }
+        }
+      }
+    },
+    "Teething" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "בקיעת שיניים"
+          }
+        }
+      }
+    },
+    "Terms of Service" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תנאי שימוש"
+          }
+        }
+      }
+    },
+    "The App and its original content, features, and functionality are owned by LittleRoutine and are protected by international copyright, trademark, and other intellectual property laws." : {
+      "comment" : "A section header that explains that the content of the app is protected by copyright laws.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "האפליקציה והתוכן, התכונות והפונקציונליות המקוריים שלה הם בבעלות LittleRoutine ומוגנים על ידי חוקי זכויות יוצרים, סימני מסחר וקניין רוחני בינלאומיים אחרים."
+          }
+        }
+      }
+    },
+    "The App is intended for personal, non-commercial use by parents, guardians, and caregivers. The App is a tracking and logging tool only and is NOT intended to:" : {
+      "comment" : "A section in the Terms of Service explaining that the app is not intended to provide medical advice or diagnosis, replace professional healthcare guidance, serve as an emergency alert system, or monitor infant safety or vital signs.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "האפליקציה מיועדת לשימוש אישי, לא מסחרי על ידי הורים, אפוטרופוסים ומטפלים. האפליקציה היא כלי מעקב ורישום בלבד ואינה מיועדת ל:"
+          }
+        }
+      }
+    },
+    "THE APP IS PROVIDED \"AS IS\" AND \"AS AVAILABLE\" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT." : {
+      "comment" : "A disclaimer of warranties displayed in the Terms of Service view.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "האפליקציה מסופקת \"כמות שהיא\" ו\"כפי שהיא זמינה\" ללא אחריות מכל סוג שהוא, בין אם מפורשת או משתמעת, כולל אך לא מוגבל לאחריות משתמעת של סחירות, התאמה למטרה מסוימת ואי-הפרה."
+          }
+        }
+      }
+    },
+    "These Terms shall be governed by and construed in accordance with applicable laws, without regard to conflict of law provisions." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תנאים אלה יהיו כפופים ויפורשו בהתאם לחוקים החלים, ללא התחשבות בהוראות ניגוד חוקים."
+          }
+        }
+      }
+    },
+    "This Week" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "השבוע"
+          }
+        }
+      }
+    },
+    "Time" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שעה"
+          }
+        }
+      }
+    },
+    "Time Period" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תקופת זמן"
+          }
+        }
+      }
+    },
+    "Timeline" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ציר זמן"
+          }
+        }
+      }
+    },
+    "Tired" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עייף"
+          }
+        }
+      }
+    },
+    "Title" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "כותרת"
+          }
+        }
+      }
+    },
+    "Title (optional)" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "כותרת (אופציונלי)"
+          }
+        }
+      }
+    },
+    "To" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עד תאריך"
+          }
+        }
+      }
+    },
+    "To Discuss" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לדיון"
+          }
+        }
+      }
+    },
+    "TO THE MAXIMUM EXTENT PERMITTED BY LAW, BABYTRACK AND ITS DEVELOPERS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO:" : {
+      "comment" : "A section header in the Terms of Service view.",
+      "extractionState" : "stale",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "במידה המרבית המותרת על פי חוק, LittleRoutine ומפתחיה לא יהיו אחראים לכל נזק עקיף, מקרי, מיוחד, תוצאתי או עונשי, כולל אך לא מוגבל ל:"
+          }
+        }
+      }
+    },
+    "TO THE MAXIMUM EXTENT PERMITTED BY LAW, LITTLEROUTINE AND ITS DEVELOPERS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO:" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "במידה המרבית המותרת על פי חוק, LITTLEROUTINE ומפתחיה לא יהיו אחראים לכל נזק עקיף, מקרי, מיוחד, תוצאתי או עונשי, כולל אך לא מוגבל ל:"
+          }
+        }
+      }
+    },
+    "Today" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "היום"
+          }
+        }
+      }
+    },
+    "Today: 6 feedings • 5 diapers • 3h naps" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "היום: 6 האכלות • 5 חיתולים • 3 שעות תנומות"
+          }
+        }
+      }
+    },
+    "Today's Diapers" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חיתולים היום"
+          }
+        }
+      }
+    },
+    "Today's Sleep" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שינה היום"
+          }
+        }
+      }
+    },
+    "Today's Timeline" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ציר זמן של היום"
+          }
+        }
+      }
+    },
+    "Tooth" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שן"
+          }
+        }
+      }
+    },
+    "Tooth Chart" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תרשים שיניים"
+          }
+        }
+      }
+    },
+    "Tooth Erupted" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "השן בקעה"
+          }
+        }
+      }
+    },
+    "Total" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סה״כ"
+          }
+        }
+      }
+    },
+    "Total Changes" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סה״כ החלפות"
+          }
+        }
+      }
+    },
+    "Total Records" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סה״כ רשומות"
+          }
+        }
+      }
+    },
+    "Total Sleep" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סה״כ שינה"
+          }
+        }
+      }
+    },
+    "Try %@" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נסה %@"
+          }
+        }
+      }
+    },
+    "Try Again" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נסה שוב"
+          }
+        }
+      }
+    },
+    "Twice Daily" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פעמיים ביום"
+          }
+        }
+      }
+    },
+    "Type" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סוג"
+          }
+        }
+      }
+    },
+    "Typical Age" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "גיל טיפוסי"
+          }
+        }
+      }
+    },
+    "Unit" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "יחידה"
+          }
+        }
+      }
+    },
+    "Upcoming" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "קרוב"
+          }
+        }
+      }
+    },
+    "Update" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עדכן"
+          }
+        }
+      }
+    },
+    "Upper" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עליון"
+          }
+        }
+      }
+    },
+    "Upper Teeth" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שיניים עליונות"
+          }
+        }
+      }
+    },
+    "Use Milk Now" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "השתמש בחלב עכשיו"
+          }
+        }
+      }
+    },
+    "Use Now" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "השתמש עכשיו"
+          }
+        }
+      }
+    },
+    "Use Now & Log Bottle Feeding" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "השתמש עכשיו ורשום האכלת בקבוק"
+          }
+        }
+      }
+    },
+    "Use Now Only (Start Timer)" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "השתמש עכשיו בלבד (התחל טיימר)"
+          }
+        }
+      }
+    },
+    "Used" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נוצל"
+          }
+        }
+      }
+    },
+    "Vaccinations" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חיסונים"
+          }
+        }
+      }
+    },
+    "Vaccine Details" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פרטי חיסון"
+          }
+        }
+      }
+    },
+    "Vaccine Name" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "שם החיסון"
+          }
+        }
+      }
+    },
+    "Vegetable" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ירק"
+          }
+        }
+      }
+    },
+    "Version" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "גרסה"
+          }
+        }
+      }
+    },
+    "View" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "תצוגה"
+          }
+        }
+      }
+    },
+    "View All" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "צפה בהכל"
+          }
+        }
+      }
+    },
+    "Volume" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נפח"
+          }
+        }
+      }
+    },
+    "Wake Up" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "התעוררות"
+          }
+        }
+      }
+    },
+    "We do not collect, store, or have access to:" : {
+      "comment" : "A section header within the Privacy Policy that explains what data LittleRoutine does not collect.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "איננו אוספים, מאחסנים או ניגשים ל:"
+          }
+        }
+      }
+    },
+    "We may update this Privacy Policy from time to time. We will notify you of any changes by updating the \"Last updated\" date at the top of this policy." : {
+      "comment" : "A note informing users that the Privacy Policy may be updated over time.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אנו עשויים לעדכן מדיניות פרטיות זו מעת לעת. נודיע לך על כל שינוי על ידי עדכון התאריך \"עודכן לאחרונה\" בראש מדיניות זו."
+          }
+        }
+      }
+    },
+    "We reserve the right to modify these Terms at any time. Continued use of the App after changes constitutes acceptance of the modified Terms." : {
+      "comment" : "A statement that the developer reserves the right to change the Terms of Service at any time. It also states that continuing to use the app after these changes is considered acceptance of the new terms.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אנו שומרים לעצמנו את הזכות לשנות תנאים אלה בכל עת. המשך השימוש באפליקציה לאחר שינויים מהווה קבלת התנאים המעודכנים."
+          }
+        }
+      }
+    },
+    "Weight" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "משקל"
+          }
+        }
+      }
+    },
+    "Weight Over Time" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "משקל לאורך זמן"
+          }
+        }
+      }
+    },
+    "Welcome to LittleRoutine" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ברוכים הבאים ל-LittleRoutine"
+          }
+        }
+      }
+    },
+    "Wet" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רטוב"
+          }
+        }
+      }
+    },
+    "What helped?" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מה עזר?"
+          }
+        }
+      }
+    },
+    "What would you like to do with" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מה תרצה לעשות עם"
+          }
+        }
+      }
+    },
+    "What's on your mind?" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מה עובר לך בראש?"
+          }
+        }
+      }
+    },
+    "Would you like to log this %@ as a bottle feeding? A 4-hour room temperature timer will start." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "האם תרצה לרשום %@ זה כהאכלת בקבוק? טיימר של 4 שעות לטמפרטורת חדר יתחיל."
+          }
+        }
+      }
+    },
+    "Write about this moment..." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "כתוב על הרגע הזה..."
+          }
+        }
+      }
+    },
+    "Write down any questions, symptoms, or concerns you want to discuss at your next appointment" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "רשום שאלות, תסמינים או חששות שתרצה לדון בהם בפגישה הבאה"
+          }
+        }
+      }
+    },
+    "Yes" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "כן"
+          }
+        }
+      }
+    },
+    "Yesterday" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אתמול"
+          }
+        }
+      }
+    },
+    "Yesterday: 8 feedings • 6 diapers • 12h sleep" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אתמול: 8 האכלות • 6 חיתולים • 12 שעות שינה"
+          }
+        }
+      }
+    },
+    "You agree to indemnify and hold harmless LittleRoutine, its developers, and affiliates from any claims, damages, losses, or expenses arising from your use of the App or violation of these Terms." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אתה מסכים לשפות ולהגן על LittleRoutine, מפתחיה ושותפיה מפני כל תביעות, נזקים, הפסדים או הוצאות הנובעים משימושך באפליקציה או מהפרת תנאים אלה."
+          }
+        }
+      }
+    },
+    "You are responsible for:" : {
+      "comment" : "A heading for a section of the Terms of Service that discusses user responsibilities.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אתה אחראי ל:"
+          }
+        }
+      }
+    },
+    "You have complete control over your data:" : {
+      "comment" : "A heading for a section of the Privacy Policy that discusses your rights over your data.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "יש לך שליטה מלאה על הנתונים שלך:"
+          }
+        }
+      }
+    },
+    "You may terminate your use of the App at any time by uninstalling it. Upon termination, all data stored locally on your device will be deleted." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אתה רשאי להפסיק את השימוש באפליקציה בכל עת על ידי הסרתה. עם סיום השימוש, כל הנתונים המאוחסנים מקומית במכשיר שלך יימחקו."
+          }
+        }
+      }
+    },
+    "Your Data & Privacy" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הנתונים והפרטיות שלך"
+          }
+        }
+      }
+    },
+    "Your data is protected by iOS's built-in security features including app sandboxing, which prevents other apps from accessing your LittleRoutine data. For additional security, we recommend:" : {
+      "comment" : "A section header and introductory text for a section about data security.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הנתונים שלך מוגנים על ידי תכונות האבטחה המובנות של iOS כולל ארגז חול לאפליקציות, המונע מאפליקציות אחרות לגשת לנתוני LittleRoutine שלך. לאבטחה נוספת, אנו ממליצים:"
+          }
+        }
+      }
+    },
+    "Your data remains on your device until you choose to delete it. You can delete individual records within the app, or delete all data by uninstalling the app. We have no ability to recover deleted data as we do not have access to it." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הנתונים שלך נשארים במכשיר שלך עד שתבחר למחוק אותם. תוכל למחוק רשומות בודדות בתוך האפליקציה, או למחוק את כל הנתונים על ידי הסרת האפליקציה. אין לנו יכולת לשחזר נתונים שנמחקו מכיוון שאין לנו גישה אליהם."
+          }
+        }
+      }
+    },
+    "Your Name" : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "השם שלך"
+          }
+        }
+      }
+    },
+    "Your use of the App is also governed by our Privacy Policy. All data is stored locally on your device. You are solely responsible for maintaining backups of your data." : {
+      "localizations" : {
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "השימוש שלך באפליקציה כפוף גם למדיניות הפרטיות שלנו. כל הנתונים מאוחסנים מקומית במכשיר שלך. אתה האחראי הבלעדי לשמירת גיבויים של הנתונים שלך."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.1"
+}
