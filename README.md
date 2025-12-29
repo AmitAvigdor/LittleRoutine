@@ -273,12 +273,3 @@ For questions or issues, please open a GitHub issue or contact the development t
 **Built with SwiftUI & SwiftData for iOS 17+**
 
 ---
-
-אם תרצה, אני יכול גם:
-
-* לקצר לגרסת **portfolio / recruiter**
-* להכין גרסת **open-source**
-* להוסיף **screenshots placeholders**
-* לבדוק אם זה נראה “App Store ready”
-
-רק תגיד.
