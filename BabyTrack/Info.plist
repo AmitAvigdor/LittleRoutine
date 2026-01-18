@@ -48,10 +48,6 @@
 	<array>
 		<string>processing</string>
 	</array>
-	<key>NSHealthShareUsageDescription</key>
-	<string>LittleRoutine would like to read your baby's health data from Apple Health to display growth information.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>LittleRoutine would like to save your baby's growth measurements (weight, height) to Apple Health for tracking.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>LittleRoutine would like to access your photo library to add photos to your baby's diary and food journal.</string>
 	<key>NSCameraUsageDescription</key>

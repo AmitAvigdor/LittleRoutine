@@ -621,6 +621,7 @@
       }
     },
     "Apple Health" : {
+      "extractionState" : "stale",
       "localizations" : {
         "he" : {
           "stringUnit" : {
@@ -663,6 +664,7 @@
       }
     },
     "Authorization Status" : {
+      "extractionState" : "stale",
       "localizations" : {
         "he" : {
           "stringUnit" : {
@@ -1152,6 +1154,7 @@
       }
     },
     "Connection Status" : {
+      "extractionState" : "stale",
       "localizations" : {
         "he" : {
           "stringUnit" : {
@@ -1766,6 +1769,7 @@
       }
     },
     "Error" : {
+      "extractionState" : "stale",
       "localizations" : {
         "he" : {
           "stringUnit" : {
@@ -2341,6 +2345,7 @@
       }
     },
     "Growth measurements from the Growth Tracking section will be saved to Apple Health automatically." : {
+      "extractionState" : "stale",
       "localizations" : {
         "he" : {
           "stringUnit" : {
@@ -2382,6 +2387,7 @@
       }
     },
     "HealthKit is not available on this device" : {
+      "extractionState" : "stale",
       "localizations" : {
         "he" : {
           "stringUnit" : {
@@ -2443,6 +2449,7 @@
       }
     },
     "How It Works" : {
+      "extractionState" : "stale",
       "localizations" : {
         "he" : {
           "stringUnit" : {
@@ -2844,7 +2851,6 @@
       }
     },
     "Log ${type} diaper" : {
-      "extractionState" : "stale",
       "localizations" : {
         "he" : {
           "stringUnit" : {
@@ -2935,7 +2941,6 @@
       }
     },
     "Log feeding on ${side}" : {
-      "extractionState" : "stale",
       "localizations" : {
         "he" : {
           "stringUnit" : {
@@ -4611,7 +4616,6 @@
       }
     },
     "Start ${type} timer" : {
-      "extractionState" : "stale",
       "localizations" : {
         "he" : {
           "stringUnit" : {
@@ -4837,6 +4841,7 @@
       }
     },
     "Sync growth data with Apple Health" : {
+      "extractionState" : "stale",
       "localizations" : {
         "he" : {
           "stringUnit" : {
@@ -4847,6 +4852,7 @@
       }
     },
     "Synced Data" : {
+      "extractionState" : "stale",
       "localizations" : {
         "he" : {
           "stringUnit" : {

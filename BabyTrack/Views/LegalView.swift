@@ -5,8 +5,7 @@ import SwiftUI
 // 2. Update the "Last updated" dates if you modify the legal documents
 // 3. Ensure you have a working support email that you monitor regularly
 
-// TODO: Replace with your actual support email before App Store submission
-private let supportEmail = "support@littleroutineapp.com"
+private let supportEmail = "littleroutineapp@gmail.com"
 
 // MARK: - Privacy Policy View
 

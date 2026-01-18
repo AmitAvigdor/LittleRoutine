@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+@theme {
+  /* Primary Colors - Purple/Pink */
+  --color-primary-50: #f3e5f5;
+  --color-primary-100: #e1bee7;
+  --color-primary-200: #ce93d8;
+  --color-primary-300: #ba68c8;
+  --color-primary-400: #ab47bc;
+  --color-primary-500: #9c27b0;
+  --color-primary-600: #8e24aa;
+  --color-primary-700: #7b1fa2;
+  --color-primary-800: #6a1b9a;
+  --color-primary-900: #4a148c;
+
+  --color-secondary-50: #fce4ec;
+  --color-secondary-100: #f8bbd9;
+  --color-secondary-200: #f48fb1;
+  --color-secondary-300: #f06292;
+  --color-secondary-400: #ec407a;
+  --color-secondary-500: #e91e63;
+  --color-secondary-600: #d81b60;
+  --color-secondary-700: #c2185b;
+  --color-secondary-800: #ad1457;
+  --color-secondary-900: #880e4f;
+
+  /* Baby Profile Colors */
+  --color-baby-purple: #9c27b0;
+  --color-baby-pink: #e91e63;
+  --color-baby-blue: #2196f3;
+  --color-baby-teal: #009688;
+  --color-baby-orange: #ff9800;
+  --color-baby-green: #4caf50;
+
+  /* Activity Colors */
+  --color-feeding: #e91e63;
+  --color-sleep: #3f51b5;
+  --color-diaper: #4caf50;
+  --color-pump: #2196f3;
+
+  /* Sleep Type Colors */
+  --color-nap: #ff9800;
+  --color-night: #3f51b5;
+
+  /* Diaper Type Colors */
+  --color-wet: #2196f3;
+  --color-dirty: #795548;
+  --color-both: #ff9800;
+
+  /* Breast Side Colors */
+  --color-left: #9c27b0;
+  --color-right: #e91e63;
+
+  /* Mood Colors */
+  --color-mood-happy: #ffc107;
+  --color-mood-fussy: #ff9800;
+  --color-mood-calm: #4caf50;
+  --color-mood-crying: #f44336;
+  --color-mood-sleepy: #3f51b5;
+
+  /* Night Mode Colors */
+  --color-night-bg: rgb(26, 13, 13);
+  --color-night-card: rgb(38, 20, 20);
+  --color-night-text: rgb(255, 230, 230);
+}
+
+/* Base styles */
+html {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background-color: #fafafa;
+}
+
+/* Night mode */
+.night-mode {
+  background-color: var(--color-night-bg);
+  color: var(--color-night-text);
+}
+
+.night-mode .card {
+  background-color: var(--color-night-card);
+}
+
+/* Safe area padding for PWA */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Timer display font */
+.timer-display {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Gradient backgrounds */
+.gradient-primary {
+  background: linear-gradient(135deg, #9c27b0 0%, #e91e63 100%);
+}
+
+.gradient-feeding {
+  background: linear-gradient(135deg, #9c27b0 0%, #e91e63 100%);
+}
+
+.gradient-sleep {
+  background: linear-gradient(135deg, #3f51b5 0%, #7c4dff 100%);
+}
+
+.gradient-diaper {
+  background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);
+}
+
+/* Bottom navigation safe area */
+.bottom-nav {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e0e0e0;
+  border-radius: 2px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #424242;
+}

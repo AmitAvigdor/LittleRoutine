@@ -156,10 +156,6 @@ struct MoreView: View {
                         Label("Daily Summary", systemImage: "sun.max.fill")
                     }
 
-                    NavigationLink(destination: HealthKitSettingsView()) {
-                        Label("Apple Health", systemImage: "heart.fill")
-                    }
-
                     // TODO: Enable for Partner Sync in v2
                     // NavigationLink(destination: SyncSettingsView()) {
                     //     Label("Partner Sync", systemImage: "person.2.fill")

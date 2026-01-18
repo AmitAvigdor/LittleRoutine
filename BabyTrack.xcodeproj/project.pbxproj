@@ -55,10 +55,8 @@
 		C11111110000000000000007 /* TeethingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11111100000000000000007 /* TeethingView.swift */; };
 		C11111110000000000000008 /* PhotoDiaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11111100000000000000008 /* PhotoDiaryView.swift */; };
 		C11111110000000000000009 /* DataExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11111100000000000000009 /* DataExportView.swift */; };
-		C11111110000000000000010 /* HealthKitSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11111100000000000000010 /* HealthKitSettingsView.swift */; };
 		C11111110000000000000011 /* DailySummaryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11111100000000000000011 /* DailySummaryManager.swift */; };
 		C11111110000000000000012 /* DataExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11111100000000000000012 /* DataExporter.swift */; };
-		C11111110000000000000013 /* HealthKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11111100000000000000013 /* HealthKitManager.swift */; };
 		C11111110000000000000014 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = C11111100000000000000014 /* Localizable.xcstrings */; };
 /* End PBXBuildFile section */
 
@@ -114,10 +112,8 @@
 		C11111100000000000000007 /* TeethingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeethingView.swift; sourceTree = "<group>"; };
 		C11111100000000000000008 /* PhotoDiaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoDiaryView.swift; sourceTree = "<group>"; };
 		C11111100000000000000009 /* DataExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataExportView.swift; sourceTree = "<group>"; };
-		C11111100000000000000010 /* HealthKitSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitSettingsView.swift; sourceTree = "<group>"; };
 		C11111100000000000000011 /* DailySummaryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailySummaryManager.swift; sourceTree = "<group>"; };
 		C11111100000000000000012 /* DataExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataExporter.swift; sourceTree = "<group>"; };
-		C11111100000000000000013 /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
 		C11111100000000000000014 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -226,7 +222,6 @@
 				C11111100000000000000007 /* TeethingView.swift */,
 				C11111100000000000000008 /* PhotoDiaryView.swift */,
 				C11111100000000000000009 /* DataExportView.swift */,
-				C11111100000000000000010 /* HealthKitSettingsView.swift */,
 				A11111300000000000000007 /* Components */,
 			);
 			path = Views;
@@ -238,7 +233,6 @@
 				A11111100000000000000013 /* DateFormatters.swift */,
 				C11111100000000000000011 /* DailySummaryManager.swift */,
 				C11111100000000000000012 /* DataExporter.swift */,
-				C11111100000000000000013 /* HealthKitManager.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -376,10 +370,8 @@
 				C11111110000000000000007 /* TeethingView.swift in Sources */,
 				C11111110000000000000008 /* PhotoDiaryView.swift in Sources */,
 				C11111110000000000000009 /* DataExportView.swift in Sources */,
-				C11111110000000000000010 /* HealthKitSettingsView.swift in Sources */,
 				C11111110000000000000011 /* DailySummaryManager.swift in Sources */,
 				C11111110000000000000012 /* DataExporter.swift in Sources */,
-				C11111110000000000000013 /* HealthKitManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
