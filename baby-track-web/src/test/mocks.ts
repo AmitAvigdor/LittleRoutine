@@ -6,10 +6,10 @@ export const mockBaby: Baby = {
   id: 'baby-1',
   userId: 'user-1',
   name: 'Test Baby',
-  dateOfBirth: '2024-01-01',
-  gender: 'male',
+  birthDate: '2024-01-01',
   color: 'purple',
   photoUrl: null,
+  isActive: true,
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
 };
