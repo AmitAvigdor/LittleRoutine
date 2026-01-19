@@ -11,7 +11,6 @@ import {
   Pill,
   SmilePlus,
   Stethoscope,
-  Camera,
   Star,
   Milk,
   Settings,
@@ -20,7 +19,6 @@ import {
   ChevronRight,
   Users,
   Edit,
-  Baby as BabyIcon,
 } from 'lucide-react';
 
 const features = [
@@ -30,7 +28,6 @@ const features = [
   { icon: Pill, label: 'Medicine', path: '/more/medicine', color: '#9c27b0' },
   { icon: SmilePlus, label: 'Teething', path: '/more/teething', color: '#e91e63' },
   { icon: Stethoscope, label: 'Pediatrician Notes', path: '/more/pediatrician', color: '#00bcd4' },
-  { icon: Camera, label: 'Photo Diary', path: '/more/diary', color: '#ff5722' },
   { icon: Star, label: 'Milestones', path: '/more/milestones', color: '#ffc107' },
   { icon: Milk, label: 'Milk Stash', path: '/more/milk-stash', color: '#3f51b5' },
 ];

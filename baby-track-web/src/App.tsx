@@ -11,6 +11,15 @@ import { MoreView } from '@/features/more/MoreView';
 import { BabyManagement } from '@/features/babies/BabyManagement';
 import { BabyForm } from '@/features/babies/BabyForm';
 import { SettingsView } from '@/features/settings/SettingsView';
+import { GrowthView } from '@/features/growth/GrowthView';
+import { MilestonesView } from '@/features/growth/MilestonesView';
+import { SolidFoodsView } from '@/features/nutrition/SolidFoodsView';
+import { VaccinationsView } from '@/features/medical/VaccinationsView';
+import { MedicineView } from '@/features/medical/MedicineView';
+import { TeethingView } from '@/features/medical/TeethingView';
+import { PediatricianNotesView } from '@/features/medical/PediatricianNotesView';
+import { MilkStashView } from '@/features/milkstash/MilkStashView';
+import { ExportView } from '@/features/export/ExportView';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -90,7 +99,15 @@ function AppRoutes() {
         <Route path="/more/babies/new" element={<BabyForm />} />
         <Route path="/more/babies/:id/edit" element={<BabyForm />} />
         <Route path="/more/settings" element={<SettingsView />} />
-        {/* TODO: Add more routes for Growth, Vaccinations, etc. */}
+        <Route path="/more/growth" element={<GrowthView />} />
+        <Route path="/more/milestones" element={<MilestonesView />} />
+        <Route path="/more/solid-foods" element={<SolidFoodsView />} />
+        <Route path="/more/vaccinations" element={<VaccinationsView />} />
+        <Route path="/more/medicine" element={<MedicineView />} />
+        <Route path="/more/teething" element={<TeethingView />} />
+        <Route path="/more/pediatrician" element={<PediatricianNotesView />} />
+        <Route path="/more/milk-stash" element={<MilkStashView />} />
+        <Route path="/more/export" element={<ExportView />} />
       </Route>
 
       {/* Redirects */}

@@ -39,7 +39,6 @@ export interface MedicineLog {
 }
 
 export interface CreateMedicineLogInput {
-  medicineId: string;
   timestamp: string;
   givenBy?: string | null;
   notes?: string | null;
@@ -100,6 +99,7 @@ export interface PediatricianNote {
   userId: string;
   date: string;
   concern: string;
+  notes: string | null;
   isResolved: boolean;
   resolution: string | null;
   resolvedDate: string | null;
@@ -110,6 +110,7 @@ export interface PediatricianNote {
 export interface CreatePediatricianNoteInput {
   date: string;
   concern: string;
+  notes?: string | null;
   isResolved?: boolean;
   resolution?: string | null;
 }
