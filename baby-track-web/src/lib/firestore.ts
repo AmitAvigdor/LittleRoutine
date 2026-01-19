@@ -349,6 +349,40 @@ export async function createSleepSession(
   return docRef.id;
 }
 
+// Create a complete sleep session (for manual entry)
+export async function createCompleteSleepSession(
+  babyId: string,
+  userId: string,
+  input: {
+    startTime: string;
+    endTime: string;
+    type: 'nap' | 'night';
+    notes?: string | null;
+    babyMood?: BabyMood | null;
+  }
+): Promise<string> {
+  const now = new Date().toISOString();
+  const startTime = new Date(input.startTime);
+  const endTime = new Date(input.endTime);
+  const duration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
+
+  const docRef = await addDoc(collection(db, 'sleepSessions'), {
+    babyId,
+    userId,
+    startTime: input.startTime,
+    endTime: input.endTime,
+    type: input.type,
+    date: startTime.toISOString().split('T')[0],
+    duration,
+    isActive: false,
+    notes: input.notes || null,
+    babyMood: input.babyMood || null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return docRef.id;
+}
+
 export async function endSleepSession(
   sessionId: string,
   endTime: string,

@@ -4,15 +4,22 @@ import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Timer } from '@/components/ui/Timer';
 import { Button } from '@/components/ui/Button';
-import { Textarea } from '@/components/ui/Input';
+import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
 import { BabyMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
 import { SleepSession, SleepType, BabyMood, SLEEP_TYPE_CONFIG, formatSleepDuration } from '@/types';
-import { createSleepSession, endSleepSession, subscribeToSleepSessions } from '@/lib/firestore';
+import { createSleepSession, endSleepSession, createCompleteSleepSession, subscribeToSleepSessions } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { clsx } from 'clsx';
-import { Moon, Sun, Clock, Bed } from 'lucide-react';
+import { Moon, Sun, Clock, Bed, Timer as TimerIcon, Edit3 } from 'lucide-react';
+
+type EntryMode = 'timer' | 'manual';
+
+const entryModeOptions = [
+  { value: 'timer', label: 'Timer', icon: <TimerIcon className="w-4 h-4" /> },
+  { value: 'manual', label: 'Manual', icon: <Edit3 className="w-4 h-4" /> },
+];
 
 const typeOptions = [
   { value: 'nap', label: 'Nap', icon: <Sun className="w-4 h-4" />, color: SLEEP_TYPE_CONFIG.nap.color },
@@ -31,6 +38,12 @@ export function SleepView() {
   const [babyMood, setBabyMood] = useState<BabyMood | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Entry mode state
+  const [entryMode, setEntryMode] = useState<EntryMode>('timer');
+  const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
+  const [manualStartTime, setManualStartTime] = useState(format(new Date(), 'HH:mm'));
+  const [manualDuration, setManualDuration] = useState('');
 
   // Subscribe to sessions
   useEffect(() => {
@@ -96,6 +109,36 @@ export function SleepView() {
     }
   };
 
+  const handleManualSave = async () => {
+    if (!user || !selectedBaby || !manualDuration) return;
+
+    setSaving(true);
+    try {
+      const startTime = new Date(`${manualDate}T${manualStartTime}`);
+      const durationMinutes = parseInt(manualDuration, 10);
+      const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000);
+
+      await createCompleteSleepSession(selectedBaby.id, user.uid, {
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        type: sleepType,
+        notes: notes || null,
+        babyMood,
+      });
+
+      // Reset form
+      setManualDate(new Date().toISOString().split('T')[0]);
+      setManualStartTime(format(new Date(), 'HH:mm'));
+      setManualDuration('');
+      setNotes('');
+      setBabyMood(null);
+    } catch (error) {
+      console.error('Error saving sleep session:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleCancel = () => {
     setShowForm(false);
     // Resume timer
@@ -118,6 +161,17 @@ export function SleepView() {
       <Header title="Sleep" />
 
       <div className="px-4 py-4 space-y-4">
+        {/* Entry Mode Toggle */}
+        {!isTimerRunning && !showForm && (
+          <div className="flex justify-center">
+            <SegmentedControl
+              options={entryModeOptions}
+              value={entryMode}
+              onChange={(value) => setEntryMode(value as EntryMode)}
+            />
+          </div>
+        )}
+
         {/* Type Selector */}
         <div className="flex justify-center">
           <SegmentedControl
@@ -127,48 +181,110 @@ export function SleepView() {
           />
         </div>
 
-        {/* Timer Card */}
-        <Card variant="elevated" className="text-center py-8">
-          {!isTimerRunning && !showForm ? (
-            <div>
-              <div className="w-24 h-24 rounded-full mx-auto flex items-center justify-center mb-4"
-                style={{ backgroundColor: `${SLEEP_TYPE_CONFIG[sleepType].color}20` }}
-              >
-                {sleepType === 'nap' ? (
-                  <Sun className="w-12 h-12" style={{ color: SLEEP_TYPE_CONFIG[sleepType].color }} />
-                ) : (
-                  <Moon className="w-12 h-12" style={{ color: SLEEP_TYPE_CONFIG[sleepType].color }} />
-                )}
+        {/* Timer Mode */}
+        {entryMode === 'timer' && (
+          <Card variant="elevated" className="text-center py-8">
+            {!isTimerRunning && !showForm ? (
+              <div>
+                <div className="w-24 h-24 rounded-full mx-auto flex items-center justify-center mb-4"
+                  style={{ backgroundColor: `${SLEEP_TYPE_CONFIG[sleepType].color}20` }}
+                >
+                  {sleepType === 'nap' ? (
+                    <Sun className="w-12 h-12" style={{ color: SLEEP_TYPE_CONFIG[sleepType].color }} />
+                  ) : (
+                    <Moon className="w-12 h-12" style={{ color: SLEEP_TYPE_CONFIG[sleepType].color }} />
+                  )}
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Start {sleepType === 'nap' ? 'Nap' : 'Night Sleep'}
+                </h3>
+                <p className="text-sm text-gray-500 mb-6">
+                  Tap the button to begin tracking
+                </p>
+                <Button
+                  onClick={handleStart}
+                  className="px-8"
+                  style={{ backgroundColor: SLEEP_TYPE_CONFIG[sleepType].color }}
+                >
+                  <Bed className="w-5 h-5 mr-2" />
+                  Start Sleep
+                </Button>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Start {sleepType === 'nap' ? 'Nap' : 'Night Sleep'}
-              </h3>
-              <p className="text-sm text-gray-500 mb-6">
-                Tap the button to begin tracking
-              </p>
+            ) : (
+              <Timer
+                initialSeconds={timerSeconds}
+                isRunning={isTimerRunning}
+                onStop={handleStop}
+                onTimeUpdate={setTimerSeconds}
+                showControls={!showForm}
+                color={SLEEP_TYPE_CONFIG[sleepType].color}
+              />
+            )}
+          </Card>
+        )}
+
+        {/* Manual Entry Mode */}
+        {entryMode === 'manual' && (
+          <Card>
+            <CardHeader
+              title="Log Past Sleep"
+              subtitle={`Enter ${sleepType === 'nap' ? 'nap' : 'night sleep'} details manually`}
+            />
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  type="date"
+                  label="Date"
+                  value={manualDate}
+                  onChange={(e) => setManualDate(e.target.value)}
+                />
+                <Input
+                  type="time"
+                  label="Start Time"
+                  value={manualStartTime}
+                  onChange={(e) => setManualStartTime(e.target.value)}
+                />
+              </div>
+
+              <Input
+                type="number"
+                label="Duration (minutes)"
+                placeholder="e.g. 90"
+                value={manualDuration}
+                onChange={(e) => setManualDuration(e.target.value)}
+                min="1"
+                max="720"
+              />
+
+              <BabyMoodSelector
+                label="Baby's mood when waking"
+                value={babyMood}
+                onChange={setBabyMood}
+              />
+
+              <Textarea
+                label="Notes (optional)"
+                placeholder="Any notes about this sleep..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={2}
+              />
+
               <Button
-                onClick={handleStart}
-                className="px-8"
+                onClick={handleManualSave}
+                className="w-full"
+                disabled={!manualDuration || saving}
                 style={{ backgroundColor: SLEEP_TYPE_CONFIG[sleepType].color }}
               >
-                <Bed className="w-5 h-5 mr-2" />
-                Start Sleep
+                {saving ? 'Saving...' : 'Save Sleep'}
               </Button>
             </div>
-          ) : (
-            <Timer
-              initialSeconds={timerSeconds}
-              isRunning={isTimerRunning}
-              onStop={handleStop}
-              onTimeUpdate={setTimerSeconds}
-              showControls={!showForm}
-              color={SLEEP_TYPE_CONFIG[sleepType].color}
-            />
-          )}
-        </Card>
+          </Card>
+        )}
 
-        {/* Save Form */}
-        {showForm && (
+        {/* Save Form (Timer mode only) */}
+        {showForm && entryMode === 'timer' && (
           <Card>
             <CardHeader
               title="Sleep Ended"
