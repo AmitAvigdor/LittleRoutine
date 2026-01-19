@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
-import { createBaby, updateBaby, deleteBaby, getBaby } from '@/lib/firestore';
+import { createBaby, updateBaby, deleteBaby } from '@/lib/firestore';
 import { uploadBabyPhoto } from '@/lib/storage';
 import { BabyColor, BABY_COLOR_CONFIG } from '@/types';
 import { clsx } from 'clsx';

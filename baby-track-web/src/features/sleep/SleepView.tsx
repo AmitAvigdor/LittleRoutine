@@ -11,7 +11,6 @@ import { SleepSession, SleepType, BabyMood, SLEEP_TYPE_CONFIG, formatSleepDurati
 import { createSleepSession, endSleepSession, createCompleteSleepSession, subscribeToSleepSessions } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
-import { clsx } from 'clsx';
 import { Moon, Sun, Clock, Bed, Timer as TimerIcon, Edit3 } from 'lucide-react';
 
 type EntryMode = 'timer' | 'manual';
@@ -50,10 +49,13 @@ export function SleepView() {
     if (!selectedBaby) return;
     const unsubscribe = subscribeToSleepSessions(selectedBaby.id, setSessions);
     return () => unsubscribe();
-  }, [selectedBaby?.id]);
+  }, [selectedBaby]);
 
   // Check for active session on load
   useEffect(() => {
+    // Don't override local state if user has already stopped the timer (showForm is true)
+    if (showForm) return;
+
     const activeSession = sessions.find((s) => s.isActive);
     if (activeSession) {
       setActiveSessionId(activeSession.id);
@@ -64,7 +66,7 @@ export function SleepView() {
       const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
       setTimerSeconds(elapsed);
     }
-  }, [sessions]);
+  }, [sessions, showForm]);
 
   const handleStart = useCallback(async () => {
     if (!user || !selectedBaby) return;

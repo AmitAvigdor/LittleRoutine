@@ -37,6 +37,14 @@ export function Timer({
     }
   }, [externalIsRunning]);
 
+  // Sync seconds when initialSeconds changes (e.g., when resuming an active session)
+  useEffect(() => {
+    // Only sync if timer is not running to avoid interfering with active counting
+    if (!isRunning) {
+      setSeconds(initialSeconds);
+    }
+  }, [initialSeconds, isRunning]);
+
   useEffect(() => {
     let interval: number | undefined;
 

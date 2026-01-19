@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format, isToday, parseISO } from 'date-fns';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
@@ -28,13 +28,23 @@ export function DiaperView() {
   const [showForm, setShowForm] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const saveTimeoutRef = useRef<number | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Subscribe to changes
   useEffect(() => {
     if (!selectedBaby) return;
     const unsubscribe = subscribeToDiaperChanges(selectedBaby.id, setChanges);
     return () => unsubscribe();
-  }, [selectedBaby?.id]);
+  }, [selectedBaby]);
 
   const handleQuickLog = async (type: DiaperType) => {
     if (!user || !selectedBaby) return;
@@ -49,7 +59,8 @@ export function DiaperView() {
 
       // Show feedback
       setJustSaved(true);
-      setTimeout(() => setJustSaved(false), 1500);
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = window.setTimeout(() => setJustSaved(false), 1500);
     } catch (error) {
       console.error('Error saving diaper change:', error);
     }
@@ -78,7 +89,8 @@ export function DiaperView() {
       setBabyMood(null);
       setShowForm(false);
       setJustSaved(true);
-      setTimeout(() => setJustSaved(false), 1500);
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = window.setTimeout(() => setJustSaved(false), 1500);
     } catch (error) {
       console.error('Error saving diaper change:', error);
     } finally {

@@ -10,7 +10,6 @@ import { Baby, PumpSession, PumpSide, MomMood, VolumeUnit, PUMP_SIDE_CONFIG, for
 import { createPumpSession, subscribeToPumpSessions } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
-import { clsx } from 'clsx';
 import { Clock, Droplet, Timer as TimerIcon, Edit3 } from 'lucide-react';
 
 type EntryMode = 'timer' | 'manual';

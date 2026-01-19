@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, parseISO, isWithinInterval, subDays } from 'date-fns';
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, parseISO, isWithinInterval } from 'date-fns';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
 import { SegmentedControl } from '@/components/ui/Select';
@@ -13,8 +13,7 @@ import {
   subscribeToDiaperChanges,
 } from '@/lib/firestore';
 import { FeedingSession, PumpSession, BottleSession, SleepSession, DiaperChange, formatDuration, formatSleepDuration, convertVolume } from '@/types';
-import { clsx } from 'clsx';
-import { Droplet, Moon, Leaf, Milk, Baby, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Droplet, Moon, Leaf, Milk, Baby } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -36,7 +35,7 @@ const filterOptions = [
 ];
 
 export function StatsView() {
-  const { user } = useAuth();
+  useAuth(); // Ensure user is authenticated
   const { selectedBaby, babies, settings } = useAppStore();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('today');
 
@@ -63,7 +62,7 @@ export function StatsView() {
     ];
 
     return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
-  }, [selectedBaby?.id]);
+  }, [selectedBaby]);
 
   // Calculate date range
   const dateRange = useMemo(() => {
