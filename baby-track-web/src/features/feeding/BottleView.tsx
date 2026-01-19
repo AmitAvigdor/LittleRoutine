@@ -32,6 +32,7 @@ export function BottleView({ baby }: BottleViewProps) {
   const [notes, setNotes] = useState('');
   const [babyMood, setBabyMood] = useState<BabyMood | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Subscribe to sessions
   useEffect(() => {
@@ -53,20 +54,27 @@ export function BottleView({ baby }: BottleViewProps) {
   const handleSave = async () => {
     if (!user || !volume) return;
 
-    await createBottleSession(baby.id, user.uid, {
-      timestamp: new Date().toISOString(),
-      volume: parseFloat(volume),
-      volumeUnit,
-      contentType,
-      notes: notes || null,
-      babyMood,
-    });
+    setSaving(true);
+    try {
+      await createBottleSession(baby.id, user.uid, {
+        timestamp: new Date().toISOString(),
+        volume: parseFloat(volume),
+        volumeUnit,
+        contentType,
+        notes: notes || null,
+        babyMood,
+      });
 
-    // Reset form
-    setVolume('');
-    setNotes('');
-    setBabyMood(null);
-    setShowForm(false);
+      // Reset form only on success
+      setVolume('');
+      setNotes('');
+      setBabyMood(null);
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error saving bottle session:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -180,11 +188,11 @@ export function BottleView({ baby }: BottleViewProps) {
             />
 
             <div className="flex gap-3">
-              <Button variant="outline" onClick={handleCancel} className="flex-1">
+              <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
                 Cancel
               </Button>
-              <Button onClick={handleSave} className="flex-1" disabled={!volume}>
-                Save
+              <Button onClick={handleSave} className="flex-1" disabled={!volume || saving}>
+                {saving ? 'Saving...' : 'Save'}
               </Button>
             </div>
           </div>

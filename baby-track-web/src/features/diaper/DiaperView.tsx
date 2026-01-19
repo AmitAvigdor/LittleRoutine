@@ -27,6 +27,7 @@ export function DiaperView() {
   const [babyMood, setBabyMood] = useState<BabyMood | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Subscribe to changes
   useEffect(() => {
@@ -38,16 +39,20 @@ export function DiaperView() {
   const handleQuickLog = async (type: DiaperType) => {
     if (!user || !selectedBaby) return;
 
-    await createDiaperChange(selectedBaby.id, user.uid, {
-      type,
-      timestamp: new Date().toISOString(),
-      notes: null,
-      babyMood: null,
-    });
+    try {
+      await createDiaperChange(selectedBaby.id, user.uid, {
+        type,
+        timestamp: new Date().toISOString(),
+        notes: null,
+        babyMood: null,
+      });
 
-    // Show feedback
-    setJustSaved(true);
-    setTimeout(() => setJustSaved(false), 1500);
+      // Show feedback
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 1500);
+    } catch (error) {
+      console.error('Error saving diaper change:', error);
+    }
   };
 
   const handleDetailedLog = (type: DiaperType) => {
@@ -58,20 +63,27 @@ export function DiaperView() {
   const handleSave = async () => {
     if (!user || !selectedBaby || !selectedType) return;
 
-    await createDiaperChange(selectedBaby.id, user.uid, {
-      type: selectedType,
-      timestamp: new Date().toISOString(),
-      notes: notes || null,
-      babyMood,
-    });
+    setSaving(true);
+    try {
+      await createDiaperChange(selectedBaby.id, user.uid, {
+        type: selectedType,
+        timestamp: new Date().toISOString(),
+        notes: notes || null,
+        babyMood,
+      });
 
-    // Reset form
-    setSelectedType(null);
-    setNotes('');
-    setBabyMood(null);
-    setShowForm(false);
-    setJustSaved(true);
-    setTimeout(() => setJustSaved(false), 1500);
+      // Reset form only on success
+      setSelectedType(null);
+      setNotes('');
+      setBabyMood(null);
+      setShowForm(false);
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 1500);
+    } catch (error) {
+      console.error('Error saving diaper change:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -188,11 +200,11 @@ export function DiaperView() {
               />
 
               <div className="flex gap-3">
-                <Button variant="outline" onClick={handleCancel} className="flex-1">
+                <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
                   Cancel
                 </Button>
-                <Button onClick={handleSave} className="flex-1">
-                  Save
+                <Button onClick={handleSave} className="flex-1" disabled={saving}>
+                  {saving ? 'Saving...' : 'Save'}
                 </Button>
               </div>
             </div>

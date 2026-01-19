@@ -30,6 +30,7 @@ import type {
   DiaryEntry, CreateDiaryEntryInput,
   PediatricianNote, CreatePediatricianNoteInput,
   AppSettings, UpdateAppSettingsInput,
+  BabyMood,
 } from '@/types';
 import { DEFAULT_SETTINGS, calculateMilkExpiration } from '@/types';
 
@@ -352,10 +353,12 @@ export async function endSleepSession(
   sessionId: string,
   endTime: string,
   notes?: string | null,
-  babyMood?: string | null
+  babyMood?: BabyMood | null
 ): Promise<void> {
   const docSnap = await getDoc(doc(db, 'sleepSessions', sessionId));
-  if (!docSnap.exists()) return;
+  if (!docSnap.exists()) {
+    throw new Error(`Sleep session ${sessionId} not found`);
+  }
 
   const session = docSnap.data();
   const startTime = new Date(session.startTime);

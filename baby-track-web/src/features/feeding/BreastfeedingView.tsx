@@ -26,6 +26,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
   const [babyMood, setBabyMood] = useState<BabyMood | null>(null);
   const [momMood, setMomMood] = useState<MomMood | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Subscribe to sessions
   useEffect(() => {
@@ -72,18 +73,25 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
   const handleSave = async () => {
     if (!user || !startTime) return;
 
-    const endTime = new Date(startTime.getTime() + timerSeconds * 1000);
+    setSaving(true);
+    try {
+      const endTime = new Date(startTime.getTime() + timerSeconds * 1000);
 
-    await createFeedingSession(baby.id, user.uid, {
-      breastSide: selectedSide,
-      startTime: startTime.toISOString(),
-      endTime: endTime.toISOString(),
-      notes: notes || null,
-      babyMood,
-      momMood,
-    });
+      await createFeedingSession(baby.id, user.uid, {
+        breastSide: selectedSide,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        notes: notes || null,
+        babyMood,
+        momMood,
+      });
 
-    handleReset();
+      handleReset();
+    } catch (error) {
+      console.error('Error saving feeding session:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Today's stats
@@ -201,11 +209,11 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
             />
 
             <div className="flex gap-3">
-              <Button variant="outline" onClick={handleReset} className="flex-1">
+              <Button variant="outline" onClick={handleReset} className="flex-1" disabled={saving}>
                 Cancel
               </Button>
-              <Button onClick={handleSave} className="flex-1">
-                Save Session
+              <Button onClick={handleSave} className="flex-1" disabled={saving}>
+                {saving ? 'Saving...' : 'Save Session'}
               </Button>
             </div>
           </div>

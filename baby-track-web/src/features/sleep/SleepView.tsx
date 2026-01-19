@@ -30,6 +30,7 @@ export function SleepView() {
   const [notes, setNotes] = useState('');
   const [babyMood, setBabyMood] = useState<BabyMood | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Subscribe to sessions
   useEffect(() => {
@@ -73,19 +74,26 @@ export function SleepView() {
   const handleSave = async () => {
     if (!activeSessionId) return;
 
-    await endSleepSession(
-      activeSessionId,
-      new Date().toISOString(),
-      notes || null,
-      babyMood
-    );
+    setSaving(true);
+    try {
+      await endSleepSession(
+        activeSessionId,
+        new Date().toISOString(),
+        notes || null,
+        babyMood
+      );
 
-    // Reset
-    setActiveSessionId(null);
-    setTimerSeconds(0);
-    setNotes('');
-    setBabyMood(null);
-    setShowForm(false);
+      // Reset only on success
+      setActiveSessionId(null);
+      setTimerSeconds(0);
+      setNotes('');
+      setBabyMood(null);
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error saving sleep session:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -183,11 +191,11 @@ export function SleepView() {
               />
 
               <div className="flex gap-3">
-                <Button variant="outline" onClick={handleCancel} className="flex-1">
+                <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
                   Resume
                 </Button>
-                <Button onClick={handleSave} className="flex-1">
-                  Save
+                <Button onClick={handleSave} className="flex-1" disabled={saving}>
+                  {saving ? 'Saving...' : 'Save'}
                 </Button>
               </div>
             </div>
