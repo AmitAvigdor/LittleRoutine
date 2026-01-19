@@ -11,7 +11,14 @@ import { createPumpSession, subscribeToPumpSessions } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { clsx } from 'clsx';
-import { Clock, Droplet } from 'lucide-react';
+import { Clock, Droplet, Timer as TimerIcon, Edit3 } from 'lucide-react';
+
+type EntryMode = 'timer' | 'manual';
+
+const entryModeOptions = [
+  { value: 'timer', label: 'Timer', icon: <TimerIcon className="w-4 h-4" /> },
+  { value: 'manual', label: 'Manual', icon: <Edit3 className="w-4 h-4" /> },
+];
 
 interface PumpViewProps {
   baby: Baby;
@@ -37,6 +44,12 @@ export function PumpView({ baby }: PumpViewProps) {
   const [momMood, setMomMood] = useState<MomMood | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Entry mode state
+  const [entryMode, setEntryMode] = useState<EntryMode>('timer');
+  const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
+  const [manualTime, setManualTime] = useState(format(new Date(), 'HH:mm'));
+  const [manualDuration, setManualDuration] = useState('');
 
   // Subscribe to sessions
   useEffect(() => {
@@ -74,18 +87,37 @@ export function PumpView({ baby }: PumpViewProps) {
     setVolume('');
     setNotes('');
     setMomMood(null);
+    // Reset manual entry fields
+    setManualDate(new Date().toISOString().split('T')[0]);
+    setManualTime(format(new Date(), 'HH:mm'));
+    setManualDuration('');
   }, []);
 
   const handleSave = async () => {
-    if (!user || !startTime) return;
+    if (!user) return;
+
+    // For timer mode, we need startTime; for manual mode, we need duration
+    if (entryMode === 'timer' && !startTime) return;
+    if (entryMode === 'manual' && !manualDuration) return;
 
     setSaving(true);
     try {
-      const endTime = new Date(startTime.getTime() + timerSeconds * 1000);
+      let sessionStartTime: Date;
+      let sessionEndTime: Date;
+
+      if (entryMode === 'timer') {
+        sessionStartTime = startTime!;
+        sessionEndTime = new Date(startTime!.getTime() + timerSeconds * 1000);
+      } else {
+        // Manual entry
+        sessionStartTime = new Date(`${manualDate}T${manualTime}`);
+        const durationMinutes = parseInt(manualDuration, 10);
+        sessionEndTime = new Date(sessionStartTime.getTime() + durationMinutes * 60 * 1000);
+      }
 
       await createPumpSession(baby.id, user.uid, {
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
+        startTime: sessionStartTime.toISOString(),
+        endTime: sessionEndTime.toISOString(),
         side: selectedSide,
         volume: parseFloat(volume) || 0,
         volumeUnit,
@@ -110,6 +142,17 @@ export function PumpView({ baby }: PumpViewProps) {
 
   return (
     <div className="space-y-4">
+      {/* Entry Mode Toggle */}
+      {!isTimerRunning && !showForm && (
+        <div className="flex justify-center">
+          <SegmentedControl
+            options={entryModeOptions}
+            value={entryMode}
+            onChange={(value) => setEntryMode(value as EntryMode)}
+          />
+        </div>
+      )}
+
       {/* Side Selector */}
       <div className="flex justify-center">
         <SegmentedControl
@@ -119,19 +162,101 @@ export function PumpView({ baby }: PumpViewProps) {
         />
       </div>
 
-      {/* Timer */}
-      <Card variant="elevated" className="text-center py-8">
-        <Timer
-          initialSeconds={timerSeconds}
-          isRunning={isTimerRunning}
-          onStart={handleStart}
-          onPause={handlePause}
-          onStop={handleStop}
-          onReset={handleReset}
-          onTimeUpdate={setTimerSeconds}
-          color={PUMP_SIDE_CONFIG[selectedSide].color}
-        />
-      </Card>
+      {/* Timer Mode */}
+      {entryMode === 'timer' && (
+        <Card variant="elevated" className="text-center py-8">
+          <Timer
+            initialSeconds={timerSeconds}
+            isRunning={isTimerRunning}
+            onStart={handleStart}
+            onPause={handlePause}
+            onStop={handleStop}
+            onReset={handleReset}
+            onTimeUpdate={setTimerSeconds}
+            color={PUMP_SIDE_CONFIG[selectedSide].color}
+          />
+        </Card>
+      )}
+
+      {/* Manual Entry Mode */}
+      {entryMode === 'manual' && !showForm && (
+        <Card>
+          <CardHeader title="Log Past Session" subtitle="Enter pumping details manually" />
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                type="date"
+                label="Date"
+                value={manualDate}
+                onChange={(e) => setManualDate(e.target.value)}
+              />
+              <Input
+                type="time"
+                label="Start Time"
+                value={manualTime}
+                onChange={(e) => setManualTime(e.target.value)}
+              />
+            </div>
+
+            <Input
+              type="number"
+              label="Duration (minutes)"
+              placeholder="e.g. 20"
+              value={manualDuration}
+              onChange={(e) => setManualDuration(e.target.value)}
+              min="1"
+              max="120"
+            />
+
+            <div className="flex gap-3">
+              <Input
+                type="number"
+                label="Volume"
+                placeholder="0"
+                value={volume}
+                onChange={(e) => setVolume(e.target.value)}
+                className="flex-1"
+                step="0.5"
+                min="0"
+              />
+              <div className="w-24 pt-6">
+                <SegmentedControl
+                  options={[
+                    { value: 'oz', label: 'oz' },
+                    { value: 'ml', label: 'ml' },
+                  ]}
+                  value={volumeUnit}
+                  onChange={(value) => setVolumeUnit(value as VolumeUnit)}
+                  size="sm"
+                />
+              </div>
+            </div>
+
+            <MomMoodSelector
+              label="Your mood"
+              value={momMood}
+              onChange={setMomMood}
+            />
+
+            <Textarea
+              label="Notes (optional)"
+              placeholder="Any notes about this session..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+            />
+
+            <Button
+              onClick={handleSave}
+              className="w-full"
+              disabled={!manualDuration || saving}
+            >
+              {saving ? 'Saving...' : 'Save Session'}
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* Save Form */}
       {showForm && (

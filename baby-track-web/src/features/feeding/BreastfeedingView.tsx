@@ -3,13 +3,21 @@ import { format, isToday, parseISO } from 'date-fns';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Timer } from '@/components/ui/Timer';
 import { Button } from '@/components/ui/Button';
-import { Textarea } from '@/components/ui/Input';
+import { Input, Textarea } from '@/components/ui/Input';
+import { SegmentedControl } from '@/components/ui/Select';
 import { BabyMoodSelector, MomMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
 import { Baby, FeedingSession, BreastSide, BabyMood, MomMood, BREAST_SIDE_CONFIG, formatDuration } from '@/types';
 import { createFeedingSession, subscribeToFeedingSessions } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { clsx } from 'clsx';
-import { Clock, ChevronRight } from 'lucide-react';
+import { Clock, ChevronRight, Timer as TimerIcon, Edit3 } from 'lucide-react';
+
+type EntryMode = 'timer' | 'manual';
+
+const entryModeOptions = [
+  { value: 'timer', label: 'Timer', icon: <TimerIcon className="w-4 h-4" /> },
+  { value: 'manual', label: 'Manual', icon: <Edit3 className="w-4 h-4" /> },
+];
 
 interface BreastfeedingViewProps {
   baby: Baby;
@@ -27,6 +35,12 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
   const [momMood, setMomMood] = useState<MomMood | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Entry mode state
+  const [entryMode, setEntryMode] = useState<EntryMode>('timer');
+  const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
+  const [manualTime, setManualTime] = useState(format(new Date(), 'HH:mm'));
+  const [manualDuration, setManualDuration] = useState('');
 
   // Subscribe to sessions
   useEffect(() => {
@@ -68,19 +82,38 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
     setNotes('');
     setBabyMood(null);
     setMomMood(null);
+    // Reset manual entry fields
+    setManualDate(new Date().toISOString().split('T')[0]);
+    setManualTime(format(new Date(), 'HH:mm'));
+    setManualDuration('');
   }, []);
 
   const handleSave = async () => {
-    if (!user || !startTime) return;
+    if (!user) return;
+
+    // For timer mode, we need startTime; for manual mode, we need duration
+    if (entryMode === 'timer' && !startTime) return;
+    if (entryMode === 'manual' && !manualDuration) return;
 
     setSaving(true);
     try {
-      const endTime = new Date(startTime.getTime() + timerSeconds * 1000);
+      let sessionStartTime: Date;
+      let sessionEndTime: Date;
+
+      if (entryMode === 'timer') {
+        sessionStartTime = startTime!;
+        sessionEndTime = new Date(startTime!.getTime() + timerSeconds * 1000);
+      } else {
+        // Manual entry
+        sessionStartTime = new Date(`${manualDate}T${manualTime}`);
+        const durationMinutes = parseInt(manualDuration, 10);
+        sessionEndTime = new Date(sessionStartTime.getTime() + durationMinutes * 60 * 1000);
+      }
 
       await createFeedingSession(baby.id, user.uid, {
         breastSide: selectedSide,
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
+        startTime: sessionStartTime.toISOString(),
+        endTime: sessionEndTime.toISOString(),
         notes: notes || null,
         babyMood,
         momMood,
@@ -100,8 +133,19 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
 
   return (
     <div className="space-y-4">
+      {/* Entry Mode Toggle */}
+      {!isTimerRunning && !showForm && (
+        <div className="flex justify-center">
+          <SegmentedControl
+            options={entryModeOptions}
+            value={entryMode}
+            onChange={(value) => setEntryMode(value as EntryMode)}
+          />
+        </div>
+      )}
+
       {/* Last Session Card */}
-      {lastSession && !isTimerRunning && !showForm && (
+      {lastSession && !isTimerRunning && !showForm && entryMode === 'timer' && (
         <Card className="border-l-4" style={{ borderLeftColor: BREAST_SIDE_CONFIG[lastSession.breastSide].color }}>
           <div className="flex items-center justify-between">
             <div>
@@ -168,19 +212,83 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
         })}
       </div>
 
-      {/* Timer */}
-      <Card variant="elevated" className="text-center py-8">
-        <Timer
-          initialSeconds={timerSeconds}
-          isRunning={isTimerRunning}
-          onStart={handleStart}
-          onPause={handlePause}
-          onStop={handleStop}
-          onReset={handleReset}
-          onTimeUpdate={setTimerSeconds}
-          color={BREAST_SIDE_CONFIG[selectedSide].color}
-        />
-      </Card>
+      {/* Timer Mode */}
+      {entryMode === 'timer' && (
+        <Card variant="elevated" className="text-center py-8">
+          <Timer
+            initialSeconds={timerSeconds}
+            isRunning={isTimerRunning}
+            onStart={handleStart}
+            onPause={handlePause}
+            onStop={handleStop}
+            onReset={handleReset}
+            onTimeUpdate={setTimerSeconds}
+            color={BREAST_SIDE_CONFIG[selectedSide].color}
+          />
+        </Card>
+      )}
+
+      {/* Manual Entry Mode */}
+      {entryMode === 'manual' && !showForm && (
+        <Card>
+          <CardHeader title="Log Past Feeding" subtitle="Enter feeding details manually" />
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                type="date"
+                label="Date"
+                value={manualDate}
+                onChange={(e) => setManualDate(e.target.value)}
+              />
+              <Input
+                type="time"
+                label="Start Time"
+                value={manualTime}
+                onChange={(e) => setManualTime(e.target.value)}
+              />
+            </div>
+
+            <Input
+              type="number"
+              label="Duration (minutes)"
+              placeholder="e.g. 15"
+              value={manualDuration}
+              onChange={(e) => setManualDuration(e.target.value)}
+              min="1"
+              max="120"
+            />
+
+            <BabyMoodSelector
+              label="Baby's mood"
+              value={babyMood}
+              onChange={setBabyMood}
+            />
+
+            <MomMoodSelector
+              label="Your mood"
+              value={momMood}
+              onChange={setMomMood}
+            />
+
+            <Textarea
+              label="Notes (optional)"
+              placeholder="Any notes about this session..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+            />
+
+            <Button
+              onClick={handleSave}
+              className="w-full"
+              disabled={!manualDuration || saving}
+            >
+              {saving ? 'Saving...' : 'Save Session'}
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* Save Form */}
       {showForm && (
