@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
 import { BabyMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
+import { EditSessionModal } from '@/components/ui/EditSessionModal';
 import { SleepSession, SleepType, BabyMood, SLEEP_TYPE_CONFIG, formatSleepDuration } from '@/types';
 import { createSleepSession, endSleepSession, createCompleteSleepSession, subscribeToSleepSessions } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -44,6 +45,9 @@ export function SleepView() {
   const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
   const [manualStartTime, setManualStartTime] = useState(format(new Date(), 'HH:mm'));
   const [manualDuration, setManualDuration] = useState('');
+
+  // Edit modal state
+  const [selectedSession, setSelectedSession] = useState<SleepSession | null>(null);
 
   // Subscribe to sessions
   useEffect(() => {
@@ -367,9 +371,10 @@ export function SleepView() {
             </div>
             <div className="divide-y divide-gray-50">
               {sessions.filter(s => !s.isActive).slice(0, 5).map((session) => (
-                <div
+                <button
                   key={session.id}
-                  className="px-4 py-3 flex items-center gap-3"
+                  onClick={() => setSelectedSession(session)}
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
                 >
                   <div
                     className="w-10 h-10 rounded-full flex items-center justify-center text-white"
@@ -393,10 +398,20 @@ export function SleepView() {
                     </div>
                   </div>
                   <MoodIndicator babyMood={session.babyMood} size="sm" />
-                </div>
+                </button>
               ))}
             </div>
           </Card>
+        )}
+
+        {/* Edit Session Modal */}
+        {selectedSession && (
+          <EditSessionModal
+            isOpen={!!selectedSession}
+            onClose={() => setSelectedSession(null)}
+            sessionType="sleep"
+            session={selectedSession}
+          />
         )}
       </div>
     </div>

@@ -9,7 +9,8 @@ export interface FeedingSession {
   duration: number; // seconds
   breastSide: BreastSide;
   startTime: string; // ISO datetime
-  endTime: string; // ISO datetime
+  endTime: string | null; // ISO datetime, null when session is active
+  isActive: boolean;
   notes: string | null;
   babyMood: BabyMood | null;
   momMood: MomMood | null;
@@ -36,7 +37,8 @@ export interface PumpSession {
   date: string;
   duration: number; // seconds
   startTime: string;
-  endTime: string;
+  endTime: string | null; // null when session is active
+  isActive: boolean;
   side: PumpSide;
   volume: number;
   volumeUnit: VolumeUnit;

@@ -31,6 +31,7 @@ import type {
   PediatricianNote, CreatePediatricianNoteInput,
   AppSettings, UpdateAppSettingsInput,
   BabyMood,
+  MomMood,
 } from '@/types';
 import { DEFAULT_SETTINGS, calculateMilkExpiration } from '@/types';
 
@@ -158,6 +159,68 @@ export async function setActiveBaby(userId: string, babyId: string): Promise<voi
 }
 
 // ============ FEEDING SESSIONS ============
+
+// Start a new feeding session (timer mode)
+export async function startFeedingSession(
+  babyId: string,
+  userId: string,
+  input: {
+    startTime: string;
+    breastSide: 'left' | 'right';
+  }
+): Promise<string> {
+  const now = new Date().toISOString();
+  const startTime = new Date(input.startTime);
+
+  const docRef = await addDoc(collection(db, 'feedingSessions'), {
+    babyId,
+    userId,
+    breastSide: input.breastSide,
+    startTime: input.startTime,
+    endTime: null,
+    date: startTime.toISOString().split('T')[0],
+    duration: 0,
+    isActive: true,
+    notes: null,
+    babyMood: null,
+    momMood: null,
+    loggedBy: null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return docRef.id;
+}
+
+// End an active feeding session
+export async function endFeedingSession(
+  sessionId: string,
+  endTime: string,
+  notes?: string | null,
+  babyMood?: BabyMood | null,
+  momMood?: MomMood | null
+): Promise<void> {
+  const docSnap = await getDoc(doc(db, 'feedingSessions', sessionId));
+  if (!docSnap.exists()) {
+    throw new Error(`Feeding session ${sessionId} not found`);
+  }
+
+  const session = docSnap.data();
+  const startTime = new Date(session.startTime);
+  const end = new Date(endTime);
+  const duration = Math.floor((end.getTime() - startTime.getTime()) / 1000);
+
+  await updateDoc(doc(db, 'feedingSessions', sessionId), {
+    endTime,
+    duration,
+    isActive: false,
+    notes: notes ?? session.notes ?? null,
+    babyMood: babyMood ?? session.babyMood ?? null,
+    momMood: momMood ?? session.momMood ?? null,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+// Create a complete feeding session (manual entry)
 export async function createFeedingSession(
   babyId: string,
   userId: string,
@@ -174,6 +237,7 @@ export async function createFeedingSession(
     userId,
     date: startTime.toISOString().split('T')[0],
     duration,
+    isActive: false,
     createdAt: now,
     updatedAt: now,
   });
@@ -195,6 +259,71 @@ export function subscribeToFeedingSessions(
 }
 
 // ============ PUMP SESSIONS ============
+
+// Start a new pump session (timer mode)
+export async function startPumpSession(
+  babyId: string,
+  userId: string,
+  input: {
+    startTime: string;
+    side: 'left' | 'right' | 'both';
+    volumeUnit: 'oz' | 'ml';
+  }
+): Promise<string> {
+  const now = new Date().toISOString();
+  const startTime = new Date(input.startTime);
+
+  const docRef = await addDoc(collection(db, 'pumpSessions'), {
+    babyId,
+    userId,
+    side: input.side,
+    startTime: input.startTime,
+    endTime: null,
+    date: startTime.toISOString().split('T')[0],
+    duration: 0,
+    volume: 0,
+    volumeUnit: input.volumeUnit,
+    isActive: true,
+    notes: null,
+    momMood: null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return docRef.id;
+}
+
+// End an active pump session
+export async function endPumpSession(
+  sessionId: string,
+  endTime: string,
+  volume: number,
+  volumeUnit: 'oz' | 'ml',
+  notes?: string | null,
+  momMood?: MomMood | null
+): Promise<void> {
+  const docSnap = await getDoc(doc(db, 'pumpSessions', sessionId));
+  if (!docSnap.exists()) {
+    throw new Error(`Pump session ${sessionId} not found`);
+  }
+
+  const session = docSnap.data();
+  const startTime = new Date(session.startTime);
+  const end = new Date(endTime);
+  const duration = Math.floor((end.getTime() - startTime.getTime()) / 1000);
+
+  await updateDoc(doc(db, 'pumpSessions', sessionId), {
+    endTime,
+    duration,
+    volume,
+    volumeUnit,
+    isActive: false,
+    notes: notes ?? session.notes ?? null,
+    momMood: momMood ?? session.momMood ?? null,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+// Create a complete pump session (manual entry)
 export async function createPumpSession(
   babyId: string,
   userId: string,
@@ -211,6 +340,7 @@ export async function createPumpSession(
     userId,
     date: startTime.toISOString().split('T')[0],
     duration,
+    isActive: false,
     createdAt: now,
     updatedAt: now,
   });
@@ -905,7 +1035,141 @@ export function subscribeToSettings(
   });
 }
 
-// ============ DELETE OPERATIONS ============
+// ============ UPDATE SESSION OPERATIONS ============
+
+// Update a sleep session
+export async function updateSleepSession(
+  sessionId: string,
+  updates: {
+    startTime?: string;
+    endTime?: string | null;
+    type?: 'nap' | 'night';
+    notes?: string | null;
+    babyMood?: BabyMood | null;
+  }
+): Promise<void> {
+  const docSnap = await getDoc(doc(db, 'sleepSessions', sessionId));
+  if (!docSnap.exists()) {
+    throw new Error(`Sleep session ${sessionId} not found`);
+  }
+
+  const session = docSnap.data();
+  const startTime = updates.startTime ? new Date(updates.startTime) : new Date(session.startTime);
+  const endTime = updates.endTime ? new Date(updates.endTime) : (session.endTime ? new Date(session.endTime) : null);
+
+  const duration = endTime
+    ? Math.floor((endTime.getTime() - startTime.getTime()) / 1000)
+    : session.duration;
+
+  await updateDoc(doc(db, 'sleepSessions', sessionId), {
+    ...updates,
+    date: startTime.toISOString().split('T')[0],
+    duration,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+// Update a feeding (breastfeeding) session
+export async function updateFeedingSession(
+  sessionId: string,
+  updates: {
+    startTime?: string;
+    endTime?: string;
+    breastSide?: 'left' | 'right';
+    notes?: string | null;
+    babyMood?: BabyMood | null;
+    momMood?: MomMood | null;
+  }
+): Promise<void> {
+  const docSnap = await getDoc(doc(db, 'feedingSessions', sessionId));
+  if (!docSnap.exists()) {
+    throw new Error(`Feeding session ${sessionId} not found`);
+  }
+
+  const session = docSnap.data();
+  const startTime = updates.startTime ? new Date(updates.startTime) : new Date(session.startTime);
+  const endTime = updates.endTime ? new Date(updates.endTime) : new Date(session.endTime);
+  const duration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
+
+  await updateDoc(doc(db, 'feedingSessions', sessionId), {
+    ...updates,
+    date: startTime.toISOString().split('T')[0],
+    duration,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+// Update a pump session
+export async function updatePumpSession(
+  sessionId: string,
+  updates: {
+    startTime?: string;
+    endTime?: string;
+    side?: 'left' | 'right' | 'both';
+    volume?: number;
+    volumeUnit?: 'oz' | 'ml';
+    notes?: string | null;
+    momMood?: MomMood | null;
+  }
+): Promise<void> {
+  const docSnap = await getDoc(doc(db, 'pumpSessions', sessionId));
+  if (!docSnap.exists()) {
+    throw new Error(`Pump session ${sessionId} not found`);
+  }
+
+  const session = docSnap.data();
+  const startTime = updates.startTime ? new Date(updates.startTime) : new Date(session.startTime);
+  const endTime = updates.endTime ? new Date(updates.endTime) : new Date(session.endTime);
+  const duration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
+
+  await updateDoc(doc(db, 'pumpSessions', sessionId), {
+    ...updates,
+    date: startTime.toISOString().split('T')[0],
+    duration,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+// Update a bottle session
+export async function updateBottleSession(
+  sessionId: string,
+  updates: {
+    timestamp?: string;
+    volume?: number;
+    volumeUnit?: 'oz' | 'ml';
+    contentType?: 'breastMilk' | 'formula' | 'mixed';
+    notes?: string | null;
+    babyMood?: BabyMood | null;
+  }
+): Promise<void> {
+  const timestamp = updates.timestamp ? new Date(updates.timestamp) : undefined;
+  const dateUpdate = timestamp ? { date: timestamp.toISOString().split('T')[0] } : {};
+
+  await updateDoc(doc(db, 'bottleSessions', sessionId), {
+    ...updates,
+    ...dateUpdate,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+// ============ DELETE SESSION OPERATIONS ============
+export async function deleteSleepSession(sessionId: string): Promise<void> {
+  await deleteDoc(doc(db, 'sleepSessions', sessionId));
+}
+
+export async function deleteFeedingSession(sessionId: string): Promise<void> {
+  await deleteDoc(doc(db, 'feedingSessions', sessionId));
+}
+
+export async function deletePumpSession(sessionId: string): Promise<void> {
+  await deleteDoc(doc(db, 'pumpSessions', sessionId));
+}
+
+export async function deleteBottleSession(sessionId: string): Promise<void> {
+  await deleteDoc(doc(db, 'bottleSessions', sessionId));
+}
+
+// ============ GENERIC DELETE OPERATION ============
 export async function deleteDocument(collectionPath: string, docId: string): Promise<void> {
   await deleteDoc(doc(db, collectionPath, docId));
 }

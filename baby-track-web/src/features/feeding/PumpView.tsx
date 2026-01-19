@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
 import { MomMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
+import { EditSessionModal } from '@/components/ui/EditSessionModal';
 import { Baby, PumpSession, PumpSide, MomMood, VolumeUnit, PUMP_SIDE_CONFIG, formatDuration, convertVolume } from '@/types';
-import { MilkStorageLocation, MILK_STORAGE_CONFIG } from '@/types/enums';
-import { createPumpSession, subscribeToPumpSessions, createMilkStash, createBottleSession } from '@/lib/firestore';
+import { MilkStorageLocation } from '@/types/enums';
+import { createPumpSession, startPumpSession, endPumpSession, subscribeToPumpSessions, createMilkStash, createBottleSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { Clock, Droplet, Timer as TimerIcon, Edit3, Refrigerator, Snowflake, Baby as BabyIcon, X } from 'lucide-react';
@@ -39,13 +40,14 @@ export function PumpView({ baby }: PumpViewProps) {
   const [selectedSide, setSelectedSide] = useState<PumpSide>('both');
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
-  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [volume, setVolume] = useState('');
   const [volumeUnit, setVolumeUnit] = useState<VolumeUnit>(settings?.preferredVolumeUnit || 'oz');
   const [notes, setNotes] = useState('');
   const [momMood, setMomMood] = useState<MomMood | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [starting, setStarting] = useState(false);
 
   // Milk destination state
   const [showMilkDestination, setShowMilkDestination] = useState(false);
@@ -61,6 +63,9 @@ export function PumpView({ baby }: PumpViewProps) {
   const [manualTime, setManualTime] = useState(format(new Date(), 'HH:mm'));
   const [manualDuration, setManualDuration] = useState('');
 
+  // Edit modal state
+  const [selectedSession, setSelectedSession] = useState<PumpSession | null>(null);
+
   // Subscribe to sessions
   useEffect(() => {
     const unsubscribe = subscribeToPumpSessions(baby.id, setSessions);
@@ -73,11 +78,43 @@ export function PumpView({ baby }: PumpViewProps) {
     }
   }, [settings?.preferredVolumeUnit]);
 
-  const handleStart = useCallback(() => {
-    setIsTimerRunning(true);
-    setStartTime(new Date());
-    setShowForm(false);
-  }, []);
+  // Check for active session on load and resume it
+  useEffect(() => {
+    // Don't override local state if user has already stopped the timer (showForm is true)
+    if (showForm) return;
+
+    const activeSession = sessions.find((s) => s.isActive);
+    if (activeSession) {
+      setActiveSessionId(activeSession.id);
+      setSelectedSide(activeSession.side);
+      setIsTimerRunning(true);
+      // Calculate elapsed time
+      const startTime = new Date(activeSession.startTime);
+      const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+      setTimerSeconds(elapsed);
+    }
+  }, [sessions, showForm]);
+
+  const handleStart = useCallback(async () => {
+    if (!user || starting) return;
+
+    setStarting(true);
+    try {
+      const sessionId = await startPumpSession(baby.id, user.uid, {
+        startTime: new Date().toISOString(),
+        side: selectedSide,
+        volumeUnit,
+      });
+
+      setActiveSessionId(sessionId);
+      setIsTimerRunning(true);
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error starting pump session:', error);
+    } finally {
+      setStarting(false);
+    }
+  }, [user, baby.id, selectedSide, volumeUnit, starting]);
 
   const handlePause = useCallback(() => {
     setIsTimerRunning(false);
@@ -92,7 +129,7 @@ export function PumpView({ baby }: PumpViewProps) {
   const handleReset = useCallback(() => {
     setIsTimerRunning(false);
     setTimerSeconds(0);
-    setStartTime(null);
+    setActiveSessionId(null);
     setShowForm(false);
     setVolume('');
     setNotes('');
@@ -103,56 +140,98 @@ export function PumpView({ baby }: PumpViewProps) {
     setManualDuration('');
   }, []);
 
+  const handleCancel = () => {
+    setShowForm(false);
+    // Resume timer
+    setIsTimerRunning(true);
+  };
+
   const handleSave = async () => {
     if (!user) return;
 
-    // For timer mode, we need startTime; for manual mode, we need duration
-    if (entryMode === 'timer' && !startTime) return;
-    if (entryMode === 'manual' && !manualDuration) return;
+    const volumeValue = parseFloat(volume) || 0;
 
-    setSaving(true);
-    try {
-      let sessionStartTime: Date;
-      let sessionEndTime: Date;
-
-      if (entryMode === 'timer') {
-        sessionStartTime = startTime!;
-        sessionEndTime = new Date(startTime!.getTime() + timerSeconds * 1000);
-      } else {
-        // Manual entry
-        sessionStartTime = new Date(`${manualDate}T${manualTime}`);
-        const durationMinutes = parseInt(manualDuration, 10);
-        sessionEndTime = new Date(sessionStartTime.getTime() + durationMinutes * 60 * 1000);
+    // For timer mode, we need activeSessionId; for manual mode, we need duration
+    if (entryMode === 'timer') {
+      // Try to get activeSessionId, or find it from sessions as fallback
+      let sessionIdToSave = activeSessionId;
+      if (!sessionIdToSave) {
+        const activeSession = sessions.find((s) => s.isActive);
+        sessionIdToSave = activeSession?.id ?? null;
       }
 
-      const volumeValue = parseFloat(volume) || 0;
+      if (!sessionIdToSave) {
+        console.error('No active session to save');
+        return;
+      }
 
-      await createPumpSession(baby.id, user.uid, {
-        startTime: sessionStartTime.toISOString(),
-        endTime: sessionEndTime.toISOString(),
-        side: selectedSide,
-        volume: volumeValue,
-        volumeUnit,
-        notes: notes || null,
-        momMood,
-      });
+      setSaving(true);
+      try {
+        // Get the active session to get the start time for milk destination
+        const activeSession = sessions.find((s) => s.id === sessionIdToSave);
+        const pumpedDate = activeSession?.startTime || new Date().toISOString();
 
-      // If there's volume, show milk destination dialog
-      if (volumeValue > 0) {
-        setSavedSessionData({
+        await endPumpSession(
+          sessionIdToSave,
+          new Date().toISOString(),
+          volumeValue,
+          volumeUnit,
+          notes || null,
+          momMood
+        );
+
+        // If there's volume, show milk destination dialog
+        if (volumeValue > 0) {
+          setSavedSessionData({
+            volume: volumeValue,
+            volumeUnit,
+            pumpedDate,
+          });
+          setShowMilkDestination(true);
+        }
+
+        handleReset();
+      } catch (error) {
+        console.error('Error saving pump session:', error);
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      // Manual entry
+      if (!manualDuration) return;
+
+      setSaving(true);
+      try {
+        const sessionStartTime = new Date(`${manualDate}T${manualTime}`);
+        const durationMinutes = parseInt(manualDuration, 10);
+        const sessionEndTime = new Date(sessionStartTime.getTime() + durationMinutes * 60 * 1000);
+
+        await createPumpSession(baby.id, user.uid, {
+          startTime: sessionStartTime.toISOString(),
+          endTime: sessionEndTime.toISOString(),
+          side: selectedSide,
           volume: volumeValue,
           volumeUnit,
-          pumpedDate: sessionStartTime.toISOString(),
+          notes: notes || null,
+          momMood,
         });
-        setShowMilkDestination(true);
+
+        // If there's volume, show milk destination dialog
+        if (volumeValue > 0) {
+          setSavedSessionData({
+            volume: volumeValue,
+            volumeUnit,
+            pumpedDate: sessionStartTime.toISOString(),
+          });
+          setShowMilkDestination(true);
+        }
+
         handleReset();
-      } else {
-        handleReset();
+      } catch (error) {
+        console.error('Error saving pump session:', error);
+      } finally {
+        setSaving(false);
       }
-    } catch (error) {
-      console.error('Error saving pump session:', error);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -194,8 +273,11 @@ export function PumpView({ baby }: PumpViewProps) {
     }
   };
 
-  // Today's stats
-  const todaySessions = sessions.filter((s) => isToday(parseISO(s.startTime)));
+  // Filter out active sessions for stats and history
+  const completedSessions = sessions.filter(s => !s.isActive);
+
+  // Today's stats (exclude active sessions)
+  const todaySessions = completedSessions.filter((s) => isToday(parseISO(s.startTime)));
   const todayTotalVolume = todaySessions.reduce((sum, s) => {
     const vol = convertVolume(s.volume, s.volumeUnit, volumeUnit);
     return sum + vol;
@@ -204,7 +286,7 @@ export function PumpView({ baby }: PumpViewProps) {
   return (
     <div className="space-y-4">
       {/* Entry Mode Toggle */}
-      {!isTimerRunning && !showForm && (
+      {!isTimerRunning && !showForm && !activeSessionId && (
         <div className="flex justify-center">
           <SegmentedControl
             options={entryModeOptions}
@@ -219,7 +301,7 @@ export function PumpView({ baby }: PumpViewProps) {
         <SegmentedControl
           options={sideOptions}
           value={selectedSide}
-          onChange={(value) => !isTimerRunning && setSelectedSide(value as PumpSide)}
+          onChange={(value) => !isTimerRunning && !activeSessionId && setSelectedSide(value as PumpSide)}
         />
       </div>
 
@@ -367,8 +449,8 @@ export function PumpView({ baby }: PumpViewProps) {
             />
 
             <div className="flex gap-3">
-              <Button variant="outline" onClick={handleReset} className="flex-1" disabled={saving}>
-                Cancel
+              <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
+                Resume
               </Button>
               <Button onClick={handleSave} className="flex-1" disabled={saving}>
                 {saving ? 'Saving...' : 'Save Session'}
@@ -461,16 +543,17 @@ export function PumpView({ baby }: PumpViewProps) {
       )}
 
       {/* Session History */}
-      {sessions.length > 0 && (
+      {completedSessions.length > 0 && (
         <Card padding="none">
           <div className="px-4 py-3 border-b border-gray-100">
             <h3 className="font-semibold text-gray-900">Recent Sessions</h3>
           </div>
           <div className="divide-y divide-gray-50">
-            {sessions.slice(0, 5).map((session) => (
-              <div
+            {completedSessions.slice(0, 5).map((session) => (
+              <button
                 key={session.id}
-                className="px-4 py-3 flex items-center gap-3"
+                onClick={() => setSelectedSession(session)}
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
               >
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center text-white"
@@ -490,10 +573,20 @@ export function PumpView({ baby }: PumpViewProps) {
                   </div>
                 </div>
                 <MoodIndicator momMood={session.momMood} size="sm" />
-              </div>
+              </button>
             ))}
           </div>
         </Card>
+      )}
+
+      {/* Edit Session Modal */}
+      {selectedSession && (
+        <EditSessionModal
+          isOpen={!!selectedSession}
+          onClose={() => setSelectedSession(null)}
+          sessionType="pump"
+          session={selectedSession}
+        />
       )}
     </div>
   );

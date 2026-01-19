@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
 import { BabyMoodSelector, MomMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
+import { EditSessionModal } from '@/components/ui/EditSessionModal';
 import { Baby, FeedingSession, BreastSide, BabyMood, MomMood, BREAST_SIDE_CONFIG, formatDuration } from '@/types';
-import { createFeedingSession, subscribeToFeedingSessions } from '@/lib/firestore';
+import { createFeedingSession, startFeedingSession, endFeedingSession, subscribeToFeedingSessions } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { clsx } from 'clsx';
-import { Clock, ChevronRight, Timer as TimerIcon, Edit3 } from 'lucide-react';
+import { Clock, Timer as TimerIcon, Edit3 } from 'lucide-react';
 
 type EntryMode = 'timer' | 'manual';
 
@@ -29,12 +30,13 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
   const [selectedSide, setSelectedSide] = useState<BreastSide>('left');
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
-  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [babyMood, setBabyMood] = useState<BabyMood | null>(null);
   const [momMood, setMomMood] = useState<MomMood | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [starting, setStarting] = useState(false);
 
   // Entry mode state
   const [entryMode, setEntryMode] = useState<EntryMode>('timer');
@@ -42,27 +44,62 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
   const [manualTime, setManualTime] = useState(format(new Date(), 'HH:mm'));
   const [manualDuration, setManualDuration] = useState('');
 
+  // Edit modal state
+  const [selectedSession, setSelectedSession] = useState<FeedingSession | null>(null);
+
   // Subscribe to sessions
   useEffect(() => {
     const unsubscribe = subscribeToFeedingSessions(baby.id, setSessions);
     return () => unsubscribe();
   }, [baby.id]);
 
-  // Get last session to suggest next side
-  const lastSession = sessions[0];
+  // Check for active session on load and resume it
+  useEffect(() => {
+    // Don't override local state if user has already stopped the timer (showForm is true)
+    if (showForm) return;
+
+    const activeSession = sessions.find((s) => s.isActive);
+    if (activeSession) {
+      setActiveSessionId(activeSession.id);
+      setSelectedSide(activeSession.breastSide);
+      setIsTimerRunning(true);
+      // Calculate elapsed time
+      const startTime = new Date(activeSession.startTime);
+      const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+      setTimerSeconds(elapsed);
+    }
+  }, [sessions, showForm]);
+
+  // Get last completed session to suggest next side
+  const completedSessions = sessions.filter(s => !s.isActive);
+  const lastSession = completedSessions[0];
   const suggestedSide: BreastSide = lastSession?.breastSide === 'left' ? 'right' : 'left';
 
   useEffect(() => {
-    if (!isTimerRunning) {
+    if (!isTimerRunning && !activeSessionId) {
       setSelectedSide(suggestedSide);
     }
-  }, [suggestedSide, isTimerRunning]);
+  }, [suggestedSide, isTimerRunning, activeSessionId]);
 
-  const handleStart = useCallback(() => {
-    setIsTimerRunning(true);
-    setStartTime(new Date());
-    setShowForm(false);
-  }, []);
+  const handleStart = useCallback(async () => {
+    if (!user || starting) return;
+
+    setStarting(true);
+    try {
+      const sessionId = await startFeedingSession(baby.id, user.uid, {
+        startTime: new Date().toISOString(),
+        breastSide: selectedSide,
+      });
+
+      setActiveSessionId(sessionId);
+      setIsTimerRunning(true);
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error starting feeding session:', error);
+    } finally {
+      setStarting(false);
+    }
+  }, [user, baby.id, selectedSide, starting]);
 
   const handlePause = useCallback(() => {
     setIsTimerRunning(false);
@@ -77,7 +114,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
   const handleReset = useCallback(() => {
     setIsTimerRunning(false);
     setTimerSeconds(0);
-    setStartTime(null);
+    setActiveSessionId(null);
     setShowForm(false);
     setNotes('');
     setBabyMood(null);
@@ -88,53 +125,79 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
     setManualDuration('');
   }, []);
 
+  const handleCancel = () => {
+    setShowForm(false);
+    // Resume timer
+    setIsTimerRunning(true);
+  };
+
   const handleSave = async () => {
     if (!user) return;
 
-    // For timer mode, we need startTime; for manual mode, we need duration
-    if (entryMode === 'timer' && !startTime) return;
-    if (entryMode === 'manual' && !manualDuration) return;
-
-    setSaving(true);
-    try {
-      let sessionStartTime: Date;
-      let sessionEndTime: Date;
-
-      if (entryMode === 'timer') {
-        sessionStartTime = startTime!;
-        sessionEndTime = new Date(startTime!.getTime() + timerSeconds * 1000);
-      } else {
-        // Manual entry
-        sessionStartTime = new Date(`${manualDate}T${manualTime}`);
-        const durationMinutes = parseInt(manualDuration, 10);
-        sessionEndTime = new Date(sessionStartTime.getTime() + durationMinutes * 60 * 1000);
+    // For timer mode, we need activeSessionId; for manual mode, we need duration
+    if (entryMode === 'timer') {
+      // Try to get activeSessionId, or find it from sessions as fallback
+      let sessionIdToSave = activeSessionId;
+      if (!sessionIdToSave) {
+        const activeSession = sessions.find((s) => s.isActive);
+        sessionIdToSave = activeSession?.id ?? null;
       }
 
-      await createFeedingSession(baby.id, user.uid, {
-        breastSide: selectedSide,
-        startTime: sessionStartTime.toISOString(),
-        endTime: sessionEndTime.toISOString(),
-        notes: notes || null,
-        babyMood,
-        momMood,
-      });
+      if (!sessionIdToSave) {
+        console.error('No active session to save');
+        return;
+      }
 
-      handleReset();
-    } catch (error) {
-      console.error('Error saving feeding session:', error);
-    } finally {
-      setSaving(false);
+      setSaving(true);
+      try {
+        await endFeedingSession(
+          sessionIdToSave,
+          new Date().toISOString(),
+          notes || null,
+          babyMood,
+          momMood
+        );
+        handleReset();
+      } catch (error) {
+        console.error('Error saving feeding session:', error);
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      // Manual entry
+      if (!manualDuration) return;
+
+      setSaving(true);
+      try {
+        const sessionStartTime = new Date(`${manualDate}T${manualTime}`);
+        const durationMinutes = parseInt(manualDuration, 10);
+        const sessionEndTime = new Date(sessionStartTime.getTime() + durationMinutes * 60 * 1000);
+
+        await createFeedingSession(baby.id, user.uid, {
+          breastSide: selectedSide,
+          startTime: sessionStartTime.toISOString(),
+          endTime: sessionEndTime.toISOString(),
+          notes: notes || null,
+          babyMood,
+          momMood,
+        });
+        handleReset();
+      } catch (error) {
+        console.error('Error saving feeding session:', error);
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
-  // Today's stats
-  const todaySessions = sessions.filter((s) => isToday(parseISO(s.startTime)));
+  // Today's stats (exclude active sessions)
+  const todaySessions = completedSessions.filter((s) => isToday(parseISO(s.startTime)));
   const todayTotalSeconds = todaySessions.reduce((sum, s) => sum + s.duration, 0);
 
   return (
     <div className="space-y-4">
       {/* Entry Mode Toggle */}
-      {!isTimerRunning && !showForm && (
+      {!isTimerRunning && !showForm && !activeSessionId && (
         <div className="flex justify-center">
           <SegmentedControl
             options={entryModeOptions}
@@ -145,7 +208,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
       )}
 
       {/* Last Session Card */}
-      {lastSession && !isTimerRunning && !showForm && entryMode === 'timer' && (
+      {lastSession && !isTimerRunning && !showForm && entryMode === 'timer' && !activeSessionId && (
         <Card className="border-l-4" style={{ borderLeftColor: BREAST_SIDE_CONFIG[lastSession.breastSide].color }}>
           <div className="flex items-center justify-between">
             <div>
@@ -179,15 +242,15 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
           return (
             <button
               key={side}
-              onClick={() => !isTimerRunning && setSelectedSide(side)}
-              disabled={isTimerRunning}
+              onClick={() => !isTimerRunning && !activeSessionId && setSelectedSide(side)}
+              disabled={isTimerRunning || !!activeSessionId}
               className={clsx(
                 'w-28 h-28 rounded-full flex flex-col items-center justify-center',
                 'border-4 transition-all duration-300',
                 isSelected
                   ? 'border-transparent scale-105 shadow-lg'
                   : 'border-gray-200 opacity-50',
-                isTimerRunning && !isSelected && 'opacity-30'
+                (isTimerRunning || activeSessionId) && !isSelected && 'opacity-30'
               )}
               style={isSelected ? { backgroundColor: config.color } : undefined}
             >
@@ -317,11 +380,11 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
             />
 
             <div className="flex gap-3">
-              <Button variant="outline" onClick={handleReset} className="flex-1" disabled={saving}>
-                Cancel
+              <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
+                Resume
               </Button>
               <Button onClick={handleSave} className="flex-1" disabled={saving}>
-                {saving ? 'Saving...' : 'Save Session'}
+                {saving ? 'Saving...' : 'Save'}
               </Button>
             </div>
           </div>
@@ -341,16 +404,17 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
       </div>
 
       {/* Session History */}
-      {sessions.length > 0 && (
+      {completedSessions.length > 0 && (
         <Card padding="none">
           <div className="px-4 py-3 border-b border-gray-100">
             <h3 className="font-semibold text-gray-900">Recent Sessions</h3>
           </div>
           <div className="divide-y divide-gray-50">
-            {sessions.slice(0, 5).map((session) => (
-              <div
+            {completedSessions.slice(0, 5).map((session) => (
+              <button
                 key={session.id}
-                className="px-4 py-3 flex items-center gap-3"
+                onClick={() => setSelectedSession(session)}
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
               >
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
@@ -370,11 +434,20 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
                   </div>
                 </div>
                 <MoodIndicator babyMood={session.babyMood} momMood={session.momMood} size="sm" />
-                <ChevronRight className="w-4 h-4 text-gray-400" />
-              </div>
+              </button>
             ))}
           </div>
         </Card>
+      )}
+
+      {/* Edit Session Modal */}
+      {selectedSession && (
+        <EditSessionModal
+          isOpen={!!selectedSession}
+          onClose={() => setSelectedSession(null)}
+          sessionType="breastfeeding"
+          session={selectedSession}
+        />
       )}
     </div>
   );
