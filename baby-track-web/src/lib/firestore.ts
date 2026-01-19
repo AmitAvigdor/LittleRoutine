@@ -410,8 +410,8 @@ export async function endSleepSession(
     endTime,
     duration,
     isActive: false,
-    notes: notes ?? session.notes,
-    babyMood: babyMood ?? session.babyMood,
+    notes: notes ?? session.notes ?? null,
+    babyMood: babyMood ?? session.babyMood ?? null,
     updatedAt: new Date().toISOString(),
   });
 }
