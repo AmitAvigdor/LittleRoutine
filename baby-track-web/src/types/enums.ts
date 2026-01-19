@@ -75,9 +75,9 @@ export const DIAPER_TYPE_CONFIG: Record<DiaperType, { label: string; color: stri
 // Milk Storage Location
 export type MilkStorageLocation = 'fridge' | 'freezer';
 
-export const MILK_STORAGE_CONFIG: Record<MilkStorageLocation, { label: string; expirationDays: number; icon: string }> = {
-  fridge: { label: 'Fridge', expirationDays: 4, icon: 'thermometer-snowflake' },
-  freezer: { label: 'Freezer', expirationDays: 180, icon: 'snowflake' },
+export const MILK_STORAGE_CONFIG: Record<MilkStorageLocation, { label: string; expirationDays: number; icon: string; color: string }> = {
+  fridge: { label: 'Fridge', expirationDays: 4, icon: 'thermometer-snowflake', color: '#2196f3' },
+  freezer: { label: 'Freezer', expirationDays: 180, icon: 'snowflake', color: '#3f51b5' },
 };
 
 // Food Category
