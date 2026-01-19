@@ -38,12 +38,14 @@ export function Timer({
   }, [externalIsRunning]);
 
   // Sync seconds when initialSeconds changes (e.g., when resuming an active session)
+  // Only sync when initialSeconds actually changes, not when isRunning changes
   useEffect(() => {
     // Only sync if timer is not running to avoid interfering with active counting
     if (!isRunning) {
       setSeconds(initialSeconds);
     }
-  }, [initialSeconds, isRunning]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSeconds]); // Intentionally omitting isRunning to prevent reset on stop
 
   useEffect(() => {
     let interval: number | undefined;
