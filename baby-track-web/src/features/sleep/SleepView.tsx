@@ -37,6 +37,7 @@ export function SleepView() {
   const [babyMood, setBabyMood] = useState<BabyMood | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [starting, setStarting] = useState(false);
 
   // Entry mode state
   const [entryMode, setEntryMode] = useState<EntryMode>('timer');
@@ -69,16 +70,23 @@ export function SleepView() {
   }, [sessions, showForm]);
 
   const handleStart = useCallback(async () => {
-    if (!user || !selectedBaby) return;
+    if (!user || !selectedBaby || starting) return;
 
-    const sessionId = await createSleepSession(selectedBaby.id, user.uid, {
-      startTime: new Date().toISOString(),
-      type: sleepType,
-    });
+    setStarting(true);
+    try {
+      const sessionId = await createSleepSession(selectedBaby.id, user.uid, {
+        startTime: new Date().toISOString(),
+        type: sleepType,
+      });
 
-    setActiveSessionId(sessionId);
-    setIsTimerRunning(true);
-  }, [user, selectedBaby, sleepType]);
+      setActiveSessionId(sessionId);
+      setIsTimerRunning(true);
+    } catch (error) {
+      console.error('Error starting sleep session:', error);
+    } finally {
+      setStarting(false);
+    }
+  }, [user, selectedBaby, sleepType, starting]);
 
   const handleStop = useCallback(async (totalSeconds: number) => {
     setIsTimerRunning(false);
@@ -87,12 +95,22 @@ export function SleepView() {
   }, []);
 
   const handleSave = async () => {
-    if (!activeSessionId) return;
+    // Try to get activeSessionId, or find it from sessions as fallback
+    let sessionIdToSave = activeSessionId;
+    if (!sessionIdToSave) {
+      const activeSession = sessions.find((s) => s.isActive);
+      sessionIdToSave = activeSession?.id ?? null;
+    }
+
+    if (!sessionIdToSave) {
+      console.error('No active session to save');
+      return;
+    }
 
     setSaving(true);
     try {
       await endSleepSession(
-        activeSessionId,
+        sessionIdToSave,
         new Date().toISOString(),
         notes || null,
         babyMood
@@ -207,9 +225,10 @@ export function SleepView() {
                   onClick={handleStart}
                   className="px-8"
                   style={{ backgroundColor: SLEEP_TYPE_CONFIG[sleepType].color }}
+                  disabled={starting}
                 >
                   <Bed className="w-5 h-5 mr-2" />
-                  Start Sleep
+                  {starting ? 'Starting...' : 'Start Sleep'}
                 </Button>
               </div>
             ) : (
