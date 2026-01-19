@@ -302,6 +302,13 @@ export async function markMilkStashUsed(stashId: string): Promise<void> {
   });
 }
 
+export async function updateMilkStashVolume(stashId: string, newVolume: number): Promise<void> {
+  await updateDoc(doc(db, 'milkStash', stashId), {
+    volume: newVolume,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
 export function subscribeToMilkStash(
   userId: string,
   callback: (stash: MilkStash[]) => void

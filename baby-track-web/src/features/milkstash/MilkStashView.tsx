@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
-import { createMilkStash, subscribeToMilkStash, markMilkStashInUse, markMilkStashUsed, createBottleSession } from '@/lib/firestore';
+import { createMilkStash, subscribeToMilkStash, markMilkStashInUse, markMilkStashUsed, updateMilkStashVolume, createBottleSession } from '@/lib/firestore';
 import type { MilkStash, Baby } from '@/types';
 import { MilkStorageLocation, MILK_STORAGE_CONFIG } from '@/types/enums';
 import { Milk, Plus, X, Clock, Check, AlertTriangle } from 'lucide-react';
@@ -22,6 +22,7 @@ export function MilkStashView() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [selectedMilkItem, setSelectedMilkItem] = useState<MilkStash | null>(null);
   const [selectedBabyForFeeding, setSelectedBabyForFeeding] = useState<Baby | null>(null);
+  const [usedVolume, setUsedVolume] = useState('');
 
   // Form state
   const [pumpedDate, setPumpedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -77,11 +78,15 @@ export function MilkStashView() {
     // Show confirmation dialog to record feeding
     setSelectedMilkItem(item);
     setSelectedBabyForFeeding(selectedBaby || babies[0] || null);
+    setUsedVolume(item.volume.toString());
     setShowConfirmDialog(true);
   };
 
   const handleConfirmUsed = async () => {
-    if (!selectedMilkItem || !user) return;
+    if (!selectedMilkItem || !user || !usedVolume) return;
+
+    const usedAmount = parseFloat(usedVolume);
+    if (isNaN(usedAmount) || usedAmount <= 0) return;
 
     setLoading(true);
     try {
@@ -89,7 +94,7 @@ export function MilkStashView() {
       if (selectedBabyForFeeding) {
         await createBottleSession(selectedBabyForFeeding.id, user.uid, {
           timestamp: new Date().toISOString(),
-          volume: selectedMilkItem.volume,
+          volume: usedAmount,
           volumeUnit: selectedMilkItem.volumeUnit,
           contentType: 'breastMilk',
           notes: `From milk stash (pumped: ${new Date(selectedMilkItem.pumpedDate).toLocaleDateString()})`,
@@ -97,12 +102,21 @@ export function MilkStashView() {
         });
       }
 
-      // Mark the milk stash item as used
-      await markMilkStashUsed(selectedMilkItem.id);
+      // Check if fully used or partial
+      const remainingVolume = selectedMilkItem.volume - usedAmount;
+
+      if (remainingVolume <= 0) {
+        // Fully used - mark as used
+        await markMilkStashUsed(selectedMilkItem.id);
+      } else {
+        // Partial use - update the remaining volume and keep in use
+        await updateMilkStashVolume(selectedMilkItem.id, remainingVolume);
+      }
 
       // Close dialog
       setShowConfirmDialog(false);
       setSelectedMilkItem(null);
+      setUsedVolume('');
     } catch (error) {
       console.error('Error marking used:', error);
     } finally {
@@ -113,6 +127,7 @@ export function MilkStashView() {
   const handleCancelConfirm = () => {
     setShowConfirmDialog(false);
     setSelectedMilkItem(null);
+    setUsedVolume('');
   };
 
   const isExpiringSoon = (item: MilkStash) => {
@@ -173,9 +188,25 @@ export function MilkStashView() {
               </button>
             </div>
 
-            <p className="text-sm text-gray-600 mb-4">
-              Record this milk ({selectedMilkItem.volume} {volumeUnit}) as a bottle feeding?
+            <p className="text-sm text-gray-600 mb-3">
+              How much milk was used? (Total: {selectedMilkItem.volume} {volumeUnit})
             </p>
+
+            <Input
+              type="number"
+              step="0.5"
+              label={`Amount used (${volumeUnit})`}
+              value={usedVolume}
+              onChange={(e) => setUsedVolume(e.target.value)}
+              max={selectedMilkItem.volume}
+              min="0.5"
+            />
+
+            {parseFloat(usedVolume) < selectedMilkItem.volume && parseFloat(usedVolume) > 0 && (
+              <p className="text-sm text-blue-600 mb-2">
+                Remaining: {(selectedMilkItem.volume - parseFloat(usedVolume)).toFixed(1)} {volumeUnit} will stay in stash
+              </p>
+            )}
 
             {babies.length > 1 && (
               <div className="mb-4">
@@ -218,14 +249,15 @@ export function MilkStashView() {
               <Button
                 onClick={handleConfirmUsed}
                 className="flex-1"
-                disabled={loading}
+                disabled={loading || !usedVolume || parseFloat(usedVolume) <= 0}
               >
-                {loading ? 'Saving...' : 'Yes, Record Feeding'}
+                {loading ? 'Saving...' : 'Record Feeding'}
               </Button>
               <Button
                 variant="outline"
                 onClick={handleCancelConfirm}
                 className="flex-1"
+                disabled={loading}
               >
                 Cancel
               </Button>
