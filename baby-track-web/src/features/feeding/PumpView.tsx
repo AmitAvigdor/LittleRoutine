@@ -7,10 +7,13 @@ import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
 import { MomMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
 import { Baby, PumpSession, PumpSide, MomMood, VolumeUnit, PUMP_SIDE_CONFIG, formatDuration, convertVolume } from '@/types';
-import { createPumpSession, subscribeToPumpSessions } from '@/lib/firestore';
+import { MilkStorageLocation, MILK_STORAGE_CONFIG } from '@/types/enums';
+import { createPumpSession, subscribeToPumpSessions, createMilkStash, createBottleSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
-import { Clock, Droplet, Timer as TimerIcon, Edit3 } from 'lucide-react';
+import { Clock, Droplet, Timer as TimerIcon, Edit3, Refrigerator, Snowflake, Baby as BabyIcon, X } from 'lucide-react';
+
+type MilkDestination = 'fridge' | 'freezer' | 'use' | null;
 
 type EntryMode = 'timer' | 'manual';
 
@@ -43,6 +46,14 @@ export function PumpView({ baby }: PumpViewProps) {
   const [momMood, setMomMood] = useState<MomMood | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Milk destination state
+  const [showMilkDestination, setShowMilkDestination] = useState(false);
+  const [savedSessionData, setSavedSessionData] = useState<{
+    volume: number;
+    volumeUnit: VolumeUnit;
+    pumpedDate: string;
+  } | null>(null);
 
   // Entry mode state
   const [entryMode, setEntryMode] = useState<EntryMode>('timer');
@@ -114,21 +125,72 @@ export function PumpView({ baby }: PumpViewProps) {
         sessionEndTime = new Date(sessionStartTime.getTime() + durationMinutes * 60 * 1000);
       }
 
+      const volumeValue = parseFloat(volume) || 0;
+
       await createPumpSession(baby.id, user.uid, {
         startTime: sessionStartTime.toISOString(),
         endTime: sessionEndTime.toISOString(),
         side: selectedSide,
-        volume: parseFloat(volume) || 0,
+        volume: volumeValue,
         volumeUnit,
         notes: notes || null,
         momMood,
       });
 
-      handleReset();
+      // If there's volume, show milk destination dialog
+      if (volumeValue > 0) {
+        setSavedSessionData({
+          volume: volumeValue,
+          volumeUnit,
+          pumpedDate: sessionStartTime.toISOString(),
+        });
+        setShowMilkDestination(true);
+        handleReset();
+      } else {
+        handleReset();
+      }
     } catch (error) {
       console.error('Error saving pump session:', error);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleMilkDestination = async (destination: MilkDestination) => {
+    if (!user || !savedSessionData) {
+      setShowMilkDestination(false);
+      setSavedSessionData(null);
+      return;
+    }
+
+    try {
+      if (destination === 'fridge' || destination === 'freezer') {
+        // Create milk stash entry
+        const location: MilkStorageLocation = destination === 'fridge' ? 'fridge' : 'freezer';
+        await createMilkStash(user.uid, {
+          volume: savedSessionData.volume,
+          volumeUnit: savedSessionData.volumeUnit,
+          location,
+          pumpedDate: savedSessionData.pumpedDate,
+          notes: null,
+        });
+      } else if (destination === 'use') {
+        // Create bottle feeding session with the pumped milk
+        await createBottleSession(baby.id, user.uid, {
+          timestamp: new Date().toISOString(),
+          volume: savedSessionData.volume,
+          volumeUnit: savedSessionData.volumeUnit,
+          contentType: 'breastMilk',
+          notes: 'Fresh from pump',
+          babyMood: null,
+        });
+      }
+      // If destination is null (skip), do nothing
+    } catch (error) {
+      console.error('Error handling milk destination:', error);
+    } finally {
+      setShowMilkDestination(false);
+      setSavedSessionData(null);
     }
   };
 
@@ -329,6 +391,74 @@ export function PumpView({ baby }: PumpViewProps) {
           <p className="text-sm text-gray-500">Total volume</p>
         </Card>
       </div>
+
+      {/* Milk Destination Dialog */}
+      {showMilkDestination && savedSessionData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">What would you like to do with the milk?</h3>
+              <button
+                onClick={() => handleMilkDestination(null)}
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              {savedSessionData.volume} {savedSessionData.volumeUnit} pumped
+            </p>
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3"
+                onClick={() => handleMilkDestination('fridge')}
+              >
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Refrigerator className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium">Store in Fridge</p>
+                  <p className="text-xs text-gray-500">Add to milk stash</p>
+                </div>
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3"
+                onClick={() => handleMilkDestination('freezer')}
+              >
+                <div className="w-10 h-10 rounded-full bg-cyan-100 flex items-center justify-center">
+                  <Snowflake className="w-5 h-5 text-cyan-600" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium">Store in Freezer</p>
+                  <p className="text-xs text-gray-500">Add to milk stash</p>
+                </div>
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3"
+                onClick={() => handleMilkDestination('use')}
+              >
+                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                  <BabyIcon className="w-5 h-5 text-purple-600" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium">Use Now</p>
+                  <p className="text-xs text-gray-500">Log as bottle feeding</p>
+                </div>
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full text-gray-500"
+                onClick={() => handleMilkDestination(null)}
+              >
+                Skip for now
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Session History */}
       {sessions.length > 0 && (
