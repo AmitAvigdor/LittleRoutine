@@ -12,7 +12,7 @@ import {
   subscribeToSleepSessions,
   subscribeToDiaperChanges,
 } from '@/lib/firestore';
-import { FeedingSession, PumpSession, BottleSession, SleepSession, DiaperChange, formatDuration, formatSleepDuration } from '@/types';
+import { FeedingSession, PumpSession, BottleSession, SleepSession, DiaperChange, formatDuration, formatSleepDuration, convertVolume } from '@/types';
 import { clsx } from 'clsx';
 import { Droplet, Moon, Leaf, Milk, Baby, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import {
@@ -37,8 +37,11 @@ const filterOptions = [
 
 export function StatsView() {
   const { user } = useAuth();
-  const { selectedBaby, babies } = useAppStore();
+  const { selectedBaby, babies, settings } = useAppStore();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('today');
+
+  // Get preferred units from settings
+  const volumeUnit = settings?.preferredVolumeUnit || 'oz';
 
   // Data states
   const [feedingSessions, setFeedingSessions] = useState<FeedingSession[]>([]);
@@ -94,9 +97,15 @@ export function StatsView() {
   const stats = useMemo(() => {
     const feedingTime = filteredFeeding.reduce((sum, s) => sum + s.duration, 0);
     const feedingCount = filteredFeeding.length;
-    const pumpVolume = filteredPump.reduce((sum, s) => sum + s.volume, 0);
+    // Convert pump volumes to preferred unit
+    const pumpVolume = filteredPump.reduce((sum, s) => {
+      return sum + convertVolume(s.volume, s.volumeUnit, volumeUnit);
+    }, 0);
     const pumpCount = filteredPump.length;
-    const bottleVolume = filteredBottle.reduce((sum, s) => sum + s.volume, 0);
+    // Convert bottle volumes to preferred unit
+    const bottleVolume = filteredBottle.reduce((sum, s) => {
+      return sum + convertVolume(s.volume, s.volumeUnit, volumeUnit);
+    }, 0);
     const bottleCount = filteredBottle.length;
     const sleepTime = filteredSleep.reduce((sum, s) => sum + s.duration, 0);
     const napCount = filteredSleep.filter((s) => s.type === 'nap').length;
@@ -119,7 +128,7 @@ export function StatsView() {
       wetCount,
       dirtyCount,
     };
-  }, [filteredFeeding, filteredPump, filteredBottle, filteredSleep, filteredDiaper]);
+  }, [filteredFeeding, filteredPump, filteredBottle, filteredSleep, filteredDiaper, volumeUnit]);
 
   // Chart data for feeding
   const feedingChartData = useMemo(() => {
@@ -138,11 +147,11 @@ export function StatsView() {
       });
       filteredPump.forEach((s) => {
         const hour = parseISO(s.startTime).getHours();
-        hours[hour].pump += s.volume;
+        hours[hour].pump += convertVolume(s.volume, s.volumeUnit, volumeUnit);
       });
       filteredBottle.forEach((s) => {
         const hour = parseISO(s.timestamp).getHours();
-        hours[hour].bottle += s.volume;
+        hours[hour].bottle += convertVolume(s.volume, s.volumeUnit, volumeUnit);
       });
 
       return hours.filter((h) => h.feeding > 0 || h.pump > 0 || h.bottle > 0);
@@ -160,17 +169,17 @@ export function StatsView() {
       filteredPump.forEach((s) => {
         const key = getDayKey(s.startTime);
         if (!days[key]) days[key] = { name: key, feeding: 0, pump: 0, bottle: 0 };
-        days[key].pump += s.volume;
+        days[key].pump += convertVolume(s.volume, s.volumeUnit, volumeUnit);
       });
       filteredBottle.forEach((s) => {
         const key = getDayKey(s.timestamp);
         if (!days[key]) days[key] = { name: key, feeding: 0, pump: 0, bottle: 0 };
-        days[key].bottle += s.volume;
+        days[key].bottle += convertVolume(s.volume, s.volumeUnit, volumeUnit);
       });
 
       return Object.values(days);
     }
-  }, [filteredFeeding, filteredPump, filteredBottle, timeFilter]);
+  }, [filteredFeeding, filteredPump, filteredBottle, timeFilter, volumeUnit]);
 
   // Diaper pie chart data
   const diaperPieData = [
@@ -215,7 +224,7 @@ export function StatsView() {
               <Droplet className="w-4 h-4 text-blue-500" />
               <span className="text-sm font-medium text-gray-600">Pumped</span>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{stats.pumpVolume.toFixed(1)} oz</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.pumpVolume.toFixed(1)} {volumeUnit}</p>
             <p className="text-xs text-gray-500">{stats.pumpCount} sessions</p>
           </Card>
 
@@ -225,7 +234,7 @@ export function StatsView() {
               <Milk className="w-4 h-4 text-purple-500" />
               <span className="text-sm font-medium text-gray-600">Bottles</span>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{stats.bottleVolume.toFixed(1)} oz</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.bottleVolume.toFixed(1)} {volumeUnit}</p>
             <p className="text-xs text-gray-500">{stats.bottleCount} feedings</p>
           </Card>
 
@@ -297,8 +306,8 @@ export function StatsView() {
                   <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip />
                   <Bar dataKey="feeding" fill="#e91e63" name="Nursing (min)" stackId="a" />
-                  <Bar dataKey="pump" fill="#2196f3" name="Pump (oz)" stackId="b" />
-                  <Bar dataKey="bottle" fill="#9c27b0" name="Bottle (oz)" stackId="b" />
+                  <Bar dataKey="pump" fill="#2196f3" name={`Pump (${volumeUnit})`} stackId="b" />
+                  <Bar dataKey="bottle" fill="#9c27b0" name={`Bottle (${volumeUnit})`} stackId="b" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
