@@ -12,6 +12,7 @@ import { MilkStorageLocation } from '@/types/enums';
 import { createPumpSession, startPumpSession, endPumpSession, subscribeToPumpSessions, createMilkStash, createBottleSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
+import { toast } from '@/stores/toastStore';
 import { Clock, Droplet, Timer as TimerIcon, Edit3, Refrigerator, Snowflake, Baby as BabyIcon, X } from 'lucide-react';
 
 type MilkDestination = 'fridge' | 'freezer' | 'use' | null;
@@ -111,6 +112,7 @@ export function PumpView({ baby }: PumpViewProps) {
       setShowForm(false);
     } catch (error) {
       console.error('Error starting pump session:', error);
+      toast.error('Failed to start pump session. Please try again.');
     } finally {
       setStarting(false);
     }
@@ -193,6 +195,7 @@ export function PumpView({ baby }: PumpViewProps) {
         handleReset();
       } catch (error) {
         console.error('Error saving pump session:', error);
+        toast.error('Failed to save pump session. Please try again.');
       } finally {
         setSaving(false);
       }
@@ -200,10 +203,15 @@ export function PumpView({ baby }: PumpViewProps) {
       // Manual entry
       if (!manualDuration) return;
 
+      const durationMinutes = parseInt(manualDuration, 10);
+      if (isNaN(durationMinutes) || durationMinutes <= 0 || durationMinutes > 120) {
+        toast.error('Please enter a valid duration (1-120 minutes).');
+        return;
+      }
+
       setSaving(true);
       try {
         const sessionStartTime = new Date(`${manualDate}T${manualTime}`);
-        const durationMinutes = parseInt(manualDuration, 10);
         const sessionEndTime = new Date(sessionStartTime.getTime() + durationMinutes * 60 * 1000);
 
         await createPumpSession(baby.id, user.uid, {
@@ -229,6 +237,7 @@ export function PumpView({ baby }: PumpViewProps) {
         handleReset();
       } catch (error) {
         console.error('Error saving pump session:', error);
+        toast.error('Failed to save pump session. Please try again.');
       } finally {
         setSaving(false);
       }
@@ -267,6 +276,7 @@ export function PumpView({ baby }: PumpViewProps) {
       // If destination is null (skip), do nothing
     } catch (error) {
       console.error('Error handling milk destination:', error);
+      toast.error('Failed to save milk destination. Please try again.');
     } finally {
       setShowMilkDestination(false);
       setSavedSessionData(null);

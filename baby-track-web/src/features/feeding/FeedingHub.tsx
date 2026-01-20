@@ -1,18 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Droplet, Milk, Baby } from 'lucide-react';
+import { Milk, Baby } from 'lucide-react';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { SegmentedControl } from '@/components/ui/Select';
 import { BreastfeedingView } from './BreastfeedingView';
-import { PumpView } from './PumpView';
 import { BottleView } from './BottleView';
 import { useAppStore } from '@/stores/appStore';
 
-type FeedingTab = 'breast' | 'pump' | 'bottle';
+type FeedingTab = 'breast' | 'bottle';
 
 const tabOptions = [
   { value: 'breast', label: 'Breast', icon: <Baby className="w-4 h-4" /> },
-  { value: 'pump', label: 'Pump', icon: <Droplet className="w-4 h-4" /> },
   { value: 'bottle', label: 'Bottle', icon: <Milk className="w-4 h-4" /> },
 ];
 
@@ -54,7 +52,6 @@ export function FeedingHub() {
         {selectedBaby && (
           <>
             {activeTab === 'breast' && <BreastfeedingView baby={selectedBaby} />}
-            {activeTab === 'pump' && <PumpView baby={selectedBaby} />}
             {activeTab === 'bottle' && <BottleView baby={selectedBaby} />}
           </>
         )}

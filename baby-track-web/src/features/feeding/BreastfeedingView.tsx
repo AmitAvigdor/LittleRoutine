@@ -10,6 +10,7 @@ import { EditSessionModal } from '@/components/ui/EditSessionModal';
 import { Baby, FeedingSession, BreastSide, BabyMood, MomMood, BREAST_SIDE_CONFIG, formatDuration } from '@/types';
 import { createFeedingSession, startFeedingSession, endFeedingSession, subscribeToFeedingSessions } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
+import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
 import { Clock, Timer as TimerIcon, Edit3 } from 'lucide-react';
 
@@ -96,6 +97,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
       setShowForm(false);
     } catch (error) {
       console.error('Error starting feeding session:', error);
+      toast.error('Failed to start feeding session. Please try again.');
     } finally {
       setStarting(false);
     }
@@ -160,6 +162,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
         handleReset();
       } catch (error) {
         console.error('Error saving feeding session:', error);
+        toast.error('Failed to save feeding session. Please try again.');
       } finally {
         setSaving(false);
       }
@@ -167,10 +170,15 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
       // Manual entry
       if (!manualDuration) return;
 
+      const durationMinutes = parseInt(manualDuration, 10);
+      if (isNaN(durationMinutes) || durationMinutes <= 0 || durationMinutes > 120) {
+        toast.error('Please enter a valid duration (1-120 minutes).');
+        return;
+      }
+
       setSaving(true);
       try {
         const sessionStartTime = new Date(`${manualDate}T${manualTime}`);
-        const durationMinutes = parseInt(manualDuration, 10);
         const sessionEndTime = new Date(sessionStartTime.getTime() + durationMinutes * 60 * 1000);
 
         await createFeedingSession(baby.id, user.uid, {
@@ -184,6 +192,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
         handleReset();
       } catch (error) {
         console.error('Error saving feeding session:', error);
+        toast.error('Failed to save feeding session. Please try again.');
       } finally {
         setSaving(false);
       }
@@ -207,30 +216,23 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
         </div>
       )}
 
-      {/* Last Session Card */}
+      {/* Next Side Suggestion */}
       {lastSession && !isTimerRunning && !showForm && entryMode === 'timer' && !activeSessionId && (
-        <Card className="border-l-4" style={{ borderLeftColor: BREAST_SIDE_CONFIG[lastSession.breastSide].color }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Last feeding</p>
-              <p className="font-semibold text-gray-900">
-                {BREAST_SIDE_CONFIG[lastSession.breastSide].label} side
-              </p>
-              <p className="text-sm text-gray-500">
-                {formatDuration(lastSession.duration)} • {format(parseISO(lastSession.startTime), 'h:mm a')}
-              </p>
-            </div>
-            <div
-              className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold"
-              style={{ backgroundColor: BREAST_SIDE_CONFIG[suggestedSide].color }}
-            >
-              {suggestedSide === 'left' ? 'L' : 'R'}
-            </div>
-          </div>
-          <p className="text-xs text-gray-400 mt-2">
-            Next suggested: {BREAST_SIDE_CONFIG[suggestedSide].label} side
+        <div
+          className="rounded-2xl p-4 text-center"
+          style={{ backgroundColor: `${BREAST_SIDE_CONFIG[suggestedSide].color}15` }}
+        >
+          <p className="text-sm text-gray-500 mb-1">Start with</p>
+          <p
+            className="text-2xl font-bold"
+            style={{ color: BREAST_SIDE_CONFIG[suggestedSide].color }}
+          >
+            {BREAST_SIDE_CONFIG[suggestedSide].label} Side
           </p>
-        </Card>
+          <p className="text-xs text-gray-400 mt-2">
+            Last: {BREAST_SIDE_CONFIG[lastSession.breastSide].label} • {format(parseISO(lastSession.startTime), 'h:mm a')}
+          </p>
+        </div>
       )}
 
       {/* Side Selector */}

@@ -10,6 +10,7 @@ import { Baby, BottleSession, BottleContentType, BabyMood, VolumeUnit, BOTTLE_CO
 import { createBottleSession, subscribeToBottleSessions } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
+import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
 import { Clock, Milk, Plus } from 'lucide-react';
 
@@ -58,6 +59,12 @@ export function BottleView({ baby }: BottleViewProps) {
   const handleSave = async () => {
     if (!user || !volume) return;
 
+    const volumeValue = parseFloat(volume);
+    if (isNaN(volumeValue) || volumeValue <= 0 || volumeValue > 50) {
+      toast.error('Please enter a valid volume (0.1-50).');
+      return;
+    }
+
     setSaving(true);
     try {
       await createBottleSession(baby.id, user.uid, {
@@ -76,6 +83,7 @@ export function BottleView({ baby }: BottleViewProps) {
       setShowForm(false);
     } catch (error) {
       console.error('Error saving bottle session:', error);
+      toast.error('Failed to save bottle feeding. Please try again.');
     } finally {
       setSaving(false);
     }

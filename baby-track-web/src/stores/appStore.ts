@@ -22,6 +22,10 @@ interface AppState {
   nightMode: boolean;
   sidebarOpen: boolean;
 
+  // Loading states
+  isLoadingBabies: boolean;
+  isLoadingSettings: boolean;
+
   // Actions
   setUserId: (userId: string | null) => void;
   setSelectedBabyId: (babyId: string | null) => void;
@@ -31,6 +35,8 @@ interface AppState {
   setNightMode: (enabled: boolean) => void;
   toggleSidebar: () => void;
   updateNightModeFromSettings: () => void;
+  setLoadingBabies: (loading: boolean) => void;
+  setLoadingSettings: (loading: boolean) => void;
   reset: () => void;
 }
 
@@ -43,6 +49,8 @@ const initialState = {
   settings: null,
   nightMode: false,
   sidebarOpen: false,
+  isLoadingBabies: true,
+  isLoadingSettings: true,
 };
 
 export const useAppStore = create<AppState>()(
@@ -63,27 +71,24 @@ export const useAppStore = create<AppState>()(
         set({ selectedBaby: baby, selectedBabyId: baby?.id || null }),
 
       setBabies: (babies) => {
-        console.log('appStore.setBabies: Received babies:', babies);
         const { selectedBabyId } = get();
-        console.log('appStore.setBabies: Current selectedBabyId:', selectedBabyId);
         let selectedBaby = babies.find((b) => b.id === selectedBabyId) || null;
 
         // If no baby is selected, select the active one or the first one
         if (!selectedBaby && babies.length > 0) {
           selectedBaby = babies.find((b) => b.isActive) || babies[0];
-          console.log('appStore.setBabies: Auto-selected baby:', selectedBaby?.name);
         }
 
-        console.log('appStore.setBabies: Setting state with', babies.length, 'babies, selected:', selectedBaby?.name);
         set({
           babies,
           selectedBaby,
           selectedBabyId: selectedBaby?.id || null,
+          isLoadingBabies: false,
         });
       },
 
       setSettings: (settings) => {
-        set({ settings });
+        set({ settings, isLoadingSettings: false });
         get().updateNightModeFromSettings();
       },
 
@@ -99,6 +104,9 @@ export const useAppStore = create<AppState>()(
           set({ nightMode });
         }
       },
+
+      setLoadingBabies: (loading) => set({ isLoadingBabies: loading }),
+      setLoadingSettings: (loading) => set({ isLoadingSettings: loading }),
 
       reset: () => set(initialState),
     }),

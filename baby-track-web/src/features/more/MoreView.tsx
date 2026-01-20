@@ -13,6 +13,7 @@ import {
   Stethoscope,
   Star,
   Milk,
+  Droplet,
   Settings,
   FileText,
   LogOut,
@@ -22,14 +23,15 @@ import {
 } from 'lucide-react';
 
 const features = [
+  { icon: Droplet, label: 'Pumping', path: '/more/pump', color: '#2196f3' },
+  { icon: Milk, label: 'Milk Stash', path: '/more/milk-stash', color: '#3f51b5' },
   { icon: TrendingUp, label: 'Growth Tracking', path: '/more/growth', color: '#ff9800' },
   { icon: Apple, label: 'Solid Foods', path: '/more/solid-foods', color: '#4caf50' },
-  { icon: Syringe, label: 'Vaccinations', path: '/more/vaccinations', color: '#2196f3' },
+  { icon: Syringe, label: 'Vaccinations', path: '/more/vaccinations', color: '#03a9f4' },
   { icon: Pill, label: 'Medicine', path: '/more/medicine', color: '#9c27b0' },
   { icon: SmilePlus, label: 'Teething', path: '/more/teething', color: '#e91e63' },
   { icon: Stethoscope, label: 'Pediatrician Notes', path: '/more/pediatrician', color: '#00bcd4' },
   { icon: Star, label: 'Milestones', path: '/more/milestones', color: '#ffc107' },
-  { icon: Milk, label: 'Milk Stash', path: '/more/milk-stash', color: '#3f51b5' },
 ];
 
 export function MoreView() {

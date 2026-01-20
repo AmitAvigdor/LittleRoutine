@@ -80,8 +80,6 @@ function subscribeToCollectionSimple<T>(
 
 // ============ BABIES ============
 export async function createBaby(userId: string, input: CreateBabyInput): Promise<string> {
-  console.log('createBaby: Creating baby for userId:', userId);
-  console.log('createBaby: Input:', input);
   const now = new Date().toISOString();
   const babyData = {
     ...input,
@@ -93,9 +91,7 @@ export async function createBaby(userId: string, input: CreateBabyInput): Promis
     createdAt: now,
     updatedAt: now,
   };
-  console.log('createBaby: Full baby data to save:', babyData);
   const docRef = await addDoc(collection(db, 'babies'), babyData);
-  console.log('createBaby: Created with ID:', docRef.id);
   return docRef.id;
 }
 
@@ -117,31 +113,17 @@ export async function getBaby(babyId: string): Promise<Baby | null> {
 }
 
 export function subscribeToBabies(userId: string, callback: (babies: Baby[]) => void): () => void {
-  console.log('subscribeToBabies: Setting up subscription for userId:', userId);
-  // Simple query without orderBy to avoid needing composite index
   const q = query(collection(db, 'babies'), where('userId', '==', userId));
   return onSnapshot(q, (snapshot) => {
-    console.log('subscribeToBabies: Received snapshot with', snapshot.docs.length, 'docs');
-    console.log('subscribeToBabies: fromCache:', snapshot.metadata.fromCache);
-    console.log('subscribeToBabies: hasPendingWrites:', snapshot.metadata.hasPendingWrites);
-
-    const babies = snapshot.docs.map((doc) => {
-      const data = doc.data();
-      console.log('subscribeToBabies: Doc data:', doc.id, data);
-      return {
-        id: doc.id,
-        ...convertTimestamps(data),
-      };
-    }) as Baby[];
+    const babies = snapshot.docs.map((docSnap) => ({
+      id: docSnap.id,
+      ...convertTimestamps(docSnap.data()),
+    })) as Baby[];
     // Sort client-side
     babies.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    console.log('subscribeToBabies: Calling callback with babies:', babies);
     callback(babies);
   }, (error) => {
-    console.error('subscribeToBabies: ERROR:', error);
-    console.error('subscribeToBabies: Error code:', error.code);
-    console.error('subscribeToBabies: Error message:', error.message);
-    // Call with empty array on error so app doesn't break
+    console.error('Error subscribing to babies:', error);
     callback([]);
   });
 }
@@ -204,10 +186,10 @@ export async function endFeedingSession(
     throw new Error(`Feeding session ${sessionId} not found`);
   }
 
-  const session = docSnap.data();
+  const session = convertTimestamps(docSnap.data());
   const startTime = new Date(session.startTime);
   const end = new Date(endTime);
-  const duration = Math.floor((end.getTime() - startTime.getTime()) / 1000);
+  const duration = Math.max(0, Math.floor((end.getTime() - startTime.getTime()) / 1000));
 
   await updateDoc(doc(db, 'feedingSessions', sessionId), {
     endTime,
@@ -306,10 +288,10 @@ export async function endPumpSession(
     throw new Error(`Pump session ${sessionId} not found`);
   }
 
-  const session = docSnap.data();
+  const session = convertTimestamps(docSnap.data());
   const startTime = new Date(session.startTime);
   const end = new Date(endTime);
-  const duration = Math.floor((end.getTime() - startTime.getTime()) / 1000);
+  const duration = Math.max(0, Math.floor((end.getTime() - startTime.getTime()) / 1000));
 
   await updateDoc(doc(db, 'pumpSessions', sessionId), {
     endTime,
@@ -531,10 +513,10 @@ export async function endSleepSession(
     throw new Error(`Sleep session ${sessionId} not found`);
   }
 
-  const session = docSnap.data();
+  const session = convertTimestamps(docSnap.data());
   const startTime = new Date(session.startTime);
   const end = new Date(endTime);
-  const duration = Math.floor((end.getTime() - startTime.getTime()) / 1000);
+  const duration = Math.max(0, Math.floor((end.getTime() - startTime.getTime()) / 1000));
 
   await updateDoc(doc(db, 'sleepSessions', sessionId), {
     endTime,
@@ -1024,14 +1006,14 @@ export function subscribeToSettings(
   const q = query(collection(db, 'appSettings'), where('userId', '==', userId));
   return onSnapshot(q, (snapshot) => {
     if (snapshot.empty) {
-      console.log('Settings: No settings found for user');
       callback(null);
       return;
     }
-    const doc = snapshot.docs[0];
-    callback({ id: doc.id, ...convertTimestamps(doc.data()) } as AppSettings);
+    const docSnap = snapshot.docs[0];
+    callback({ id: docSnap.id, ...convertTimestamps(docSnap.data()) } as AppSettings);
   }, (error) => {
     console.error('Error subscribing to settings:', error);
+    callback(null);
   });
 }
 
@@ -1053,12 +1035,12 @@ export async function updateSleepSession(
     throw new Error(`Sleep session ${sessionId} not found`);
   }
 
-  const session = docSnap.data();
+  const session = convertTimestamps(docSnap.data());
   const startTime = updates.startTime ? new Date(updates.startTime) : new Date(session.startTime);
   const endTime = updates.endTime ? new Date(updates.endTime) : (session.endTime ? new Date(session.endTime) : null);
 
   const duration = endTime
-    ? Math.floor((endTime.getTime() - startTime.getTime()) / 1000)
+    ? Math.max(0, Math.floor((endTime.getTime() - startTime.getTime()) / 1000))
     : session.duration;
 
   await updateDoc(doc(db, 'sleepSessions', sessionId), {
@@ -1086,10 +1068,10 @@ export async function updateFeedingSession(
     throw new Error(`Feeding session ${sessionId} not found`);
   }
 
-  const session = docSnap.data();
+  const session = convertTimestamps(docSnap.data());
   const startTime = updates.startTime ? new Date(updates.startTime) : new Date(session.startTime);
   const endTime = updates.endTime ? new Date(updates.endTime) : new Date(session.endTime);
-  const duration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
+  const duration = Math.max(0, Math.floor((endTime.getTime() - startTime.getTime()) / 1000));
 
   await updateDoc(doc(db, 'feedingSessions', sessionId), {
     ...updates,
@@ -1117,10 +1099,10 @@ export async function updatePumpSession(
     throw new Error(`Pump session ${sessionId} not found`);
   }
 
-  const session = docSnap.data();
+  const session = convertTimestamps(docSnap.data());
   const startTime = updates.startTime ? new Date(updates.startTime) : new Date(session.startTime);
   const endTime = updates.endTime ? new Date(updates.endTime) : new Date(session.endTime);
-  const duration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
+  const duration = Math.max(0, Math.floor((endTime.getTime() - startTime.getTime()) / 1000));
 
   await updateDoc(doc(db, 'pumpSessions', sessionId), {
     ...updates,

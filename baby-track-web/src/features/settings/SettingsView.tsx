@@ -7,6 +7,7 @@ import { SegmentedControl } from '@/components/ui/Select';
 import { useAppStore } from '@/stores/appStore';
 import { updateSettings } from '@/lib/firestore';
 import { VolumeUnit, WeightUnit, LengthUnit } from '@/types';
+import { toast } from '@/stores/toastStore';
 import { User, Moon, Bell, Scale } from 'lucide-react';
 
 export function SettingsView() {
@@ -30,12 +31,20 @@ export function SettingsView() {
   ) => {
     if (!settings) return;
 
+    // Store previous value for rollback
+    const previousValue = settings[key];
+
+    // Optimistic update
+    setSettings({ ...settings, [key]: value });
     setSaving(true);
+
     try {
       await updateSettings(settings.id, { [key]: value });
-      setSettings({ ...settings, [key]: value });
     } catch (error) {
       console.error('Error updating settings:', error);
+      // Rollback on error
+      setSettings({ ...settings, [key]: previousValue });
+      toast.error('Failed to save settings. Please try again.');
     } finally {
       setSaving(false);
     }

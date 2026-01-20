@@ -9,6 +9,7 @@ import { DiaperChange, DiaperType, BabyMood, DIAPER_TYPE_CONFIG } from '@/types'
 import { createDiaperChange, subscribeToDiaperChanges } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
+import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
 import { Droplet, Circle, Layers, Clock, Check } from 'lucide-react';
 
@@ -63,6 +64,7 @@ export function DiaperView() {
       saveTimeoutRef.current = window.setTimeout(() => setJustSaved(false), 1500);
     } catch (error) {
       console.error('Error saving diaper change:', error);
+      toast.error('Failed to save diaper change. Please try again.');
     }
   };
 
@@ -93,6 +95,7 @@ export function DiaperView() {
       saveTimeoutRef.current = window.setTimeout(() => setJustSaved(false), 1500);
     } catch (error) {
       console.error('Error saving diaper change:', error);
+      toast.error('Failed to save diaper change. Please try again.');
     } finally {
       setSaving(false);
     }

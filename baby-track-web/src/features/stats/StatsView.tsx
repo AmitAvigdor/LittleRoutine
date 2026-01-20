@@ -12,8 +12,20 @@ import {
   subscribeToSleepSessions,
   subscribeToDiaperChanges,
 } from '@/lib/firestore';
-import { FeedingSession, PumpSession, BottleSession, SleepSession, DiaperChange, formatDuration, formatSleepDuration, convertVolume } from '@/types';
-import { Droplet, Moon, Leaf, Milk, Baby } from 'lucide-react';
+import {
+  FeedingSession,
+  PumpSession,
+  BottleSession,
+  SleepSession,
+  DiaperChange,
+  formatDuration,
+  formatSleepDuration,
+  convertVolume,
+  BREAST_SIDE_CONFIG,
+  BOTTLE_CONTENT_CONFIG,
+  SLEEP_TYPE_CONFIG,
+} from '@/types';
+import { Droplet, Moon, Sun, Leaf, Milk, Baby, Clock, BarChart3, History } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -26,7 +38,14 @@ import {
   Cell,
 } from 'recharts';
 
+type ViewMode = 'stats' | 'history';
 type TimeFilter = 'today' | 'week' | 'all';
+type HistoryFilter = 'all' | 'feeding' | 'sleep';
+
+const viewModeOptions = [
+  { value: 'stats', label: 'Stats', icon: <BarChart3 className="w-4 h-4" /> },
+  { value: 'history', label: 'History', icon: <History className="w-4 h-4" /> },
+];
 
 const filterOptions = [
   { value: 'today', label: 'Today' },
@@ -34,10 +53,18 @@ const filterOptions = [
   { value: 'all', label: 'All Time' },
 ];
 
+const historyFilterOptions = [
+  { value: 'all', label: 'All' },
+  { value: 'feeding', label: 'Feeding' },
+  { value: 'sleep', label: 'Sleep' },
+];
+
 export function StatsView() {
   useAuth(); // Ensure user is authenticated
   const { selectedBaby, babies, settings } = useAppStore();
+  const [viewMode, setViewMode] = useState<ViewMode>('stats');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('today');
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all');
 
   // Get preferred units from settings
   const volumeUnit = settings?.preferredVolumeUnit || 'oz';
@@ -187,26 +214,154 @@ export function StatsView() {
     { name: 'Both', value: stats.diaperCount - stats.wetCount - stats.dirtyCount, color: '#ff9800' },
   ].filter((d) => d.value > 0);
 
+  // History data - combine all sessions into a unified timeline
+  const historyData = useMemo(() => {
+    type HistoryItem = {
+      id: string;
+      type: 'breastfeeding' | 'bottle' | 'pump' | 'sleep';
+      timestamp: string;
+      duration?: number;
+      details: string;
+      subDetails?: string;
+      color: string;
+      icon: 'baby' | 'milk' | 'droplet' | 'moon' | 'sun';
+    };
+
+    const items: HistoryItem[] = [];
+
+    // Add breastfeeding sessions
+    if (historyFilter === 'all' || historyFilter === 'feeding') {
+      feedingSessions.filter(s => !s.isActive).forEach((s) => {
+        items.push({
+          id: `feeding-${s.id}`,
+          type: 'breastfeeding',
+          timestamp: s.startTime,
+          duration: s.duration,
+          details: `Breastfeeding - ${BREAST_SIDE_CONFIG[s.breastSide].label}`,
+          subDetails: formatDuration(s.duration),
+          color: BREAST_SIDE_CONFIG[s.breastSide].color,
+          icon: 'baby',
+        });
+      });
+
+      // Add bottle sessions
+      bottleSessions.forEach((s) => {
+        items.push({
+          id: `bottle-${s.id}`,
+          type: 'bottle',
+          timestamp: s.timestamp,
+          details: `Bottle - ${BOTTLE_CONTENT_CONFIG[s.contentType].label}`,
+          subDetails: `${s.volume} ${s.volumeUnit}`,
+          color: BOTTLE_CONTENT_CONFIG[s.contentType].color,
+          icon: 'milk',
+        });
+      });
+
+      // Add pump sessions
+      pumpSessions.filter(s => !s.isActive).forEach((s) => {
+        items.push({
+          id: `pump-${s.id}`,
+          type: 'pump',
+          timestamp: s.startTime,
+          duration: s.duration,
+          details: `Pumping - ${s.side === 'both' ? 'Both sides' : s.side.charAt(0).toUpperCase() + s.side.slice(1)}`,
+          subDetails: `${s.volume} ${s.volumeUnit} • ${formatDuration(s.duration)}`,
+          color: '#2196f3',
+          icon: 'droplet',
+        });
+      });
+    }
+
+    // Add sleep sessions
+    if (historyFilter === 'all' || historyFilter === 'sleep') {
+      sleepSessions.filter(s => !s.isActive).forEach((s) => {
+        items.push({
+          id: `sleep-${s.id}`,
+          type: 'sleep',
+          timestamp: s.startTime,
+          duration: s.duration,
+          details: SLEEP_TYPE_CONFIG[s.type].label,
+          subDetails: formatSleepDuration(s.duration),
+          color: SLEEP_TYPE_CONFIG[s.type].color,
+          icon: s.type === 'nap' ? 'sun' : 'moon',
+        });
+      });
+    }
+
+    // Sort by timestamp descending (most recent first)
+    items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    return items;
+  }, [feedingSessions, bottleSessions, pumpSessions, sleepSessions, historyFilter]);
+
+  // Group history items by date
+  const groupedHistory = useMemo(() => {
+    const groups: Record<string, typeof historyData> = {};
+
+    historyData.forEach((item) => {
+      const dateKey = format(parseISO(item.timestamp), 'yyyy-MM-dd');
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(item);
+    });
+
+    return Object.entries(groups).map(([date, items]) => ({
+      date,
+      dateLabel: format(parseISO(date), 'EEEE, MMM d'),
+      items,
+    }));
+  }, [historyData]);
+
   if (babies.length === 0) {
     return <NoBabiesHeader />;
   }
+
+  const renderHistoryIcon = (icon: string, color: string) => {
+    const iconClass = "w-5 h-5";
+    switch (icon) {
+      case 'baby':
+        return <Baby className={iconClass} style={{ color }} />;
+      case 'milk':
+        return <Milk className={iconClass} style={{ color }} />;
+      case 'droplet':
+        return <Droplet className={iconClass} style={{ color }} />;
+      case 'moon':
+        return <Moon className={iconClass} style={{ color }} />;
+      case 'sun':
+        return <Sun className={iconClass} style={{ color }} />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <div>
       <Header title="Stats" />
 
       <div className="px-4 py-4 space-y-4">
-        {/* Time Filter */}
+        {/* View Mode Toggle */}
         <div className="flex justify-center">
           <SegmentedControl
-            options={filterOptions}
-            value={timeFilter}
-            onChange={(value) => setTimeFilter(value as TimeFilter)}
+            options={viewModeOptions}
+            value={viewMode}
+            onChange={(value) => setViewMode(value as ViewMode)}
           />
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 gap-3">
+        {viewMode === 'stats' && (
+          <>
+            {/* Time Filter */}
+            <div className="flex justify-center">
+              <SegmentedControl
+                options={filterOptions}
+                value={timeFilter}
+                onChange={(value) => setTimeFilter(value as TimeFilter)}
+              />
+            </div>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 gap-3">
           {/* Feeding */}
           <Card className="border-l-4 border-l-pink-500">
             <div className="flex items-center gap-2 mb-2">
@@ -325,6 +480,74 @@ export function StatsView() {
               </span>
             </div>
           </Card>
+        )}
+          </>
+        )}
+
+        {viewMode === 'history' && (
+          <>
+            {/* History Filter */}
+            <div className="flex justify-center">
+              <SegmentedControl
+                options={historyFilterOptions}
+                value={historyFilter}
+                onChange={(value) => setHistoryFilter(value as HistoryFilter)}
+              />
+            </div>
+
+            {/* History List */}
+            {groupedHistory.length > 0 ? (
+              <div className="space-y-4">
+                {groupedHistory.map((group) => (
+                  <div key={group.date}>
+                    <h3 className="text-sm font-semibold text-gray-500 mb-2 px-1">
+                      {group.dateLabel}
+                    </h3>
+                    <Card padding="none">
+                      <div className="divide-y divide-gray-50">
+                        {group.items.map((item) => (
+                          <div
+                            key={item.id}
+                            className="px-4 py-3 flex items-center gap-3"
+                          >
+                            <div
+                              className="w-10 h-10 rounded-full flex items-center justify-center"
+                              style={{ backgroundColor: `${item.color}20` }}
+                            >
+                              {renderHistoryIcon(item.icon, item.color)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 truncate">
+                                {item.details}
+                              </p>
+                              <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <Clock className="w-3 h-3 flex-shrink-0" />
+                                <span>{format(parseISO(item.timestamp), 'h:mm a')}</span>
+                                {item.subDetails && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{item.subDetails}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Card className="text-center py-8">
+                <History className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">No history to show</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Start tracking to see your history here
+                </p>
+              </Card>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -3,7 +3,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { ToastContainer } from '@/components/ui/Toast';
 import { FeedingHub } from '@/features/feeding/FeedingHub';
+import { PumpPage } from '@/features/feeding/PumpPage';
 import { SleepView } from '@/features/sleep/SleepView';
 import { DiaperView } from '@/features/diaper/DiaperView';
 import { StatsView } from '@/features/stats/StatsView';
@@ -107,6 +109,7 @@ function AppRoutes() {
         <Route path="/more/teething" element={<TeethingView />} />
         <Route path="/more/pediatrician" element={<PediatricianNotesView />} />
         <Route path="/more/milk-stash" element={<MilkStashView />} />
+        <Route path="/more/pump" element={<PumpPage />} />
         <Route path="/more/export" element={<ExportView />} />
       </Route>
 
@@ -123,6 +126,7 @@ export default function App() {
       <BrowserRouter>
         <AuthProvider>
           <AppRoutes />
+          <ToastContainer />
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

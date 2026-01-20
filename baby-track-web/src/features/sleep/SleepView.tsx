@@ -12,6 +12,7 @@ import { SleepSession, SleepType, BabyMood, SLEEP_TYPE_CONFIG, formatSleepDurati
 import { createSleepSession, endSleepSession, createCompleteSleepSession, subscribeToSleepSessions } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
+import { toast } from '@/stores/toastStore';
 import { Moon, Sun, Clock, Bed, Timer as TimerIcon, Edit3 } from 'lucide-react';
 
 type EntryMode = 'timer' | 'manual';
@@ -87,6 +88,7 @@ export function SleepView() {
       setIsTimerRunning(true);
     } catch (error) {
       console.error('Error starting sleep session:', error);
+      toast.error('Failed to start sleep tracking. Please try again.');
     } finally {
       setStarting(false);
     }
@@ -128,6 +130,7 @@ export function SleepView() {
       setShowForm(false);
     } catch (error) {
       console.error('Error saving sleep session:', error);
+      toast.error('Failed to save sleep session. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -136,10 +139,15 @@ export function SleepView() {
   const handleManualSave = async () => {
     if (!user || !selectedBaby || !manualDuration) return;
 
+    const durationMinutes = parseInt(manualDuration, 10);
+    if (isNaN(durationMinutes) || durationMinutes <= 0 || durationMinutes > 720) {
+      toast.error('Please enter a valid duration (1-720 minutes).');
+      return;
+    }
+
     setSaving(true);
     try {
       const startTime = new Date(`${manualDate}T${manualStartTime}`);
-      const durationMinutes = parseInt(manualDuration, 10);
       const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000);
 
       await createCompleteSleepSession(selectedBaby.id, user.uid, {
@@ -158,6 +166,7 @@ export function SleepView() {
       setBabyMood(null);
     } catch (error) {
       console.error('Error saving sleep session:', error);
+      toast.error('Failed to save sleep session. Please try again.');
     } finally {
       setSaving(false);
     }
