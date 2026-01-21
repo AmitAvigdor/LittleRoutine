@@ -64,6 +64,9 @@ export const toast = {
     useToastStore.getState().addToast(message, 'info', duration),
   // Toast with undo action
   withUndo: (message: string, onUndo: () => void, duration = 5000) => {
+    // Use an object to hold the id so the closure can access it
+    const idHolder: { value: string } = { value: '' };
+
     const id = useToastStore.getState().addToast(
       message,
       'success',
@@ -72,10 +75,13 @@ export const toast = {
         label: 'Undo',
         onClick: () => {
           onUndo();
-          useToastStore.getState().removeToast(id);
+          useToastStore.getState().removeToast(idHolder.value);
         },
       }
     );
+
+    // Set the id after creation so the closure can access it
+    idHolder.value = id;
     return id;
   },
 };

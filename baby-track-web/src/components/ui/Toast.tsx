@@ -36,12 +36,12 @@ export function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-full max-w-sm px-4">
+    <div className="fixed top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 flex flex-col gap-2 w-full max-w-sm px-4">
       {toasts.map((toast) => (
         <div
           key={toast.id}
           className={clsx(
-            'flex items-center gap-3 p-3 rounded-lg border shadow-lg animate-in fade-in slide-in-from-top-2 duration-200',
+            'flex items-center gap-3 p-4 rounded-xl border-2 shadow-xl animate-in fade-in zoom-in-95 duration-200',
             styles[toast.type]
           )}
         >
@@ -51,17 +51,17 @@ export function ToastContainer() {
             <button
               onClick={toast.action.onClick}
               className={clsx(
-                'flex items-center gap-1 px-3 py-1 rounded-md text-sm font-medium transition-colors',
+                'flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-colors active:scale-95',
                 actionStyles[toast.type]
               )}
             >
-              <Undo2 className="w-3.5 h-3.5" />
+              <Undo2 className="w-4 h-4" />
               {toast.action.label}
             </button>
           )}
           <button
             onClick={() => removeToast(toast.id)}
-            className="p-0.5 rounded hover:bg-black/5 transition-colors"
+            className="p-1 rounded-lg hover:bg-black/10 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
