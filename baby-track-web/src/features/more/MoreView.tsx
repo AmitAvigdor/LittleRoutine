@@ -20,9 +20,11 @@ import {
   ChevronRight,
   Users,
   Edit,
+  BarChart2,
 } from 'lucide-react';
 
 const features = [
+  { icon: BarChart2, label: 'Stats & History', path: '/stats', color: '#9c27b0' },
   { icon: Droplet, label: 'Pumping', path: '/more/pump', color: '#2196f3' },
   { icon: Milk, label: 'Milk Stash', path: '/more/milk-stash', color: '#3f51b5' },
   { icon: TrendingUp, label: 'Growth Tracking', path: '/more/growth', color: '#ff9800' },

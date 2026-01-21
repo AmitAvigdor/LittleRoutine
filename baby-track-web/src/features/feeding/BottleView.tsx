@@ -28,7 +28,15 @@ export function BottleView({ baby }: BottleViewProps) {
   const { user } = useAuth();
   const { settings } = useAppStore();
   const [sessions, setSessions] = useState<BottleSession[]>([]);
-  const [contentType, setContentType] = useState<BottleContentType>('breastMilk');
+
+  // Default to formula if feeding preference is formula
+  const getInitialContentType = (): BottleContentType => {
+    if (settings?.feedingTypePreference === 'formula') {
+      return 'formula';
+    }
+    return 'breastMilk';
+  };
+  const [contentType, setContentType] = useState<BottleContentType>(getInitialContentType);
   const [volume, setVolume] = useState('');
   const [volumeUnit, setVolumeUnit] = useState<VolumeUnit>(settings?.preferredVolumeUnit || 'oz');
   const [notes, setNotes] = useState('');
@@ -50,6 +58,13 @@ export function BottleView({ baby }: BottleViewProps) {
       setVolumeUnit(settings.preferredVolumeUnit);
     }
   }, [settings?.preferredVolumeUnit]);
+
+  // Update content type when feeding preference changes
+  useEffect(() => {
+    if (settings?.feedingTypePreference === 'formula') {
+      setContentType('formula');
+    }
+  }, [settings?.feedingTypePreference]);
 
   const handleQuickAdd = (quickVolume: number) => {
     setVolume(quickVolume.toString());
