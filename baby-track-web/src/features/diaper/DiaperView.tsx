@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Input';
 import { BabyMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
 import { DiaperChange, DiaperType, BabyMood, DIAPER_TYPE_CONFIG } from '@/types';
-import { createDiaperChange, subscribeToDiaperChanges } from '@/lib/firestore';
+import { createDiaperChange, subscribeToDiaperChanges, deleteDiaperChange } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
@@ -56,17 +56,25 @@ export function DiaperView() {
     if (!user || !selectedBaby) return;
 
     try {
-      await createDiaperChange(selectedBaby.id, user.uid, {
+      const changeId = await createDiaperChange(selectedBaby.id, user.uid, {
         type,
         timestamp: new Date().toISOString(),
         notes: null,
         babyMood: null,
       });
 
-      // Show feedback
-      setJustSaved(true);
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = window.setTimeout(() => setJustSaved(false), 1500);
+      // Show feedback with undo option
+      toast.withUndo(
+        `${DIAPER_TYPE_CONFIG[type].label} diaper logged`,
+        async () => {
+          try {
+            await deleteDiaperChange(changeId);
+            toast.info('Diaper log undone');
+          } catch {
+            toast.error('Failed to undo');
+          }
+        }
+      );
     } catch (error) {
       console.error('Error saving diaper change:', error);
       toast.error('Failed to save diaper change. Please try again.');

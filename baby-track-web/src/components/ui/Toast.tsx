@@ -1,5 +1,5 @@
 import { useToastStore, type ToastType } from '@/stores/toastStore';
-import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, AlertTriangle, Info, Undo2 } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const icons: Record<ToastType, React.ReactNode> = {
@@ -23,6 +23,13 @@ const iconStyles: Record<ToastType, string> = {
   info: 'text-blue-500',
 };
 
+const actionStyles: Record<ToastType, string> = {
+  success: 'bg-green-600 hover:bg-green-700 text-white',
+  error: 'bg-red-600 hover:bg-red-700 text-white',
+  warning: 'bg-yellow-600 hover:bg-yellow-700 text-white',
+  info: 'bg-blue-600 hover:bg-blue-700 text-white',
+};
+
 export function ToastContainer() {
   const { toasts, removeToast } = useToastStore();
 
@@ -34,12 +41,24 @@ export function ToastContainer() {
         <div
           key={toast.id}
           className={clsx(
-            'flex items-start gap-3 p-3 rounded-lg border shadow-lg animate-in fade-in slide-in-from-top-2 duration-200',
+            'flex items-center gap-3 p-3 rounded-lg border shadow-lg animate-in fade-in slide-in-from-top-2 duration-200',
             styles[toast.type]
           )}
         >
           <span className={iconStyles[toast.type]}>{icons[toast.type]}</span>
           <p className="flex-1 text-sm font-medium">{toast.message}</p>
+          {toast.action && (
+            <button
+              onClick={toast.action.onClick}
+              className={clsx(
+                'flex items-center gap-1 px-3 py-1 rounded-md text-sm font-medium transition-colors',
+                actionStyles[toast.type]
+              )}
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+              {toast.action.label}
+            </button>
+          )}
           <button
             onClick={() => removeToast(toast.id)}
             className="p-0.5 rounded hover:bg-black/5 transition-colors"

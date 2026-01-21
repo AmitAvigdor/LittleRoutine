@@ -1151,6 +1151,10 @@ export async function deleteBottleSession(sessionId: string): Promise<void> {
   await deleteDoc(doc(db, 'bottleSessions', sessionId));
 }
 
+export async function deleteDiaperChange(changeId: string): Promise<void> {
+  await deleteDoc(doc(db, 'diaperChanges', changeId));
+}
+
 // ============ GENERIC DELETE OPERATION ============
 export async function deleteDocument(collectionPath: string, docId: string): Promise<void> {
   await deleteDoc(doc(db, collectionPath, docId));

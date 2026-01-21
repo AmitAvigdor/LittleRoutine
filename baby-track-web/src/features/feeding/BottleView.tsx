@@ -7,7 +7,7 @@ import { SegmentedControl } from '@/components/ui/Select';
 import { BabyMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
 import { EditSessionModal } from '@/components/ui/EditSessionModal';
 import { Baby, BottleSession, BottleContentType, BabyMood, VolumeUnit, BOTTLE_CONTENT_CONFIG, convertVolume } from '@/types';
-import { createBottleSession, subscribeToBottleSessions } from '@/lib/firestore';
+import { createBottleSession, subscribeToBottleSessions, deleteBottleSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
@@ -80,11 +80,14 @@ export function BottleView({ baby }: BottleViewProps) {
       return;
     }
 
+    const savedVolume = parseFloat(volume);
+    const savedUnit = volumeUnit;
+
     setSaving(true);
     try {
-      await createBottleSession(baby.id, user.uid, {
+      const sessionId = await createBottleSession(baby.id, user.uid, {
         timestamp: new Date().toISOString(),
-        volume: parseFloat(volume),
+        volume: savedVolume,
         volumeUnit,
         contentType,
         notes: notes || null,
@@ -96,6 +99,19 @@ export function BottleView({ baby }: BottleViewProps) {
       setNotes('');
       setBabyMood(null);
       setShowForm(false);
+
+      // Show undo toast
+      toast.withUndo(
+        `Bottle ${savedVolume} ${savedUnit} logged`,
+        async () => {
+          try {
+            await deleteBottleSession(sessionId);
+            toast.info('Bottle log undone');
+          } catch {
+            toast.error('Failed to undo');
+          }
+        }
+      );
     } catch (error) {
       console.error('Error saving bottle session:', error);
       toast.error('Failed to save bottle feeding. Please try again.');

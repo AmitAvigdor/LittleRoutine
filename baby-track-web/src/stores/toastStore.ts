@@ -2,16 +2,22 @@ import { create } from 'zustand';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface Toast {
   id: string;
   message: string;
   type: ToastType;
   duration?: number;
+  action?: ToastAction;
 }
 
 interface ToastState {
   toasts: Toast[];
-  addToast: (message: string, type?: ToastType, duration?: number) => void;
+  addToast: (message: string, type?: ToastType, duration?: number, action?: ToastAction) => string;
   removeToast: (id: string) => void;
   clearToasts: () => void;
 }
@@ -21,10 +27,10 @@ let toastId = 0;
 export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
 
-  addToast: (message, type = 'info', duration = 4000) => {
+  addToast: (message, type = 'info', duration = 4000, action) => {
     const id = `toast-${++toastId}`;
     set((state) => ({
-      toasts: [...state.toasts, { id, message, type, duration }],
+      toasts: [...state.toasts, { id, message, type, duration, action }],
     }));
 
     if (duration > 0) {
@@ -34,6 +40,8 @@ export const useToastStore = create<ToastState>((set) => ({
         }));
       }, duration);
     }
+
+    return id;
   },
 
   removeToast: (id) =>
@@ -54,4 +62,20 @@ export const toast = {
     useToastStore.getState().addToast(message, 'warning', duration),
   info: (message: string, duration?: number) =>
     useToastStore.getState().addToast(message, 'info', duration),
+  // Toast with undo action
+  withUndo: (message: string, onUndo: () => void, duration = 5000) => {
+    const id = useToastStore.getState().addToast(
+      message,
+      'success',
+      duration,
+      {
+        label: 'Undo',
+        onClick: () => {
+          onUndo();
+          useToastStore.getState().removeToast(id);
+        },
+      }
+    );
+    return id;
+  },
 };
