@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, parseISO, isWithinInterval } from 'date-fns';
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, subWeeks, parseISO, isWithinInterval } from 'date-fns';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
 import { SegmentedControl } from '@/components/ui/Select';
@@ -26,7 +26,7 @@ import {
   SLEEP_TYPE_CONFIG,
   DIAPER_TYPE_CONFIG,
 } from '@/types';
-import { Droplet, Moon, Sun, Leaf, Milk, Baby, Clock, BarChart3, History } from 'lucide-react';
+import { Droplet, Moon, Sun, Leaf, Milk, Baby, Clock, BarChart3, History, Lightbulb, TrendingUp, TrendingDown, Minus, Calendar } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -39,13 +39,14 @@ import {
   Cell,
 } from 'recharts';
 
-type ViewMode = 'stats' | 'history';
+type ViewMode = 'stats' | 'history' | 'insights';
 type TimeFilter = 'today' | 'week' | 'all';
 type HistoryFilter = 'all' | 'feeding' | 'sleep' | 'diaper';
 
 const viewModeOptions = [
   { value: 'stats', label: 'Stats', icon: <BarChart3 className="w-4 h-4" /> },
   { value: 'history', label: 'History', icon: <History className="w-4 h-4" /> },
+  { value: 'insights', label: 'Insights', icon: <Lightbulb className="w-4 h-4" /> },
 ];
 
 const filterOptions = [
@@ -330,6 +331,159 @@ export function StatsView() {
     }));
   }, [historyData]);
 
+  // Insights calculations
+  const insights = useMemo(() => {
+    const now = new Date();
+    const thisWeekStart = startOfWeek(now);
+    const thisWeekEnd = endOfWeek(now);
+    const lastWeekStart = startOfWeek(subWeeks(now, 1));
+    const lastWeekEnd = endOfWeek(subWeeks(now, 1));
+
+    // Helper to filter by date range
+    const filterByRange = <T extends { startTime?: string; timestamp?: string }>(
+      items: T[],
+      start: Date,
+      end: Date
+    ): T[] => {
+      return items.filter((item) => {
+        const date = parseISO(item.startTime || item.timestamp || '');
+        return isWithinInterval(date, { start, end });
+      });
+    };
+
+    // This week data
+    const thisWeekFeeding = filterByRange(feedingSessions, thisWeekStart, thisWeekEnd).filter(s => !s.isActive);
+    const thisWeekBottle = filterByRange(bottleSessions, thisWeekStart, thisWeekEnd);
+    const thisWeekSleep = filterByRange(sleepSessions, thisWeekStart, thisWeekEnd).filter(s => !s.isActive);
+    const thisWeekDiaper = filterByRange(diaperChanges, thisWeekStart, thisWeekEnd);
+
+    // Last week data
+    const lastWeekFeeding = filterByRange(feedingSessions, lastWeekStart, lastWeekEnd).filter(s => !s.isActive);
+    const lastWeekBottle = filterByRange(bottleSessions, lastWeekStart, lastWeekEnd);
+    const lastWeekSleep = filterByRange(sleepSessions, lastWeekStart, lastWeekEnd).filter(s => !s.isActive);
+    const lastWeekDiaper = filterByRange(diaperChanges, lastWeekStart, lastWeekEnd);
+
+    // Calculate totals
+    const thisWeekSleepTotal = thisWeekSleep.reduce((sum, s) => sum + s.duration, 0);
+    const lastWeekSleepTotal = lastWeekSleep.reduce((sum, s) => sum + s.duration, 0);
+    const thisWeekFeedingCount = thisWeekFeeding.length + thisWeekBottle.length;
+    const lastWeekFeedingCount = lastWeekFeeding.length + lastWeekBottle.length;
+    const thisWeekDiaperCount = thisWeekDiaper.length;
+    const lastWeekDiaperCount = lastWeekDiaper.length;
+
+    // Calculate percentage changes
+    const calcChange = (current: number, previous: number): number => {
+      if (previous === 0) return current > 0 ? 100 : 0;
+      return Math.round(((current - previous) / previous) * 100);
+    };
+
+    const sleepChange = calcChange(thisWeekSleepTotal, lastWeekSleepTotal);
+    const feedingChange = calcChange(thisWeekFeedingCount, lastWeekFeedingCount);
+    const diaperChange = calcChange(thisWeekDiaperCount, lastWeekDiaperCount);
+
+    // Calculate daily averages for this week
+    const daysInWeek = Math.min(7, Math.ceil((now.getTime() - thisWeekStart.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+    const avgDailySleep = thisWeekSleepTotal / daysInWeek;
+    const avgDailyFeedings = thisWeekFeedingCount / daysInWeek;
+    const avgDailyDiapers = thisWeekDiaperCount / daysInWeek;
+
+    // Pattern detection - find most common hours for activities
+    const getHourDistribution = (items: { startTime?: string; timestamp?: string }[]): Record<number, number> => {
+      const hours: Record<number, number> = {};
+      items.forEach((item) => {
+        const hour = parseISO(item.startTime || item.timestamp || '').getHours();
+        hours[hour] = (hours[hour] || 0) + 1;
+      });
+      return hours;
+    };
+
+    const findPeakHours = (distribution: Record<number, number>, topN: number = 3): number[] => {
+      return Object.entries(distribution)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, topN)
+        .map(([hour]) => parseInt(hour));
+    };
+
+    const formatHour = (hour: number): string => {
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const h = hour % 12 || 12;
+      return `${h}${ampm}`;
+    };
+
+    // Get patterns from all-time data for better accuracy
+    const allSleepNaps = sleepSessions.filter(s => !s.isActive && s.type === 'nap');
+    const allFeedingSessions = [...feedingSessions.filter(s => !s.isActive), ...bottleSessions];
+
+    const napHours = getHourDistribution(allSleepNaps);
+    const feedingHours = getHourDistribution(allFeedingSessions);
+
+    const peakNapHours = findPeakHours(napHours, 2);
+    const peakFeedingHours = findPeakHours(feedingHours, 3);
+
+    // Generate pattern insights
+    const patterns: string[] = [];
+
+    if (peakNapHours.length > 0 && allSleepNaps.length >= 5) {
+      patterns.push(`Usually naps around ${peakNapHours.map(formatHour).join(' and ')}`);
+    }
+
+    if (peakFeedingHours.length > 0 && allFeedingSessions.length >= 5) {
+      patterns.push(`Most feedings happen around ${peakFeedingHours.map(formatHour).join(', ')}`);
+    }
+
+    // Calculate average nap duration
+    if (allSleepNaps.length >= 3) {
+      const avgNapDuration = allSleepNaps.reduce((sum, s) => sum + s.duration, 0) / allSleepNaps.length;
+      const avgNapMins = Math.round(avgNapDuration / 60);
+      if (avgNapMins >= 30) {
+        patterns.push(`Average nap lasts about ${avgNapMins} minutes`);
+      }
+    }
+
+    // Calculate average time between feedings
+    if (allFeedingSessions.length >= 5) {
+      const sortedFeedings = [...allFeedingSessions]
+        .sort((a, b) => new Date(a.startTime || a.timestamp || '').getTime() - new Date(b.startTime || b.timestamp || '').getTime());
+
+      let totalGap = 0;
+      let gapCount = 0;
+      for (let i = 1; i < sortedFeedings.length; i++) {
+        const prev = new Date(sortedFeedings[i-1].startTime || sortedFeedings[i-1].timestamp || '').getTime();
+        const curr = new Date(sortedFeedings[i].startTime || sortedFeedings[i].timestamp || '').getTime();
+        const gap = (curr - prev) / (1000 * 60 * 60); // hours
+        if (gap > 0.5 && gap < 12) { // Only count reasonable gaps
+          totalGap += gap;
+          gapCount++;
+        }
+      }
+      if (gapCount > 0) {
+        const avgGap = totalGap / gapCount;
+        patterns.push(`Feeds about every ${avgGap.toFixed(1)} hours on average`);
+      }
+    }
+
+    return {
+      // Weekly comparisons
+      sleepChange,
+      feedingChange,
+      diaperChange,
+      thisWeekSleepTotal,
+      lastWeekSleepTotal,
+      thisWeekFeedingCount,
+      lastWeekFeedingCount,
+      thisWeekDiaperCount,
+      lastWeekDiaperCount,
+      // Daily averages
+      avgDailySleep,
+      avgDailyFeedings,
+      avgDailyDiapers,
+      // Patterns
+      patterns,
+      // Data availability
+      hasEnoughData: feedingSessions.length >= 5 || sleepSessions.length >= 5,
+    };
+  }, [feedingSessions, bottleSessions, sleepSessions, diaperChanges]);
+
   if (babies.length === 0) {
     return <NoBabiesHeader />;
   }
@@ -563,6 +717,170 @@ export function StatsView() {
                 <p className="text-gray-500">No history to show</p>
                 <p className="text-sm text-gray-400 mt-1">
                   Start tracking to see your history here
+                </p>
+              </Card>
+            )}
+          </>
+        )}
+
+        {viewMode === 'insights' && (
+          <>
+            {insights.hasEnoughData ? (
+              <div className="space-y-4">
+                {/* Weekly Summary */}
+                <Card>
+                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-primary-500" />
+                    This Week vs Last Week
+                  </h3>
+
+                  <div className="space-y-4">
+                    {/* Sleep comparison */}
+                    <div className="flex items-center justify-between p-3 bg-indigo-50 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <Moon className="w-5 h-5 text-indigo-600" />
+                        <div>
+                          <p className="font-medium text-gray-900">Sleep</p>
+                          <p className="text-sm text-gray-500">
+                            {formatSleepDuration(insights.thisWeekSleepTotal)} this week
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                        insights.sleepChange > 0
+                          ? 'bg-green-100 text-green-700'
+                          : insights.sleepChange < 0
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {insights.sleepChange > 0 ? (
+                          <TrendingUp className="w-4 h-4" />
+                        ) : insights.sleepChange < 0 ? (
+                          <TrendingDown className="w-4 h-4" />
+                        ) : (
+                          <Minus className="w-4 h-4" />
+                        )}
+                        {insights.sleepChange > 0 ? '+' : ''}{insights.sleepChange}%
+                      </div>
+                    </div>
+
+                    {/* Feeding comparison */}
+                    <div className="flex items-center justify-between p-3 bg-pink-50 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <Baby className="w-5 h-5 text-pink-600" />
+                        <div>
+                          <p className="font-medium text-gray-900">Feedings</p>
+                          <p className="text-sm text-gray-500">
+                            {insights.thisWeekFeedingCount} feedings this week
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                        insights.feedingChange > 0
+                          ? 'bg-green-100 text-green-700'
+                          : insights.feedingChange < 0
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {insights.feedingChange > 0 ? (
+                          <TrendingUp className="w-4 h-4" />
+                        ) : insights.feedingChange < 0 ? (
+                          <TrendingDown className="w-4 h-4" />
+                        ) : (
+                          <Minus className="w-4 h-4" />
+                        )}
+                        {insights.feedingChange > 0 ? '+' : ''}{insights.feedingChange}%
+                      </div>
+                    </div>
+
+                    {/* Diaper comparison */}
+                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <Leaf className="w-5 h-5 text-green-600" />
+                        <div>
+                          <p className="font-medium text-gray-900">Diapers</p>
+                          <p className="text-sm text-gray-500">
+                            {insights.thisWeekDiaperCount} changes this week
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                        insights.diaperChange >= 0
+                          ? 'bg-gray-100 text-gray-600'
+                          : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {insights.diaperChange > 0 ? (
+                          <TrendingUp className="w-4 h-4" />
+                        ) : insights.diaperChange < 0 ? (
+                          <TrendingDown className="w-4 h-4" />
+                        ) : (
+                          <Minus className="w-4 h-4" />
+                        )}
+                        {insights.diaperChange > 0 ? '+' : ''}{insights.diaperChange}%
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Daily Averages */}
+                <Card>
+                  <h3 className="font-semibold text-gray-900 mb-4">Daily Averages</h3>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="p-3 bg-gray-50 rounded-xl">
+                      <p className="text-2xl font-bold text-indigo-600">
+                        {formatSleepDuration(insights.avgDailySleep)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Sleep/day</p>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-xl">
+                      <p className="text-2xl font-bold text-pink-600">
+                        {insights.avgDailyFeedings.toFixed(1)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Feedings/day</p>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-xl">
+                      <p className="text-2xl font-bold text-green-600">
+                        {insights.avgDailyDiapers.toFixed(1)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Diapers/day</p>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Detected Patterns */}
+                {insights.patterns.length > 0 && (
+                  <Card>
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Lightbulb className="w-5 h-5 text-amber-500" />
+                      Detected Patterns
+                    </h3>
+                    <div className="space-y-3">
+                      {insights.patterns.map((pattern, index) => (
+                        <div
+                          key={index}
+                          className="flex items-start gap-3 p-3 bg-amber-50 rounded-xl"
+                        >
+                          <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span className="text-xs font-bold text-amber-600">{index + 1}</span>
+                          </div>
+                          <p className="text-gray-700">{pattern}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+
+                {/* Insight tip */}
+                <p className="text-xs text-center text-gray-400 px-4">
+                  Insights become more accurate as you track more data over time
+                </p>
+              </div>
+            ) : (
+              <Card className="text-center py-8">
+                <Lightbulb className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">Not enough data yet</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Keep tracking for a few more days to see insights
                 </p>
               </Card>
             )}
