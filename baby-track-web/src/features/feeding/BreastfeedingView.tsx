@@ -8,7 +8,7 @@ import { SegmentedControl } from '@/components/ui/Select';
 import { BabyMoodSelector, MomMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
 import { EditSessionModal } from '@/components/ui/EditSessionModal';
 import { Baby, FeedingSession, BreastSide, BabyMood, MomMood, BREAST_SIDE_CONFIG, formatDuration } from '@/types';
-import { createFeedingSession, startFeedingSession, endFeedingSession, subscribeToFeedingSessions } from '@/lib/firestore';
+import { createFeedingSession, startFeedingSession, endFeedingSession, subscribeToFeedingSessions, deleteFeedingSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
@@ -150,6 +150,10 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
         return;
       }
 
+      const savedSessionId = sessionIdToSave;
+      const savedDuration = timerSeconds;
+      const savedSide = selectedSide;
+
       setSaving(true);
       try {
         await endFeedingSession(
@@ -160,6 +164,19 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
           momMood
         );
         handleReset();
+
+        // Show undo toast
+        toast.withUndo(
+          `${formatDuration(savedDuration)} ${BREAST_SIDE_CONFIG[savedSide].label} side logged`,
+          async () => {
+            try {
+              await deleteFeedingSession(savedSessionId);
+              toast.info('Feeding session undone');
+            } catch {
+              toast.error('Failed to undo');
+            }
+          }
+        );
       } catch (error) {
         console.error('Error saving feeding session:', error);
         toast.error('Failed to save feeding session. Please try again.');
@@ -181,7 +198,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
         const sessionStartTime = new Date(`${manualDate}T${manualTime}`);
         const sessionEndTime = new Date(sessionStartTime.getTime() + durationMinutes * 60 * 1000);
 
-        await createFeedingSession(baby.id, user.uid, {
+        const sessionId = await createFeedingSession(baby.id, user.uid, {
           breastSide: selectedSide,
           startTime: sessionStartTime.toISOString(),
           endTime: sessionEndTime.toISOString(),
@@ -189,7 +206,22 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
           babyMood,
           momMood,
         });
+
+        const savedSide = selectedSide;
         handleReset();
+
+        // Show undo toast
+        toast.withUndo(
+          `${durationMinutes}min ${BREAST_SIDE_CONFIG[savedSide].label} side logged`,
+          async () => {
+            try {
+              await deleteFeedingSession(sessionId);
+              toast.info('Feeding session undone');
+            } catch {
+              toast.error('Failed to undo');
+            }
+          }
+        );
       } catch (error) {
         console.error('Error saving feeding session:', error);
         toast.error('Failed to save feeding session. Please try again.');

@@ -9,7 +9,7 @@ import { SegmentedControl } from '@/components/ui/Select';
 import { BabyMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
 import { EditSessionModal } from '@/components/ui/EditSessionModal';
 import { SleepSession, SleepType, BabyMood, SLEEP_TYPE_CONFIG, formatSleepDuration } from '@/types';
-import { createSleepSession, endSleepSession, createCompleteSleepSession, subscribeToSleepSessions } from '@/lib/firestore';
+import { createSleepSession, endSleepSession, createCompleteSleepSession, subscribeToSleepSessions, deleteSleepSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
@@ -113,6 +113,10 @@ export function SleepView() {
       return;
     }
 
+    const savedSessionId = sessionIdToSave;
+    const savedDuration = timerSeconds;
+    const savedType = sleepType;
+
     setSaving(true);
     try {
       await endSleepSession(
@@ -128,6 +132,19 @@ export function SleepView() {
       setNotes('');
       setBabyMood(null);
       setShowForm(false);
+
+      // Show undo toast
+      toast.withUndo(
+        `${formatSleepDuration(savedDuration)} ${savedType} logged`,
+        async () => {
+          try {
+            await deleteSleepSession(savedSessionId);
+            toast.info('Sleep session undone');
+          } catch {
+            toast.error('Failed to undo');
+          }
+        }
+      );
     } catch (error) {
       console.error('Error saving sleep session:', error);
       toast.error('Failed to save sleep session. Please try again.');
@@ -145,12 +162,14 @@ export function SleepView() {
       return;
     }
 
+    const savedType = sleepType;
+
     setSaving(true);
     try {
       const startTime = new Date(`${manualDate}T${manualStartTime}`);
       const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000);
 
-      await createCompleteSleepSession(selectedBaby.id, user.uid, {
+      const sessionId = await createCompleteSleepSession(selectedBaby.id, user.uid, {
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
         type: sleepType,
@@ -164,6 +183,19 @@ export function SleepView() {
       setManualDuration('');
       setNotes('');
       setBabyMood(null);
+
+      // Show undo toast
+      toast.withUndo(
+        `${durationMinutes}min ${savedType} logged`,
+        async () => {
+          try {
+            await deleteSleepSession(sessionId);
+            toast.info('Sleep session undone');
+          } catch {
+            toast.error('Failed to undo');
+          }
+        }
+      );
     } catch (error) {
       console.error('Error saving sleep session:', error);
       toast.error('Failed to save sleep session. Please try again.');
