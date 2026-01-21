@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Milk, Baby } from 'lucide-react';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
@@ -15,8 +15,26 @@ const tabOptions = [
 ];
 
 export function FeedingHub() {
-  const [activeTab, setActiveTab] = useState<FeedingTab>('breast');
-  const { selectedBaby, babies } = useAppStore();
+  const { selectedBaby, babies, settings } = useAppStore();
+
+  // Set initial tab based on feeding type preference
+  const getInitialTab = (): FeedingTab => {
+    if (settings?.feedingTypePreference === 'formula') {
+      return 'bottle';
+    }
+    return 'breast';
+  };
+
+  const [activeTab, setActiveTab] = useState<FeedingTab>(getInitialTab);
+
+  // Update tab when settings change (e.g., when settings load)
+  useEffect(() => {
+    if (settings?.feedingTypePreference === 'formula') {
+      setActiveTab('bottle');
+    } else if (settings?.feedingTypePreference === 'breastfeeding') {
+      setActiveTab('breast');
+    }
+  }, [settings?.feedingTypePreference]);
   const navigate = useNavigate();
 
   if (babies.length === 0) {

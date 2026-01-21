@@ -1,4 +1,4 @@
-import { VolumeUnit, WeightUnit, LengthUnit } from './enums';
+import { VolumeUnit, WeightUnit, LengthUnit, FeedingTypePreference } from './enums';
 
 export interface AppSettings {
   id: string;
@@ -12,6 +12,9 @@ export interface AppSettings {
   preferredVolumeUnit: VolumeUnit;
   preferredWeightUnit: WeightUnit;
   preferredLengthUnit: LengthUnit;
+
+  // Feeding Preference
+  feedingTypePreference: FeedingTypePreference;
 
   // Night Mode
   nightModeEnabled: boolean;
@@ -46,6 +49,7 @@ export interface UpdateAppSettingsInput {
   preferredVolumeUnit?: VolumeUnit;
   preferredWeightUnit?: WeightUnit;
   preferredLengthUnit?: LengthUnit;
+  feedingTypePreference?: FeedingTypePreference;
   nightModeEnabled?: boolean;
   nightModeAutoEnabled?: boolean;
   nightModeStartHour?: number;
@@ -71,6 +75,7 @@ export const DEFAULT_SETTINGS: Omit<AppSettings, 'id' | 'userId' | 'createdAt' |
   preferredVolumeUnit: 'oz',
   preferredWeightUnit: 'lbs',
   preferredLengthUnit: 'in',
+  feedingTypePreference: 'breastfeeding',
   nightModeEnabled: false,
   nightModeAutoEnabled: false,
   nightModeStartHour: 20, // 8 PM

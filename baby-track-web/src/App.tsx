@@ -22,6 +22,7 @@ import { TeethingView } from '@/features/medical/TeethingView';
 import { PediatricianNotesView } from '@/features/medical/PediatricianNotesView';
 import { MilkStashView } from '@/features/milkstash/MilkStashView';
 import { ExportView } from '@/features/export/ExportView';
+import { DashboardView } from '@/features/dashboard/DashboardView';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -65,7 +66,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (user) {
-    return <Navigate to="/feed" replace />;
+    return <Navigate to="/home" replace />;
   }
 
   return <>{children}</>;
@@ -92,6 +93,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
+        <Route path="/home" element={<DashboardView />} />
         <Route path="/feed" element={<FeedingHub />} />
         <Route path="/sleep" element={<SleepView />} />
         <Route path="/diaper" element={<DiaperView />} />
@@ -114,8 +116,8 @@ function AppRoutes() {
       </Route>
 
       {/* Redirects */}
-      <Route path="/" element={<Navigate to="/feed" replace />} />
-      <Route path="*" element={<Navigate to="/feed" replace />} />
+      <Route path="/" element={<Navigate to="/home" replace />} />
+      <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
   );
 }

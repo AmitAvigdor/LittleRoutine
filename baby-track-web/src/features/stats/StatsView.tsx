@@ -24,6 +24,7 @@ import {
   BREAST_SIDE_CONFIG,
   BOTTLE_CONTENT_CONFIG,
   SLEEP_TYPE_CONFIG,
+  DIAPER_TYPE_CONFIG,
 } from '@/types';
 import { Droplet, Moon, Sun, Leaf, Milk, Baby, Clock, BarChart3, History } from 'lucide-react';
 import {
@@ -40,7 +41,7 @@ import {
 
 type ViewMode = 'stats' | 'history';
 type TimeFilter = 'today' | 'week' | 'all';
-type HistoryFilter = 'all' | 'feeding' | 'sleep';
+type HistoryFilter = 'all' | 'feeding' | 'sleep' | 'diaper';
 
 const viewModeOptions = [
   { value: 'stats', label: 'Stats', icon: <BarChart3 className="w-4 h-4" /> },
@@ -57,6 +58,7 @@ const historyFilterOptions = [
   { value: 'all', label: 'All' },
   { value: 'feeding', label: 'Feeding' },
   { value: 'sleep', label: 'Sleep' },
+  { value: 'diaper', label: 'Diaper' },
 ];
 
 export function StatsView() {
@@ -218,13 +220,13 @@ export function StatsView() {
   const historyData = useMemo(() => {
     type HistoryItem = {
       id: string;
-      type: 'breastfeeding' | 'bottle' | 'pump' | 'sleep';
+      type: 'breastfeeding' | 'bottle' | 'pump' | 'sleep' | 'diaper';
       timestamp: string;
       duration?: number;
       details: string;
       subDetails?: string;
       color: string;
-      icon: 'baby' | 'milk' | 'droplet' | 'moon' | 'sun';
+      icon: 'baby' | 'milk' | 'droplet' | 'moon' | 'sun' | 'leaf';
     };
 
     const items: HistoryItem[] = [];
@@ -288,11 +290,26 @@ export function StatsView() {
       });
     }
 
+    // Add diaper changes
+    if (historyFilter === 'all' || historyFilter === 'diaper') {
+      diaperChanges.forEach((c) => {
+        items.push({
+          id: `diaper-${c.id}`,
+          type: 'diaper',
+          timestamp: c.timestamp,
+          details: `Diaper - ${DIAPER_TYPE_CONFIG[c.type].label}`,
+          subDetails: c.notes || undefined,
+          color: DIAPER_TYPE_CONFIG[c.type].color,
+          icon: 'leaf',
+        });
+      });
+    }
+
     // Sort by timestamp descending (most recent first)
     items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     return items;
-  }, [feedingSessions, bottleSessions, pumpSessions, sleepSessions, historyFilter]);
+  }, [feedingSessions, bottleSessions, pumpSessions, sleepSessions, diaperChanges, historyFilter]);
 
   // Group history items by date
   const groupedHistory = useMemo(() => {
@@ -330,6 +347,8 @@ export function StatsView() {
         return <Moon className={iconClass} style={{ color }} />;
       case 'sun':
         return <Sun className={iconClass} style={{ color }} />;
+      case 'leaf':
+        return <Leaf className={iconClass} style={{ color }} />;
       default:
         return null;
     }

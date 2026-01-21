@@ -29,6 +29,9 @@ export const MOM_MOOD_CONFIG: Record<MomMood, { label: string; icon: string; col
   overwhelmed: { label: 'Overwhelmed', icon: 'cloud-rain', color: '#9c27b0' },
 };
 
+// Feeding Type Preference
+export type FeedingTypePreference = 'breastfeeding' | 'formula';
+
 // Breast Side
 export type BreastSide = 'left' | 'right';
 

@@ -1,12 +1,12 @@
 import { NavLink } from 'react-router-dom';
 import { clsx } from 'clsx';
-import { Droplet, Moon, Leaf, BarChart2, MoreHorizontal } from 'lucide-react';
+import { Home, Droplet, Moon, Leaf, MoreHorizontal } from 'lucide-react';
 
 const navItems = [
+  { to: '/home', label: 'Home', icon: Home, color: '#2196f3' },
   { to: '/feed', label: 'Feed', icon: Droplet, color: '#e91e63' },
   { to: '/sleep', label: 'Sleep', icon: Moon, color: '#3f51b5' },
   { to: '/diaper', label: 'Diaper', icon: Leaf, color: '#4caf50' },
-  { to: '/stats', label: 'Stats', icon: BarChart2, color: '#9c27b0' },
   { to: '/more', label: 'More', icon: MoreHorizontal, color: '#757575' },
 ];
 

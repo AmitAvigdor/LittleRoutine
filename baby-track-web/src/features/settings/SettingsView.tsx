@@ -6,9 +6,9 @@ import { Toggle } from '@/components/ui/Toggle';
 import { SegmentedControl } from '@/components/ui/Select';
 import { useAppStore } from '@/stores/appStore';
 import { updateSettings } from '@/lib/firestore';
-import { VolumeUnit, WeightUnit, LengthUnit } from '@/types';
+import { VolumeUnit, WeightUnit, LengthUnit, FeedingTypePreference } from '@/types';
 import { toast } from '@/stores/toastStore';
-import { User, Moon, Bell, Scale } from 'lucide-react';
+import { User, Moon, Bell, Scale, Baby, Milk } from 'lucide-react';
 
 export function SettingsView() {
   const { settings, setSettings } = useAppStore();
@@ -155,6 +155,25 @@ export function SettingsView() {
                 fullWidth
               />
             </div>
+          </div>
+        </Card>
+
+        {/* Feeding Preference */}
+        <Card>
+          <CardHeader
+            title="Feeding Type"
+            subtitle="Choose your primary feeding method"
+          />
+          <div>
+            <SegmentedControl
+              options={[
+                { value: 'breastfeeding', label: 'Breastfeeding', icon: <Baby className="w-4 h-4" /> },
+                { value: 'formula', label: 'Formula', icon: <Milk className="w-4 h-4" /> },
+              ]}
+              value={settings.feedingTypePreference}
+              onChange={(value) => handleSettingChange('feedingTypePreference', value as FeedingTypePreference)}
+              fullWidth
+            />
           </div>
         </Card>
 

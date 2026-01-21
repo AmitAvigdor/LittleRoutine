@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { format, isToday, parseISO } from 'date-fns';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
@@ -30,12 +30,17 @@ export function DiaperView() {
   const [justSaved, setJustSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const saveTimeoutRef = useRef<number | null>(null);
+  const longPressTimeoutRef = useRef<number | null>(null);
+  const longPressTriggeredRef = useRef(false);
 
-  // Cleanup timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
+      }
+      if (longPressTimeoutRef.current) {
+        clearTimeout(longPressTimeoutRef.current);
       }
     };
   }, []);
@@ -108,6 +113,39 @@ export function DiaperView() {
     setShowForm(false);
   };
 
+  // Long press handlers for mobile
+  const handleTouchStart = useCallback((type: DiaperType) => {
+    longPressTriggeredRef.current = false;
+    longPressTimeoutRef.current = window.setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      handleDetailedLog(type);
+    }, 500);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+  }, []);
+
+  const handleButtonClick = useCallback((type: DiaperType) => {
+    // Don't trigger quick log if long press was just triggered
+    if (longPressTriggeredRef.current) {
+      longPressTriggeredRef.current = false;
+      return;
+    }
+    handleQuickLog(type);
+  }, [user, selectedBaby]);
+
+  const handleTouchMove = useCallback(() => {
+    // Cancel long press if user moves finger
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+  }, []);
+
   if (babies.length === 0) {
     return <NoBabiesHeader />;
   }
@@ -147,7 +185,10 @@ export function DiaperView() {
                 return (
                   <button
                     key={type}
-                    onClick={() => handleQuickLog(type)}
+                    onTouchStart={() => handleTouchStart(type)}
+                    onTouchEnd={handleTouchEnd}
+                    onTouchMove={handleTouchMove}
+                    onClick={() => handleButtonClick(type)}
                     onContextMenu={(e) => {
                       e.preventDefault();
                       handleDetailedLog(type);
@@ -155,7 +196,8 @@ export function DiaperView() {
                     className={clsx(
                       'flex flex-col items-center justify-center py-6 rounded-2xl',
                       'border-2 transition-all duration-200',
-                      'hover:scale-105 active:scale-95'
+                      'hover:scale-105 active:scale-95',
+                      'select-none touch-manipulation'
                     )}
                     style={{
                       borderColor: config.color,
