@@ -412,10 +412,15 @@ export function StatsView() {
 
     // Get patterns from all-time data for better accuracy
     const allSleepNaps = sleepSessions.filter(s => !s.isActive && s.type === 'nap');
-    const allFeedingSessions = [...feedingSessions.filter(s => !s.isActive), ...bottleSessions];
+
+    // Normalize feeding sessions to have a common timestamp field
+    const allFeedingTimestamps = [
+      ...feedingSessions.filter(s => !s.isActive).map(s => ({ timestamp: s.startTime })),
+      ...bottleSessions.map(s => ({ timestamp: s.timestamp })),
+    ];
 
     const napHours = getHourDistribution(allSleepNaps);
-    const feedingHours = getHourDistribution(allFeedingSessions);
+    const feedingHours = getHourDistribution(allFeedingTimestamps);
 
     const peakNapHours = findPeakHours(napHours, 2);
     const peakFeedingHours = findPeakHours(feedingHours, 3);
@@ -427,7 +432,7 @@ export function StatsView() {
       patterns.push(`Usually naps around ${peakNapHours.map(formatHour).join(' and ')}`);
     }
 
-    if (peakFeedingHours.length > 0 && allFeedingSessions.length >= 5) {
+    if (peakFeedingHours.length > 0 && allFeedingTimestamps.length >= 5) {
       patterns.push(`Most feedings happen around ${peakFeedingHours.map(formatHour).join(', ')}`);
     }
 
@@ -441,15 +446,15 @@ export function StatsView() {
     }
 
     // Calculate average time between feedings
-    if (allFeedingSessions.length >= 5) {
-      const sortedFeedings = [...allFeedingSessions]
-        .sort((a, b) => new Date(a.startTime || a.timestamp || '').getTime() - new Date(b.startTime || b.timestamp || '').getTime());
+    if (allFeedingTimestamps.length >= 5) {
+      const sortedFeedings = [...allFeedingTimestamps]
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
       let totalGap = 0;
       let gapCount = 0;
       for (let i = 1; i < sortedFeedings.length; i++) {
-        const prev = new Date(sortedFeedings[i-1].startTime || sortedFeedings[i-1].timestamp || '').getTime();
-        const curr = new Date(sortedFeedings[i].startTime || sortedFeedings[i].timestamp || '').getTime();
+        const prev = new Date(sortedFeedings[i-1].timestamp).getTime();
+        const curr = new Date(sortedFeedings[i].timestamp).getTime();
         const gap = (curr - prev) / (1000 * 60 * 60); // hours
         if (gap > 0.5 && gap < 12) { // Only count reasonable gaps
           totalGap += gap;
