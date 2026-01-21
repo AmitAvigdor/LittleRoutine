@@ -207,7 +207,7 @@ export function SettingsView() {
           </div>
         </Card>
 
-        {/* Reminders */}
+        {/* Reminders - Coming in next version (requires push notifications backend)
         <Card>
           <CardHeader
             title="Reminders"
@@ -243,6 +243,7 @@ export function SettingsView() {
             />
           </div>
         </Card>
+        */}
 
         {/* Version */}
         <p className="text-xs text-center text-gray-400 pt-4">
