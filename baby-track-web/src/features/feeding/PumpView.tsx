@@ -364,20 +364,18 @@ export function PumpView({ baby }: PumpViewProps) {
           <CardHeader title="Log Past Session" subtitle="Enter pumping details manually" />
 
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                type="date"
-                label="Date"
-                value={manualDate}
-                onChange={(e) => setManualDate(e.target.value)}
-              />
-              <Input
-                type="time"
-                label="Start Time"
-                value={manualTime}
-                onChange={(e) => setManualTime(e.target.value)}
-              />
-            </div>
+            <Input
+              type="date"
+              label="Date"
+              value={manualDate}
+              onChange={(e) => setManualDate(e.target.value)}
+            />
+            <Input
+              type="time"
+              label="Start Time"
+              value={manualTime}
+              onChange={(e) => setManualTime(e.target.value)}
+            />
 
             <Input
               type="number"

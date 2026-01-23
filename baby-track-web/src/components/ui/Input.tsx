@@ -8,9 +8,11 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, icon, ...props }, ref) => {
+  ({ className, label, error, icon, type, ...props }, ref) => {
+    const isDateOrTime = type === 'date' || type === 'time';
+
     return (
-      <div className="w-full">
+      <div className="w-full min-w-0">
         {label && (
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             {label}
@@ -24,6 +26,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
           <input
             ref={ref}
+            type={type}
             className={clsx(
               'w-full min-w-0 rounded-xl border-2 bg-white px-3 py-2.5 text-gray-900 text-base',
               'placeholder:text-gray-400',
@@ -32,6 +35,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               'disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed',
               icon && 'pl-10',
               error ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200',
+              isDateOrTime && 'text-sm',
               className
             )}
             {...props}

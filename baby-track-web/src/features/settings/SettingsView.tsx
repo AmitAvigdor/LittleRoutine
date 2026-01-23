@@ -247,7 +247,7 @@ export function SettingsView() {
 
         {/* Version */}
         <p className="text-xs text-center text-gray-400 pt-4">
-          LittleRoutine v1.0.0
+          LittleRoutine v1.0.0 • Made by Amit Avigdor
         </p>
       </div>
     </div>

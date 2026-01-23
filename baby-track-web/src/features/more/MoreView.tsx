@@ -166,7 +166,7 @@ export function MoreView() {
 
         {/* Version info */}
         <p className="text-xs text-center text-gray-400">
-          LittleRoutine v1.0.0
+          LittleRoutine v1.0.0 • Made by Amit Avigdor
         </p>
       </div>
     </div>
