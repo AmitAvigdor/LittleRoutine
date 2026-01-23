@@ -24,6 +24,7 @@ import { MilkStashView } from '@/features/milkstash/MilkStashView';
 import { ExportView } from '@/features/export/ExportView';
 import { DashboardView } from '@/features/dashboard/DashboardView';
 import { PlayTimeView } from '@/features/play/PlayTimeView';
+import { WalksView } from '@/features/walks/WalksView';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -114,6 +115,7 @@ function AppRoutes() {
         <Route path="/more/milk-stash" element={<MilkStashView />} />
         <Route path="/more/pump" element={<PumpPage />} />
         <Route path="/more/play" element={<PlayTimeView />} />
+        <Route path="/more/walks" element={<WalksView />} />
         <Route path="/more/export" element={<ExportView />} />
       </Route>
 

@@ -31,6 +31,7 @@ import {
   Milk,
   Sun,
   ChevronRight,
+  Gamepad2,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -343,10 +344,10 @@ export function DashboardView() {
               onClick={() => navigate('/diaper')}
             />
             <QuickAction
-              label="Stats"
-              icon={<Clock className="w-7 h-7" />}
-              color="#9c27b0"
-              onClick={() => navigate('/stats')}
+              label="Play"
+              icon={<Gamepad2 className="w-7 h-7" />}
+              color="#ff9800"
+              onClick={() => navigate('/more/play')}
             />
           </div>
         </div>

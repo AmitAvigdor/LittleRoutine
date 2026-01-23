@@ -22,5 +22,5 @@ export const PLAY_TYPE_CONFIG: Record<PlayType, { label: string; color: string; 
   free_play: { label: 'Free Play', color: '#4caf50', emoji: '🎈' },
   sensory: { label: 'Sensory Play', color: '#9c27b0', emoji: '🎨' },
   reading: { label: 'Reading', color: '#2196f3', emoji: '📚' },
-  outdoor: { label: 'Outdoor', color: '#8bc34a', emoji: '🌳' },
+  outdoor: { label: 'Outdoor Play', color: '#8bc34a', emoji: '🌳' },
 };
