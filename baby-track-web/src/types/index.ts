@@ -11,3 +11,4 @@ export * from './medical';
 export * from './nutrition';
 export * from './diary';
 export * from './settings';
+export * from './play';

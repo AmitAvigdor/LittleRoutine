@@ -30,6 +30,7 @@ import type {
   DiaryEntry, CreateDiaryEntryInput,
   PediatricianNote, CreatePediatricianNoteInput,
   AppSettings, UpdateAppSettingsInput,
+  PlaySession, PlayType,
   BabyMood,
   MomMood,
 } from '@/types';
@@ -1153,6 +1154,105 @@ export async function deleteBottleSession(sessionId: string): Promise<void> {
 
 export async function deleteDiaperChange(changeId: string): Promise<void> {
   await deleteDoc(doc(db, 'diaperChanges', changeId));
+}
+
+// ============ PLAY SESSIONS ============
+export async function createPlaySession(
+  babyId: string,
+  userId: string,
+  input: { type: PlayType; startTime: string; notes?: string | null; babyMood?: BabyMood | null }
+): Promise<string> {
+  const now = new Date().toISOString();
+
+  const docRef = await addDoc(collection(db, 'playSessions'), {
+    ...input,
+    babyId,
+    userId,
+    duration: 0,
+    endTime: null,
+    isActive: true,
+    notes: input.notes || null,
+    babyMood: input.babyMood || null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return docRef.id;
+}
+
+export async function createCompletePlaySession(
+  babyId: string,
+  userId: string,
+  input: {
+    startTime: string;
+    endTime: string;
+    type: PlayType;
+    notes?: string | null;
+    babyMood?: BabyMood | null;
+  }
+): Promise<string> {
+  const now = new Date().toISOString();
+  const startTime = new Date(input.startTime);
+  const endTime = new Date(input.endTime);
+  const duration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
+
+  const docRef = await addDoc(collection(db, 'playSessions'), {
+    babyId,
+    userId,
+    startTime: input.startTime,
+    endTime: input.endTime,
+    type: input.type,
+    duration,
+    isActive: false,
+    notes: input.notes || null,
+    babyMood: input.babyMood || null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return docRef.id;
+}
+
+export async function endPlaySession(
+  sessionId: string,
+  endTime: string,
+  notes?: string | null,
+  babyMood?: BabyMood | null
+): Promise<void> {
+  const docSnap = await getDoc(doc(db, 'playSessions', sessionId));
+  if (!docSnap.exists()) {
+    throw new Error(`Play session ${sessionId} not found`);
+  }
+
+  const session = convertTimestamps(docSnap.data());
+  const startTime = new Date(session.startTime);
+  const end = new Date(endTime);
+  const duration = Math.max(0, Math.floor((end.getTime() - startTime.getTime()) / 1000));
+
+  await updateDoc(doc(db, 'playSessions', sessionId), {
+    endTime,
+    duration,
+    isActive: false,
+    notes: notes ?? session.notes ?? null,
+    babyMood: babyMood ?? session.babyMood ?? null,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+export function subscribeToPlaySessions(
+  babyId: string,
+  callback: (sessions: PlaySession[]) => void
+): () => void {
+  return subscribeToCollectionSimple<PlaySession>(
+    'playSessions',
+    'babyId',
+    babyId,
+    'startTime',
+    'desc',
+    callback
+  );
+}
+
+export async function deletePlaySession(sessionId: string): Promise<void> {
+  await deleteDoc(doc(db, 'playSessions', sessionId));
 }
 
 // ============ GENERIC DELETE OPERATION ============
