@@ -364,7 +364,13 @@ export function DashboardView() {
             </div>
             <div>
               <p className="text-2xl font-bold text-indigo-600">
-                {sleepSessions.filter((s) => !s.isActive && isToday(s.startTime)).length}
+                {sleepSessions.filter((s) => {
+                  if (s.isActive || !s.endTime) return false;
+                  // Naps: count by start time, Night: count by end time (wake up time)
+                  return s.type === 'nap'
+                    ? isToday(s.startTime)
+                    : isToday(s.endTime);
+                }).length}
               </p>
               <p className="text-xs text-gray-500">Sleeps</p>
             </div>

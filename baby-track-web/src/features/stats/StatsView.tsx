@@ -115,11 +115,22 @@ export function StatsView() {
     });
   };
 
+  // Filter sleep sessions - naps by start time, night sleep by end time (wake up)
+  const filterSleepByDate = (sessions: SleepSession[]): SleepSession[] => {
+    return sessions.filter((s) => {
+      if (s.isActive || !s.endTime) return false;
+      // For naps, use start time; for night sleep, use end time (when you wake up)
+      const relevantTime = s.type === 'nap' ? s.startTime : s.endTime;
+      const date = parseISO(relevantTime);
+      return isWithinInterval(date, dateRange);
+    });
+  };
+
   // Filtered data
   const filteredFeeding = filterByDate(feedingSessions);
   const filteredPump = filterByDate(pumpSessions);
   const filteredBottle = filterByDate(bottleSessions);
-  const filteredSleep = filterByDate(sleepSessions).filter((s) => !s.isActive);
+  const filteredSleep = filterSleepByDate(sleepSessions);
   const filteredDiaper = filterByDate(diaperChanges);
 
   // Calculate stats

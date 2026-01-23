@@ -9,11 +9,11 @@ import { MomMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
 import { EditSessionModal } from '@/components/ui/EditSessionModal';
 import { Baby, PumpSession, PumpSide, MomMood, VolumeUnit, PUMP_SIDE_CONFIG, formatDuration, convertVolume } from '@/types';
 import { MilkStorageLocation } from '@/types/enums';
-import { createPumpSession, startPumpSession, endPumpSession, subscribeToPumpSessions, createMilkStash, createBottleSession } from '@/lib/firestore';
+import { createPumpSession, startPumpSession, endPumpSession, subscribeToPumpSessions, deletePumpSession, createMilkStash, createBottleSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
-import { Clock, Droplet, Timer as TimerIcon, Edit3, Refrigerator, Snowflake, Baby as BabyIcon, X } from 'lucide-react';
+import { Clock, Droplet, Timer as TimerIcon, Edit3, Refrigerator, Snowflake, Baby as BabyIcon, X, Trash2 } from 'lucide-react';
 
 type MilkDestination = 'fridge' | 'freezer' | 'use' | null;
 
@@ -146,6 +146,33 @@ export function PumpView({ baby }: PumpViewProps) {
     setShowForm(false);
     // Resume timer
     setIsTimerRunning(true);
+  };
+
+  const handleDiscard = async () => {
+    // Find the session to delete
+    let sessionIdToDelete = activeSessionId;
+    if (!sessionIdToDelete) {
+      const activeSession = sessions.find((s) => s.isActive);
+      sessionIdToDelete = activeSession?.id ?? null;
+    }
+
+    if (!sessionIdToDelete) {
+      // No session to delete, just reset
+      handleReset();
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await deletePumpSession(sessionIdToDelete);
+      handleReset();
+      toast.info('Pump session discarded');
+    } catch (error) {
+      console.error('Error discarding pump session:', error);
+      toast.error('Failed to discard session. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSave = async () => {
@@ -458,7 +485,15 @@ export function PumpView({ baby }: PumpViewProps) {
               rows={2}
             />
 
-            <div className="flex gap-3">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleDiscard}
+                className="px-3"
+                disabled={saving}
+              >
+                <Trash2 className="w-4 h-4 text-red-500" />
+              </Button>
               <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
                 Resume
               </Button>

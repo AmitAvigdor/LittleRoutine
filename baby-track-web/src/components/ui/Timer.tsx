@@ -37,15 +37,24 @@ export function Timer({
     }
   }, [externalIsRunning]);
 
-  // Sync seconds when initialSeconds changes (e.g., when resuming an active session)
-  // Only sync when initialSeconds actually changes, not when isRunning changes
+  // Sync seconds when initialSeconds changes significantly (e.g., when resuming an active session)
+  // This handles both: initial mount and navigating back to a page with an active timer
   useEffect(() => {
-    // Only sync if timer is not running to avoid interfering with active counting
+    // Always sync if not running
     if (!isRunning) {
       setSeconds(initialSeconds);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialSeconds]); // Intentionally omitting isRunning to prevent reset on stop
+    // When running, sync if initialSeconds is significantly different (more than 2 seconds)
+    // This indicates we're resuming a session, not just normal tick updates
+    setSeconds((currentSeconds) => {
+      const diff = Math.abs(initialSeconds - currentSeconds);
+      if (diff > 2) {
+        return initialSeconds;
+      }
+      return currentSeconds;
+    });
+  }, [initialSeconds, isRunning]);
 
   useEffect(() => {
     let interval: number | undefined;

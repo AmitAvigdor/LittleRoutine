@@ -63,18 +63,7 @@ export function DiaperView() {
         babyMood: null,
       });
 
-      // Show feedback with undo option
-      toast.withUndo(
-        `${DIAPER_TYPE_CONFIG[type].label} diaper logged`,
-        async () => {
-          try {
-            await deleteDiaperChange(changeId);
-            toast.info('Diaper log undone');
-          } catch {
-            toast.error('Failed to undo');
-          }
-        }
-      );
+      toast.success(`${DIAPER_TYPE_CONFIG[type].label} diaper logged`);
     } catch (error) {
       console.error('Error saving diaper change:', error);
       toast.error('Failed to save diaper change. Please try again.');

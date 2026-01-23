@@ -12,7 +12,14 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
-import { Clock, Milk, Plus } from 'lucide-react';
+import { Clock, Milk, Plus, Zap, Edit3 } from 'lucide-react';
+
+type EntryMode = 'quick' | 'manual';
+
+const entryModeOptions = [
+  { value: 'quick', label: 'Quick', icon: <Zap className="w-4 h-4" /> },
+  { value: 'manual', label: 'Manual', icon: <Edit3 className="w-4 h-4" /> },
+];
 
 interface BottleViewProps {
   baby: Baby;
@@ -43,6 +50,11 @@ export function BottleView({ baby }: BottleViewProps) {
   const [babyMood, setBabyMood] = useState<BabyMood | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Entry mode state
+  const [entryMode, setEntryMode] = useState<EntryMode>('quick');
+  const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
+  const [manualTime, setManualTime] = useState(format(new Date(), 'HH:mm'));
 
   // Edit modal state
   const [selectedSession, setSelectedSession] = useState<BottleSession | null>(null);
@@ -75,18 +87,24 @@ export function BottleView({ baby }: BottleViewProps) {
     if (!user || !volume) return;
 
     const volumeValue = parseFloat(volume);
-    if (isNaN(volumeValue) || volumeValue <= 0 || volumeValue > 50) {
-      toast.error('Please enter a valid volume (0.1-50).');
+    const maxVolume = volumeUnit === 'ml' ? 500 : 50;
+    if (isNaN(volumeValue) || volumeValue <= 0 || volumeValue > maxVolume) {
+      toast.error(`Please enter a valid volume (0.1-${maxVolume} ${volumeUnit}).`);
       return;
     }
 
     const savedVolume = parseFloat(volume);
     const savedUnit = volumeUnit;
 
+    // Determine timestamp based on entry mode
+    const timestamp = entryMode === 'manual'
+      ? new Date(`${manualDate}T${manualTime}`).toISOString()
+      : new Date().toISOString();
+
     setSaving(true);
     try {
       const sessionId = await createBottleSession(baby.id, user.uid, {
-        timestamp: new Date().toISOString(),
+        timestamp,
         volume: savedVolume,
         volumeUnit,
         contentType,
@@ -99,19 +117,10 @@ export function BottleView({ baby }: BottleViewProps) {
       setNotes('');
       setBabyMood(null);
       setShowForm(false);
+      setManualDate(new Date().toISOString().split('T')[0]);
+      setManualTime(format(new Date(), 'HH:mm'));
 
-      // Show undo toast
-      toast.withUndo(
-        `Bottle ${savedVolume} ${savedUnit} logged`,
-        async () => {
-          try {
-            await deleteBottleSession(sessionId);
-            toast.info('Bottle log undone');
-          } catch {
-            toast.error('Failed to undo');
-          }
-        }
-      );
+      toast.success(`Bottle ${savedVolume} ${savedUnit} logged`);
     } catch (error) {
       console.error('Error saving bottle session:', error);
       toast.error('Failed to save bottle feeding. Please try again.');
@@ -125,6 +134,8 @@ export function BottleView({ baby }: BottleViewProps) {
     setNotes('');
     setBabyMood(null);
     setShowForm(false);
+    setManualDate(new Date().toISOString().split('T')[0]);
+    setManualTime(format(new Date(), 'HH:mm'));
   };
 
   // Today's stats
@@ -139,6 +150,17 @@ export function BottleView({ baby }: BottleViewProps) {
 
   return (
     <div className="space-y-4">
+      {/* Entry Mode Toggle */}
+      {!showForm && (
+        <div className="flex justify-center">
+          <SegmentedControl
+            options={entryModeOptions}
+            value={entryMode}
+            onChange={(value) => setEntryMode(value as EntryMode)}
+          />
+        </div>
+      )}
+
       {/* Content Type Selector */}
       <div className="flex justify-center">
         <SegmentedControl
@@ -149,7 +171,7 @@ export function BottleView({ baby }: BottleViewProps) {
       </div>
 
       {/* Quick Add Buttons */}
-      {!showForm && (
+      {!showForm && entryMode === 'quick' && (
         <Card>
           <CardHeader title="Quick Add" subtitle="Tap to log a feeding" />
           <div className="flex flex-wrap gap-2">
@@ -182,8 +204,77 @@ export function BottleView({ baby }: BottleViewProps) {
         </Card>
       )}
 
-      {/* Entry Form */}
-      {showForm && (
+      {/* Manual Entry Mode */}
+      {!showForm && entryMode === 'manual' && (
+        <Card>
+          <CardHeader
+            title="Log Past Feeding"
+            subtitle={BOTTLE_CONTENT_CONFIG[contentType].label}
+          />
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                type="date"
+                label="Date"
+                value={manualDate}
+                onChange={(e) => setManualDate(e.target.value)}
+              />
+              <Input
+                type="time"
+                label="Time"
+                value={manualTime}
+                onChange={(e) => setManualTime(e.target.value)}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Input
+                type="number"
+                label="Volume"
+                placeholder="0"
+                value={volume}
+                onChange={(e) => setVolume(e.target.value)}
+                className="flex-1"
+                step="0.5"
+                min="0"
+              />
+              <div className="w-24 pt-6">
+                <SegmentedControl
+                  options={[
+                    { value: 'oz', label: 'oz' },
+                    { value: 'ml', label: 'ml' },
+                  ]}
+                  value={volumeUnit}
+                  onChange={(value) => setVolumeUnit(value as VolumeUnit)}
+                  size="sm"
+                />
+              </div>
+            </div>
+
+            <BabyMoodSelector
+              label="Baby's mood"
+              value={babyMood}
+              onChange={setBabyMood}
+            />
+
+            <Textarea
+              label="Notes (optional)"
+              placeholder="Any notes about this feeding..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+            />
+
+            <Button onClick={handleSave} className="w-full" disabled={!volume || saving}>
+              {saving ? 'Saving...' : 'Save Feeding'}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Entry Form (Quick mode) */}
+      {showForm && entryMode === 'quick' && (
         <Card>
           <CardHeader
             title="Log Bottle Feeding"

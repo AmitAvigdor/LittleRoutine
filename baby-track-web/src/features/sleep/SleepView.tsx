@@ -13,7 +13,7 @@ import { createSleepSession, endSleepSession, createCompleteSleepSession, subscr
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
-import { Moon, Sun, Clock, Bed, Timer as TimerIcon, Edit3 } from 'lucide-react';
+import { Moon, Sun, Clock, Bed, Timer as TimerIcon, Edit3, Trash2 } from 'lucide-react';
 
 type EntryMode = 'timer' | 'manual';
 
@@ -45,7 +45,7 @@ export function SleepView() {
   const [entryMode, setEntryMode] = useState<EntryMode>('timer');
   const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
   const [manualStartTime, setManualStartTime] = useState(format(new Date(), 'HH:mm'));
-  const [manualDuration, setManualDuration] = useState('');
+  const [manualEndTime, setManualEndTime] = useState(format(new Date(), 'HH:mm'));
 
   // Edit modal state
   const [selectedSession, setSelectedSession] = useState<SleepSession | null>(null);
@@ -133,18 +133,7 @@ export function SleepView() {
       setBabyMood(null);
       setShowForm(false);
 
-      // Show undo toast
-      toast.withUndo(
-        `${formatSleepDuration(savedDuration)} ${savedType} logged`,
-        async () => {
-          try {
-            await deleteSleepSession(savedSessionId);
-            toast.info('Sleep session undone');
-          } catch {
-            toast.error('Failed to undo');
-          }
-        }
-      );
+      toast.success(`${formatSleepDuration(savedDuration)} ${savedType} logged`);
     } catch (error) {
       console.error('Error saving sleep session:', error);
       toast.error('Failed to save sleep session. Please try again.');
@@ -154,11 +143,19 @@ export function SleepView() {
   };
 
   const handleManualSave = async () => {
-    if (!user || !selectedBaby || !manualDuration) return;
+    if (!user || !selectedBaby || !manualStartTime || !manualEndTime) return;
 
-    const durationMinutes = parseInt(manualDuration, 10);
-    if (isNaN(durationMinutes) || durationMinutes <= 0 || durationMinutes > 720) {
-      toast.error('Please enter a valid duration (1-720 minutes).');
+    const startTime = new Date(`${manualDate}T${manualStartTime}`);
+    let endTime = new Date(`${manualDate}T${manualEndTime}`);
+
+    // If end time is before start time, assume it's the next day
+    if (endTime <= startTime) {
+      endTime = new Date(endTime.getTime() + 24 * 60 * 60 * 1000);
+    }
+
+    const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (60 * 1000));
+    if (durationMinutes <= 0 || durationMinutes > 720) {
+      toast.error('Please enter valid times (max 12 hours).');
       return;
     }
 
@@ -166,9 +163,6 @@ export function SleepView() {
 
     setSaving(true);
     try {
-      const startTime = new Date(`${manualDate}T${manualStartTime}`);
-      const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000);
-
       const sessionId = await createCompleteSleepSession(selectedBaby.id, user.uid, {
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
@@ -180,22 +174,11 @@ export function SleepView() {
       // Reset form
       setManualDate(new Date().toISOString().split('T')[0]);
       setManualStartTime(format(new Date(), 'HH:mm'));
-      setManualDuration('');
+      setManualEndTime(format(new Date(), 'HH:mm'));
       setNotes('');
       setBabyMood(null);
 
-      // Show undo toast
-      toast.withUndo(
-        `${durationMinutes}min ${savedType} logged`,
-        async () => {
-          try {
-            await deleteSleepSession(sessionId);
-            toast.info('Sleep session undone');
-          } catch {
-            toast.error('Failed to undo');
-          }
-        }
-      );
+      toast.success(`${formatSleepDuration(durationMinutes * 60)} ${savedType} logged`);
     } catch (error) {
       console.error('Error saving sleep session:', error);
       toast.error('Failed to save sleep session. Please try again.');
@@ -210,14 +193,55 @@ export function SleepView() {
     setIsTimerRunning(true);
   };
 
+  const handleDiscard = async () => {
+    // Find the session to delete
+    let sessionIdToDelete = activeSessionId;
+    if (!sessionIdToDelete) {
+      const activeSession = sessions.find((s) => s.isActive);
+      sessionIdToDelete = activeSession?.id ?? null;
+    }
+
+    if (!sessionIdToDelete) {
+      // No session to delete, just reset
+      setActiveSessionId(null);
+      setTimerSeconds(0);
+      setNotes('');
+      setBabyMood(null);
+      setShowForm(false);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await deleteSleepSession(sessionIdToDelete);
+      setActiveSessionId(null);
+      setTimerSeconds(0);
+      setNotes('');
+      setBabyMood(null);
+      setShowForm(false);
+      toast.info('Sleep session discarded');
+    } catch (error) {
+      console.error('Error discarding sleep session:', error);
+      toast.error('Failed to discard session. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (babies.length === 0) {
     return <NoBabiesHeader />;
   }
 
   // Today's stats
-  const todaySessions = sessions.filter((s) => !s.isActive && isToday(parseISO(s.startTime)));
-  const todayNaps = todaySessions.filter((s) => s.type === 'nap');
-  const todayNight = todaySessions.filter((s) => s.type === 'night');
+  // For naps: count by start time (naps don't span days)
+  // For night sleep: count by end time (you want to see it on the day you wake up)
+  const completedSessions = sessions.filter((s) => !s.isActive && s.endTime);
+  const todayNaps = completedSessions.filter(
+    (s) => s.type === 'nap' && isToday(parseISO(s.startTime))
+  );
+  const todayNight = completedSessions.filter(
+    (s) => s.type === 'night' && s.endTime && isToday(parseISO(s.endTime))
+  );
   const todayNapTime = todayNaps.reduce((sum, s) => sum + s.duration, 0);
   const todayNightTime = todayNight.reduce((sum, s) => sum + s.duration, 0);
 
@@ -298,30 +322,27 @@ export function SleepView() {
             />
 
             <div className="space-y-4">
+              <Input
+                type="date"
+                label="Date"
+                value={manualDate}
+                onChange={(e) => setManualDate(e.target.value)}
+              />
+
               <div className="grid grid-cols-2 gap-3">
-                <Input
-                  type="date"
-                  label="Date"
-                  value={manualDate}
-                  onChange={(e) => setManualDate(e.target.value)}
-                />
                 <Input
                   type="time"
                   label="Start Time"
                   value={manualStartTime}
                   onChange={(e) => setManualStartTime(e.target.value)}
                 />
+                <Input
+                  type="time"
+                  label="End Time"
+                  value={manualEndTime}
+                  onChange={(e) => setManualEndTime(e.target.value)}
+                />
               </div>
-
-              <Input
-                type="number"
-                label="Duration (minutes)"
-                placeholder="e.g. 90"
-                value={manualDuration}
-                onChange={(e) => setManualDuration(e.target.value)}
-                min="1"
-                max="720"
-              />
 
               <BabyMoodSelector
                 label="Baby's mood when waking"
@@ -340,7 +361,7 @@ export function SleepView() {
               <Button
                 onClick={handleManualSave}
                 className="w-full"
-                disabled={!manualDuration || saving}
+                disabled={!manualStartTime || !manualEndTime || saving}
                 style={{ backgroundColor: SLEEP_TYPE_CONFIG[sleepType].color }}
               >
                 {saving ? 'Saving...' : 'Save Sleep'}
@@ -372,7 +393,15 @@ export function SleepView() {
                 rows={2}
               />
 
-              <div className="flex gap-3">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleDiscard}
+                  className="px-3"
+                  disabled={saving}
+                >
+                  <Trash2 className="w-4 h-4 text-red-500" />
+                </Button>
                 <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
                   Resume
                 </Button>

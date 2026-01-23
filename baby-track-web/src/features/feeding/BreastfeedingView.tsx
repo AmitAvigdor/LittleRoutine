@@ -12,7 +12,7 @@ import { createFeedingSession, startFeedingSession, endFeedingSession, subscribe
 import { useAuth } from '@/features/auth/AuthContext';
 import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
-import { Clock, Timer as TimerIcon, Edit3 } from 'lucide-react';
+import { Clock, Timer as TimerIcon, Edit3, Trash2 } from 'lucide-react';
 
 type EntryMode = 'timer' | 'manual';
 
@@ -133,6 +133,33 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
     setIsTimerRunning(true);
   };
 
+  const handleDiscard = async () => {
+    // Find the session to delete
+    let sessionIdToDelete = activeSessionId;
+    if (!sessionIdToDelete) {
+      const activeSession = sessions.find((s) => s.isActive);
+      sessionIdToDelete = activeSession?.id ?? null;
+    }
+
+    if (!sessionIdToDelete) {
+      // No session to delete, just reset
+      handleReset();
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await deleteFeedingSession(sessionIdToDelete);
+      handleReset();
+      toast.info('Feeding session discarded');
+    } catch (error) {
+      console.error('Error discarding feeding session:', error);
+      toast.error('Failed to discard session. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!user) return;
 
@@ -165,18 +192,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
         );
         handleReset();
 
-        // Show undo toast
-        toast.withUndo(
-          `${formatDuration(savedDuration)} ${BREAST_SIDE_CONFIG[savedSide].label} side logged`,
-          async () => {
-            try {
-              await deleteFeedingSession(savedSessionId);
-              toast.info('Feeding session undone');
-            } catch {
-              toast.error('Failed to undo');
-            }
-          }
-        );
+        toast.success(`${formatDuration(savedDuration)} ${BREAST_SIDE_CONFIG[savedSide].label} side logged`);
       } catch (error) {
         console.error('Error saving feeding session:', error);
         toast.error('Failed to save feeding session. Please try again.');
@@ -209,19 +225,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
 
         const savedSide = selectedSide;
         handleReset();
-
-        // Show undo toast
-        toast.withUndo(
-          `${durationMinutes}min ${BREAST_SIDE_CONFIG[savedSide].label} side logged`,
-          async () => {
-            try {
-              await deleteFeedingSession(sessionId);
-              toast.info('Feeding session undone');
-            } catch {
-              toast.error('Failed to undo');
-            }
-          }
-        );
+        toast.success(`${durationMinutes}min ${BREAST_SIDE_CONFIG[savedSide].label} side logged`);
       } catch (error) {
         console.error('Error saving feeding session:', error);
         toast.error('Failed to save feeding session. Please try again.');
@@ -413,7 +417,15 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
               rows={2}
             />
 
-            <div className="flex gap-3">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleDiscard}
+                className="px-3"
+                disabled={saving}
+              >
+                <Trash2 className="w-4 h-4 text-red-500" />
+              </Button>
               <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
                 Resume
               </Button>
