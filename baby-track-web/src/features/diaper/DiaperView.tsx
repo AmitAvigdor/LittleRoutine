@@ -12,13 +12,13 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
-import { Droplet, Circle, Layers, Clock, Check, Edit3, Trash2 } from 'lucide-react';
+import { Droplet, Circle, Layers, Clock, Check, Edit3, Trash2, Zap } from 'lucide-react';
 
 type EntryMode = 'quick' | 'manual';
 
 const entryModeOptions = [
-  { value: 'quick', label: 'Quick Log' },
-  { value: 'manual', label: 'Manual Entry', icon: <Edit3 className="w-4 h-4" /> },
+  { value: 'quick', label: 'Quick', icon: <Zap className="w-4 h-4" /> },
+  { value: 'manual', label: 'Manual', icon: <Edit3 className="w-4 h-4" /> },
 ];
 
 const DIAPER_ICONS: Record<DiaperType, React.ReactNode> = {
