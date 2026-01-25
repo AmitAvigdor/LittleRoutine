@@ -10,6 +10,8 @@ import {
   where,
   onSnapshot,
   Timestamp,
+  arrayUnion,
+  or,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type {
@@ -90,6 +92,8 @@ export async function createBaby(userId: string, input: CreateBabyInput): Promis
     photoUrl: input.photoUrl || null,
     color: input.color || 'purple',
     isActive: true,
+    sharedWith: [],
+    shareCode: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -115,19 +119,50 @@ export async function getBaby(babyId: string): Promise<Baby | null> {
 }
 
 export function subscribeToBabies(userId: string, callback: (babies: Baby[]) => void): () => void {
-  const q = query(collection(db, 'babies'), where('userId', '==', userId));
-  return onSnapshot(q, (snapshot) => {
-    const babies = snapshot.docs.map((docSnap) => ({
+  // Subscribe to both owned babies and shared babies
+  const ownedQuery = query(collection(db, 'babies'), where('userId', '==', userId));
+  const sharedQuery = query(collection(db, 'babies'), where('sharedWith', 'array-contains', userId));
+
+  let ownedBabies: Baby[] = [];
+  let sharedBabies: Baby[] = [];
+
+  const mergeBabies = () => {
+    // Combine and deduplicate
+    const allBabies = [...ownedBabies];
+    for (const baby of sharedBabies) {
+      if (!allBabies.some(b => b.id === baby.id)) {
+        allBabies.push(baby);
+      }
+    }
+    // Sort by creation date
+    allBabies.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    callback(allBabies);
+  };
+
+  const unsubOwned = onSnapshot(ownedQuery, (snapshot) => {
+    ownedBabies = snapshot.docs.map((docSnap) => ({
       id: docSnap.id,
       ...convertTimestamps(docSnap.data()),
     })) as Baby[];
-    // Sort client-side
-    babies.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    callback(babies);
+    mergeBabies();
   }, (error) => {
-    console.error('Error subscribing to babies:', error);
-    callback([]);
+    console.error('Error subscribing to owned babies:', error);
   });
+
+  const unsubShared = onSnapshot(sharedQuery, (snapshot) => {
+    sharedBabies = snapshot.docs.map((docSnap) => ({
+      id: docSnap.id,
+      ...convertTimestamps(docSnap.data()),
+    })) as Baby[];
+    mergeBabies();
+  }, (error) => {
+    console.error('Error subscribing to shared babies:', error);
+  });
+
+  return () => {
+    unsubOwned();
+    unsubShared();
+  };
 }
 
 export async function setActiveBaby(userId: string, babyId: string): Promise<void> {
@@ -140,6 +175,120 @@ export async function setActiveBaby(userId: string, babyId: string): Promise<voi
   });
 
   await Promise.all(updates);
+}
+
+// Generate a random 6-character share code
+function generateRandomCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Exclude confusing chars like 0/O, 1/I
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+// Generate or get existing share code for a baby
+export async function generateShareCode(babyId: string): Promise<string> {
+  const baby = await getBaby(babyId);
+  if (!baby) throw new Error('Baby not found');
+
+  // If already has a share code, return it
+  if (baby.shareCode) return baby.shareCode;
+
+  // Generate a new unique code
+  let code = generateRandomCode();
+  let attempts = 0;
+
+  // Check if code is already in use
+  while (attempts < 10) {
+    const existingQuery = query(collection(db, 'babies'), where('shareCode', '==', code));
+    const existingDocs = await getDocs(existingQuery);
+    if (existingDocs.empty) break;
+    code = generateRandomCode();
+    attempts++;
+  }
+
+  // Save the code
+  await updateDoc(doc(db, 'babies', babyId), {
+    shareCode: code,
+    updatedAt: new Date().toISOString(),
+  });
+
+  return code;
+}
+
+// Join a baby using a share code
+export async function joinBabyByShareCode(userId: string, code: string): Promise<Baby> {
+  const normalizedCode = code.toUpperCase().trim();
+
+  // Find baby with this share code
+  const q = query(collection(db, 'babies'), where('shareCode', '==', normalizedCode));
+  const snapshot = await getDocs(q);
+
+  if (snapshot.empty) {
+    throw new Error('Invalid share code');
+  }
+
+  const babyDoc = snapshot.docs[0];
+  const baby = { id: babyDoc.id, ...convertTimestamps(babyDoc.data()) } as Baby;
+
+  // Check if user is already the owner
+  if (baby.userId === userId) {
+    throw new Error('You are already the owner of this baby');
+  }
+
+  // Check if user is already shared
+  if (baby.sharedWith?.includes(userId)) {
+    throw new Error('You already have access to this baby');
+  }
+
+  // Add user to sharedWith array
+  await updateDoc(doc(db, 'babies', babyDoc.id), {
+    sharedWith: arrayUnion(userId),
+    updatedAt: new Date().toISOString(),
+  });
+
+  return { ...baby, sharedWith: [...(baby.sharedWith || []), userId] };
+}
+
+// Remove a shared user from a baby (only owner can do this)
+export async function removeSharedUser(babyId: string, ownerUserId: string, userIdToRemove: string): Promise<void> {
+  const baby = await getBaby(babyId);
+  if (!baby) throw new Error('Baby not found');
+
+  // Verify the requester is the owner
+  if (baby.userId !== ownerUserId) {
+    throw new Error('Only the owner can remove shared users');
+  }
+
+  // Remove user from sharedWith array
+  const newSharedWith = (baby.sharedWith || []).filter(id => id !== userIdToRemove);
+  await updateDoc(doc(db, 'babies', babyId), {
+    sharedWith: newSharedWith,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+// Regenerate share code (invalidates old code)
+export async function regenerateShareCode(babyId: string): Promise<string> {
+  // Generate a new unique code
+  let code = generateRandomCode();
+  let attempts = 0;
+
+  while (attempts < 10) {
+    const existingQuery = query(collection(db, 'babies'), where('shareCode', '==', code));
+    const existingDocs = await getDocs(existingQuery);
+    if (existingDocs.empty) break;
+    code = generateRandomCode();
+    attempts++;
+  }
+
+  await updateDoc(doc(db, 'babies', babyId), {
+    shareCode: code,
+    updatedAt: new Date().toISOString(),
+  });
+
+  return code;
 }
 
 // ============ FEEDING SESSIONS ============

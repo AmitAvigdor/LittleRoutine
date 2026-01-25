@@ -1,17 +1,44 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
-import { Card } from '@/components/ui/Card';
+import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { useAppStore } from '@/stores/appStore';
+import { useAuth } from '@/features/auth/AuthContext';
+import { joinBabyByShareCode } from '@/lib/firestore';
 import { BABY_COLOR_CONFIG, calculateBabyAge } from '@/types';
-import { Plus, Edit, Check } from 'lucide-react';
+import { toast } from '@/stores/toastStore';
+import { Plus, Edit, Check, UserPlus, Users } from 'lucide-react';
 
 export function BabyManagement() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { babies, selectedBaby, setSelectedBabyId } = useAppStore();
+  const [showJoinForm, setShowJoinForm] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
+  const [joining, setJoining] = useState(false);
 
   const handleSelectBaby = (babyId: string) => {
     setSelectedBabyId(babyId);
+  };
+
+  const handleJoinBaby = async () => {
+    if (!user || !joinCode.trim()) return;
+
+    setJoining(true);
+    try {
+      const baby = await joinBabyByShareCode(user.uid, joinCode);
+      toast.success(`You now have access to ${baby.name}`);
+      setShowJoinForm(false);
+      setJoinCode('');
+      setSelectedBabyId(baby.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to join';
+      toast.error(message);
+    } finally {
+      setJoining(false);
+    }
   };
 
   return (
@@ -44,6 +71,7 @@ export function BabyManagement() {
             const color = BABY_COLOR_CONFIG[baby.color]?.hex || '#9c27b0';
             const isSelected = baby.id === selectedBaby?.id;
             const age = baby.birthDate ? calculateBabyAge(baby.birthDate) : null;
+            const isShared = baby.userId !== user?.uid;
 
             return (
               <Card
@@ -58,7 +86,7 @@ export function BabyManagement() {
 
                 <div className="flex items-center gap-4 pl-2">
                   <div
-                    className="w-14 h-14 rounded-full flex items-center justify-center text-white text-lg font-bold shrink-0"
+                    className="w-14 h-14 rounded-full flex items-center justify-center text-white text-lg font-bold shrink-0 relative"
                     style={{ backgroundColor: color }}
                   >
                     {baby.photoUrl ? (
@@ -70,6 +98,11 @@ export function BabyManagement() {
                     ) : (
                       baby.name.charAt(0).toUpperCase()
                     )}
+                    {isShared && (
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                        <Users className="w-3 h-3 text-white" />
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -78,6 +111,9 @@ export function BabyManagement() {
                     </h3>
                     {age && (
                       <p className="text-sm text-gray-500">{age.text}</p>
+                    )}
+                    {isShared && (
+                      <p className="text-xs text-blue-600">Shared with you</p>
                     )}
                   </div>
 
@@ -101,6 +137,52 @@ export function BabyManagement() {
             );
           })
         )}
+
+        {/* Join a Baby with Share Code */}
+        <Card className="mt-4">
+          {!showJoinForm ? (
+            <button
+              onClick={() => setShowJoinForm(true)}
+              className="w-full flex items-center justify-center gap-2 py-2 text-gray-600 hover:text-gray-900"
+            >
+              <UserPlus className="w-5 h-5" />
+              <span>Join a shared baby</span>
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <CardHeader
+                title="Join a Baby"
+                subtitle="Enter the share code from your partner"
+              />
+              <Input
+                placeholder="Enter 6-letter code"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                maxLength={6}
+                className="text-center font-mono text-lg tracking-widest"
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowJoinForm(false);
+                    setJoinCode('');
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleJoinBaby}
+                  disabled={joinCode.length !== 6 || joining}
+                >
+                  {joining ? 'Joining...' : 'Join'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </Card>
       </div>
     </div>
   );

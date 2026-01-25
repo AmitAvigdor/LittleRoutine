@@ -47,13 +47,16 @@ export function Timer({
     }
     // When running, sync if initialSeconds is significantly different (more than 2 seconds)
     // This indicates we're resuming a session, not just normal tick updates
-    setSeconds((currentSeconds) => {
-      const diff = Math.abs(initialSeconds - currentSeconds);
-      if (diff > 2) {
-        return initialSeconds;
-      }
-      return currentSeconds;
-    });
+    // Don't sync to 0 - that would reset the timer (0 means "no value", not "reset")
+    if (initialSeconds > 0) {
+      setSeconds((currentSeconds) => {
+        const diff = Math.abs(initialSeconds - currentSeconds);
+        if (diff > 2) {
+          return initialSeconds;
+        }
+        return currentSeconds;
+      });
+    }
   }, [initialSeconds, isRunning]);
 
   useEffect(() => {

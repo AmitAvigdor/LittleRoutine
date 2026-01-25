@@ -3,31 +3,31 @@ import { formatDuration, convertVolume, calculateMilkExpiration, getRoomTempExpi
 
 describe('formatDuration', () => {
   it('formats seconds only', () => {
-    expect(formatDuration(45)).toBe('0:45');
+    expect(formatDuration(45)).toBe('45s');
   });
 
   it('formats minutes and seconds', () => {
-    expect(formatDuration(90)).toBe('1:30');
-    expect(formatDuration(125)).toBe('2:05');
+    expect(formatDuration(90)).toBe('1m 30s');
+    expect(formatDuration(125)).toBe('2m 5s');
   });
 
-  it('formats hours, minutes and seconds', () => {
-    expect(formatDuration(3661)).toBe('1:01:01');
-    expect(formatDuration(7325)).toBe('2:02:05');
+  it('formats hours and minutes', () => {
+    expect(formatDuration(3661)).toBe('1h 1m');
+    expect(formatDuration(7325)).toBe('2h 2m');
   });
 
   it('handles zero', () => {
-    expect(formatDuration(0)).toBe('0:00');
+    expect(formatDuration(0)).toBe('0s');
   });
 
-  it('pads seconds correctly', () => {
-    expect(formatDuration(5)).toBe('0:05');
-    expect(formatDuration(65)).toBe('1:05');
+  it('formats exact minutes without seconds', () => {
+    expect(formatDuration(60)).toBe('1m');
+    expect(formatDuration(120)).toBe('2m');
   });
 
-  it('pads minutes correctly when hours present', () => {
-    expect(formatDuration(3605)).toBe('1:00:05');
-    expect(formatDuration(3665)).toBe('1:01:05');
+  it('formats exact hours without minutes', () => {
+    expect(formatDuration(3600)).toBe('1h');
+    expect(formatDuration(7200)).toBe('2h');
   });
 
   // Edge case: what happens with negative numbers?
@@ -41,7 +41,7 @@ describe('formatDuration', () => {
   // Edge case: very large numbers
   it('handles very large durations', () => {
     const twentyFourHours = 86400;
-    expect(formatDuration(twentyFourHours)).toBe('24:00:00');
+    expect(formatDuration(twentyFourHours)).toBe('24h');
   });
 });
 

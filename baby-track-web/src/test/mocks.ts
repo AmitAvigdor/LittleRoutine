@@ -10,6 +10,8 @@ export const mockBaby: Baby = {
   color: 'purple',
   photoUrl: null,
   isActive: true,
+  sharedWith: [],
+  shareCode: null,
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
 };

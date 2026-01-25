@@ -10,6 +10,8 @@ export interface Baby {
   createdAt: string;
   updatedAt: string;
   isActive: boolean;
+  sharedWith: string[]; // Array of user IDs who have access
+  shareCode: string | null; // Code for inviting partners
 }
 
 export interface CreateBabyInput {

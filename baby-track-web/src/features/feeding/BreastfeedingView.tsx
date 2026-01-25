@@ -356,7 +356,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
       {/* Manual Entry Mode */}
       {entryMode === 'manual' && !showForm && (
         <Card>
-          <CardHeader title="Log Past Feeding" subtitle="Enter feeding details manually" />
+          <CardHeader title="Log Past Feeding" subtitle={`${BREAST_SIDE_CONFIG[selectedSide].label} side`} />
 
           <div className="space-y-4">
             <Input
@@ -382,33 +382,46 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
               max="120"
             />
 
-            <BabyMoodSelector
-              label="Baby's mood"
-              value={babyMood}
-              onChange={setBabyMood}
-            />
-
-            <MomMoodSelector
-              label="Your mood"
-              value={momMood}
-              onChange={setMomMood}
-            />
-
-            <Textarea
-              label="Notes (optional)"
-              placeholder="Any notes about this session..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-            />
-
             <Button
               onClick={handleSave}
               className="w-full"
               disabled={!manualDuration || saving}
             >
-              {saving ? 'Saving...' : 'Save Session'}
+              {saving ? 'Saving...' : 'Save'}
             </Button>
+
+            {/* Expandable details section */}
+            <button
+              onClick={() => setShowDetails(!showDetails)}
+              className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
+            >
+              <span>Add details (optional)</span>
+              {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {showDetails && (
+              <div className="space-y-4 pt-2 border-t border-gray-100">
+                <BabyMoodSelector
+                  label="Baby's mood"
+                  value={babyMood}
+                  onChange={setBabyMood}
+                />
+
+                <MomMoodSelector
+                  label="Your mood"
+                  value={momMood}
+                  onChange={setMomMood}
+                />
+
+                <Textarea
+                  label="Notes (optional)"
+                  placeholder="Any notes about this session..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                />
+              </div>
+            )}
           </div>
         </Card>
       )}

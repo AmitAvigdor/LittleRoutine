@@ -117,9 +117,18 @@ export function formatDuration(seconds: number): string {
   const secs = seconds % 60;
 
   if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    if (minutes > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${hours}h`;
   }
-  return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  if (minutes > 0) {
+    if (secs > 0) {
+      return `${minutes}m ${secs}s`;
+    }
+    return `${minutes}m`;
+  }
+  return `${secs}s`;
 }
 
 export function calculateMilkExpiration(pumpedDate: string, location: MilkStorageLocation): string {

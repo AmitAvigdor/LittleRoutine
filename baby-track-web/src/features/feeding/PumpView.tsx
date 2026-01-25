@@ -13,7 +13,7 @@ import { createPumpSession, startPumpSession, endPumpSession, subscribeToPumpSes
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
-import { Clock, Droplet, Timer as TimerIcon, Edit3, Refrigerator, Snowflake, Baby as BabyIcon, X, Trash2 } from 'lucide-react';
+import { Clock, Droplet, Timer as TimerIcon, Edit3, Refrigerator, Snowflake, Baby as BabyIcon, X, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 
 type MilkDestination = 'fridge' | 'freezer' | 'use' | null;
 
@@ -66,6 +66,9 @@ export function PumpView({ baby }: PumpViewProps) {
 
   // Edit modal state
   const [selectedSession, setSelectedSession] = useState<PumpSession | null>(null);
+
+  // Expandable details state
+  const [showDetails, setShowDetails] = useState(false);
 
   // Subscribe to sessions
   useEffect(() => {
@@ -361,7 +364,7 @@ export function PumpView({ baby }: PumpViewProps) {
       {/* Manual Entry Mode */}
       {entryMode === 'manual' && !showForm && (
         <Card>
-          <CardHeader title="Log Past Session" subtitle="Enter pumping details manually" />
+          <CardHeader title="Log Past Session" subtitle={`${PUMP_SIDE_CONFIG[selectedSide].label} side`} />
 
           <div className="space-y-4">
             <Input
@@ -411,27 +414,40 @@ export function PumpView({ baby }: PumpViewProps) {
               </div>
             </div>
 
-            <MomMoodSelector
-              label="Your mood"
-              value={momMood}
-              onChange={setMomMood}
-            />
-
-            <Textarea
-              label="Notes (optional)"
-              placeholder="Any notes about this session..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-            />
-
             <Button
               onClick={handleSave}
               className="w-full"
               disabled={!manualDuration || saving}
             >
-              {saving ? 'Saving...' : 'Save Session'}
+              {saving ? 'Saving...' : 'Save'}
             </Button>
+
+            {/* Expandable details section */}
+            <button
+              onClick={() => setShowDetails(!showDetails)}
+              className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
+            >
+              <span>Add details (optional)</span>
+              {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {showDetails && (
+              <div className="space-y-4 pt-2 border-t border-gray-100">
+                <MomMoodSelector
+                  label="Your mood"
+                  value={momMood}
+                  onChange={setMomMood}
+                />
+
+                <Textarea
+                  label="Notes (optional)"
+                  placeholder="Any notes about this session..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                />
+              </div>
+            )}
           </div>
         </Card>
       )}

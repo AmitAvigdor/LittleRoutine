@@ -308,28 +308,41 @@ export function WalksView() {
                 />
               </div>
 
-              <BabyMoodSelector
-                label="Baby's mood"
-                value={babyMood}
-                onChange={setBabyMood}
-              />
-
-              <Textarea
-                label="Notes (optional)"
-                placeholder="Where did you go? How was the walk?"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-              />
-
               <Button
                 onClick={handleManualSave}
                 className="w-full"
                 disabled={!manualStartTime || !manualEndTime || saving}
                 style={{ backgroundColor: WALK_COLOR }}
               >
-                {saving ? 'Saving...' : 'Save Walk'}
+                {saving ? 'Saving...' : 'Save'}
               </Button>
+
+              {/* Expandable details section */}
+              <button
+                onClick={() => setShowDetails(!showDetails)}
+                className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
+              >
+                <span>Add details (optional)</span>
+                {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+
+              {showDetails && (
+                <div className="space-y-4 pt-2 border-t border-gray-100">
+                  <BabyMoodSelector
+                    label="Baby's mood"
+                    value={babyMood}
+                    onChange={setBabyMood}
+                  />
+
+                  <Textarea
+                    label="Notes (optional)"
+                    placeholder="Where did you go? How was the walk?"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+              )}
             </div>
           </Card>
         )}
