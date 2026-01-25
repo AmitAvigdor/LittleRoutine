@@ -19,7 +19,7 @@ import type {
   BottleSession, CreateBottleSessionInput,
   MilkStash, CreateMilkStashInput,
   SleepSession, CreateSleepSessionInput,
-  DiaperChange, CreateDiaperChangeInput,
+  DiaperChange, CreateDiaperChangeInput, DiaperType,
   GrowthEntry, CreateGrowthEntryInput,
   Milestone, CreateMilestoneInput,
   Medicine, CreateMedicineInput,
@@ -1155,6 +1155,27 @@ export async function deleteBottleSession(sessionId: string): Promise<void> {
 
 export async function deleteDiaperChange(changeId: string): Promise<void> {
   await deleteDoc(doc(db, 'diaperChanges', changeId));
+}
+
+export async function updateDiaperChange(
+  changeId: string,
+  updates: {
+    type?: DiaperType;
+    timestamp?: string;
+    notes?: string | null;
+    babyMood?: BabyMood | null;
+  }
+): Promise<void> {
+  const updateData: Record<string, unknown> = {
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (updates.timestamp) {
+    updateData.date = updates.timestamp.split('T')[0];
+  }
+
+  await updateDoc(doc(db, 'diaperChanges', changeId), updateData);
 }
 
 // ============ PLAY SESSIONS ============

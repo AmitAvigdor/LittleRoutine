@@ -12,7 +12,7 @@ import { createWalkSession, endWalkSession, createCompleteWalkSession, subscribe
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
-import { Clock, Timer as TimerIcon, Edit3, Trash2, Footprints } from 'lucide-react';
+import { Clock, Timer as TimerIcon, Edit3, Trash2, Footprints, ChevronDown, ChevronUp } from 'lucide-react';
 
 type EntryMode = 'timer' | 'manual';
 
@@ -36,6 +36,7 @@ export function WalksView() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   // Entry mode state
   const [entryMode, setEntryMode] = useState<EntryMode>('timer');
@@ -62,6 +63,25 @@ export function WalksView() {
       const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
       setTimerSeconds(elapsed);
     }
+  }, [sessions, showForm]);
+
+  // Re-sync timer when app becomes visible again (e.g., after closing and reopening)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !showForm) {
+        const activeSession = sessions.find((s) => s.isActive);
+        if (activeSession) {
+          setActiveSessionId(activeSession.id);
+          setIsTimerRunning(true);
+          const startTime = new Date(activeSession.startTime);
+          const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+          setTimerSeconds(elapsed);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [sessions, showForm]);
 
   const handleStart = useCallback(async () => {
@@ -117,6 +137,7 @@ export function WalksView() {
       setNotes('');
       setBabyMood(null);
       setShowForm(false);
+      setShowDetails(false);
 
       toast.success(`${formatDuration(savedDuration)} walk logged`);
     } catch (error) {
@@ -169,6 +190,7 @@ export function WalksView() {
 
   const handleCancel = () => {
     setShowForm(false);
+    setShowDetails(false);
     setIsTimerRunning(true);
   };
 
@@ -185,6 +207,7 @@ export function WalksView() {
       setNotes('');
       setBabyMood(null);
       setShowForm(false);
+      setShowDetails(false);
       return;
     }
 
@@ -196,6 +219,7 @@ export function WalksView() {
       setNotes('');
       setBabyMood(null);
       setShowForm(false);
+      setShowDetails(false);
       toast.info('Walk discarded');
     } catch (error) {
       console.error('Error discarding walk session:', error);
@@ -246,31 +270,10 @@ export function WalksView() {
               isRunning={isTimerRunning}
               initialSeconds={timerSeconds}
               onTimeUpdate={setTimerSeconds}
+              onStart={handleStart}
+              onStop={handleStop}
               color={WALK_COLOR}
             />
-
-            <div className="mt-6">
-              {!isTimerRunning ? (
-                <Button
-                  onClick={handleStart}
-                  size="lg"
-                  className="w-full"
-                  style={{ backgroundColor: WALK_COLOR }}
-                  disabled={starting}
-                >
-                  {starting ? 'Starting...' : 'Start Walk'}
-                </Button>
-              ) : (
-                <Button
-                  onClick={() => handleStop(timerSeconds)}
-                  size="lg"
-                  variant="outline"
-                  className="w-full"
-                >
-                  End Walk
-                </Button>
-              )}
-            </div>
           </Card>
         )}
 
@@ -340,20 +343,7 @@ export function WalksView() {
             />
 
             <div className="space-y-4">
-              <BabyMoodSelector
-                label="Baby's mood"
-                value={babyMood}
-                onChange={setBabyMood}
-              />
-
-              <Textarea
-                label="Notes (optional)"
-                placeholder="Where did you go? How was the walk?"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-              />
-
+              {/* Action buttons at top */}
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -370,6 +360,33 @@ export function WalksView() {
                   {saving ? 'Saving...' : 'Save'}
                 </Button>
               </div>
+
+              {/* Expandable details section */}
+              <button
+                onClick={() => setShowDetails(!showDetails)}
+                className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
+              >
+                <span>Add details (optional)</span>
+                {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+
+              {showDetails && (
+                <div className="space-y-4 pt-2 border-t border-gray-100">
+                  <BabyMoodSelector
+                    label="Baby's mood"
+                    value={babyMood}
+                    onChange={setBabyMood}
+                  />
+
+                  <Textarea
+                    label="Notes (optional)"
+                    placeholder="Where did you go? How was the walk?"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+              )}
             </div>
           </Card>
         )}

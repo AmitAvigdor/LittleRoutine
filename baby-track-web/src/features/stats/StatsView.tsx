@@ -11,6 +11,8 @@ import {
   subscribeToBottleSessions,
   subscribeToSleepSessions,
   subscribeToDiaperChanges,
+  subscribeToPlaySessions,
+  subscribeToWalkSessions,
 } from '@/lib/firestore';
 import {
   FeedingSession,
@@ -18,6 +20,8 @@ import {
   BottleSession,
   SleepSession,
   DiaperChange,
+  PlaySession,
+  WalkSession,
   formatDuration,
   formatSleepDuration,
   convertVolume,
@@ -25,8 +29,9 @@ import {
   BOTTLE_CONTENT_CONFIG,
   SLEEP_TYPE_CONFIG,
   DIAPER_TYPE_CONFIG,
+  PLAY_TYPE_CONFIG,
 } from '@/types';
-import { Droplet, Moon, Sun, Leaf, Milk, Baby, Clock, BarChart3, History, Lightbulb, TrendingUp, TrendingDown, Minus, Calendar } from 'lucide-react';
+import { Droplet, Moon, Sun, Leaf, Milk, Baby, Clock, BarChart3, History, Lightbulb, TrendingUp, TrendingDown, Minus, Calendar, Gamepad2, Footprints } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -41,7 +46,7 @@ import {
 
 type ViewMode = 'stats' | 'history' | 'insights';
 type TimeFilter = 'today' | 'week' | 'all';
-type HistoryFilter = 'all' | 'feeding' | 'sleep' | 'diaper';
+type HistoryFilter = 'all' | 'feeding' | 'sleep' | 'diaper' | 'play' | 'walks';
 
 const viewModeOptions = [
   { value: 'stats', label: 'Stats', icon: <BarChart3 className="w-4 h-4" /> },
@@ -60,6 +65,8 @@ const historyFilterOptions = [
   { value: 'feeding', label: 'Feeding' },
   { value: 'sleep', label: 'Sleep' },
   { value: 'diaper', label: 'Diaper' },
+  { value: 'play', label: 'Play' },
+  { value: 'walks', label: 'Walks' },
 ];
 
 export function StatsView() {
@@ -78,6 +85,8 @@ export function StatsView() {
   const [bottleSessions, setBottleSessions] = useState<BottleSession[]>([]);
   const [sleepSessions, setSleepSessions] = useState<SleepSession[]>([]);
   const [diaperChanges, setDiaperChanges] = useState<DiaperChange[]>([]);
+  const [playSessions, setPlaySessions] = useState<PlaySession[]>([]);
+  const [walkSessions, setWalkSessions] = useState<WalkSession[]>([]);
 
   // Subscribe to all data
   useEffect(() => {
@@ -89,6 +98,8 @@ export function StatsView() {
       subscribeToBottleSessions(selectedBaby.id, setBottleSessions),
       subscribeToSleepSessions(selectedBaby.id, setSleepSessions),
       subscribeToDiaperChanges(selectedBaby.id, setDiaperChanges),
+      subscribeToPlaySessions(selectedBaby.id, setPlaySessions),
+      subscribeToWalkSessions(selectedBaby.id, setWalkSessions),
     ];
 
     return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
@@ -132,6 +143,8 @@ export function StatsView() {
   const filteredBottle = filterByDate(bottleSessions);
   const filteredSleep = filterSleepByDate(sleepSessions);
   const filteredDiaper = filterByDate(diaperChanges);
+  const filteredPlay = filterByDate(playSessions).filter(s => !s.isActive);
+  const filteredWalks = filterByDate(walkSessions).filter(s => !s.isActive);
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -153,6 +166,10 @@ export function StatsView() {
     const diaperCount = filteredDiaper.length;
     const wetCount = filteredDiaper.filter((c) => c.type === 'wet').length;
     const dirtyCount = filteredDiaper.filter((c) => c.type === 'dirty').length;
+    const playTime = filteredPlay.reduce((sum, s) => sum + s.duration, 0);
+    const playCount = filteredPlay.length;
+    const walkTime = filteredWalks.reduce((sum, s) => sum + s.duration, 0);
+    const walkCount = filteredWalks.length;
 
     return {
       feedingTime,
@@ -167,8 +184,12 @@ export function StatsView() {
       diaperCount,
       wetCount,
       dirtyCount,
+      playTime,
+      playCount,
+      walkTime,
+      walkCount,
     };
-  }, [filteredFeeding, filteredPump, filteredBottle, filteredSleep, filteredDiaper, volumeUnit]);
+  }, [filteredFeeding, filteredPump, filteredBottle, filteredSleep, filteredDiaper, filteredPlay, filteredWalks, volumeUnit]);
 
   // Chart data for feeding
   const feedingChartData = useMemo(() => {
@@ -232,13 +253,13 @@ export function StatsView() {
   const historyData = useMemo(() => {
     type HistoryItem = {
       id: string;
-      type: 'breastfeeding' | 'bottle' | 'pump' | 'sleep' | 'diaper';
+      type: 'breastfeeding' | 'bottle' | 'pump' | 'sleep' | 'diaper' | 'play' | 'walk';
       timestamp: string;
       duration?: number;
       details: string;
       subDetails?: string;
       color: string;
-      icon: 'baby' | 'milk' | 'droplet' | 'moon' | 'sun' | 'leaf';
+      icon: 'baby' | 'milk' | 'droplet' | 'moon' | 'sun' | 'leaf' | 'gamepad' | 'footprints';
     };
 
     const items: HistoryItem[] = [];
@@ -317,11 +338,43 @@ export function StatsView() {
       });
     }
 
+    // Add play sessions
+    if (historyFilter === 'all' || historyFilter === 'play') {
+      playSessions.filter(s => !s.isActive).forEach((s) => {
+        items.push({
+          id: `play-${s.id}`,
+          type: 'play',
+          timestamp: s.startTime,
+          duration: s.duration,
+          details: `Play - ${PLAY_TYPE_CONFIG[s.type].label}`,
+          subDetails: formatDuration(s.duration),
+          color: PLAY_TYPE_CONFIG[s.type].color,
+          icon: 'gamepad',
+        });
+      });
+    }
+
+    // Add walk sessions
+    if (historyFilter === 'all' || historyFilter === 'walks') {
+      walkSessions.filter(s => !s.isActive).forEach((s) => {
+        items.push({
+          id: `walk-${s.id}`,
+          type: 'walk',
+          timestamp: s.startTime,
+          duration: s.duration,
+          details: 'Walk',
+          subDetails: formatDuration(s.duration),
+          color: '#8bc34a',
+          icon: 'footprints',
+        });
+      });
+    }
+
     // Sort by timestamp descending (most recent first)
     items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     return items;
-  }, [feedingSessions, bottleSessions, pumpSessions, sleepSessions, diaperChanges, historyFilter]);
+  }, [feedingSessions, bottleSessions, pumpSessions, sleepSessions, diaperChanges, playSessions, walkSessions, historyFilter]);
 
   // Group history items by date
   const groupedHistory = useMemo(() => {
@@ -367,12 +420,16 @@ export function StatsView() {
     const thisWeekBottle = filterByRange(bottleSessions, thisWeekStart, thisWeekEnd);
     const thisWeekSleep = filterByRange(sleepSessions, thisWeekStart, thisWeekEnd).filter(s => !s.isActive);
     const thisWeekDiaper = filterByRange(diaperChanges, thisWeekStart, thisWeekEnd);
+    const thisWeekPlay = filterByRange(playSessions, thisWeekStart, thisWeekEnd).filter(s => !s.isActive);
+    const thisWeekWalks = filterByRange(walkSessions, thisWeekStart, thisWeekEnd).filter(s => !s.isActive);
 
     // Last week data
     const lastWeekFeeding = filterByRange(feedingSessions, lastWeekStart, lastWeekEnd).filter(s => !s.isActive);
     const lastWeekBottle = filterByRange(bottleSessions, lastWeekStart, lastWeekEnd);
     const lastWeekSleep = filterByRange(sleepSessions, lastWeekStart, lastWeekEnd).filter(s => !s.isActive);
     const lastWeekDiaper = filterByRange(diaperChanges, lastWeekStart, lastWeekEnd);
+    const lastWeekPlay = filterByRange(playSessions, lastWeekStart, lastWeekEnd).filter(s => !s.isActive);
+    const lastWeekWalks = filterByRange(walkSessions, lastWeekStart, lastWeekEnd).filter(s => !s.isActive);
 
     // Calculate totals
     const thisWeekSleepTotal = thisWeekSleep.reduce((sum, s) => sum + s.duration, 0);
@@ -381,6 +438,10 @@ export function StatsView() {
     const lastWeekFeedingCount = lastWeekFeeding.length + lastWeekBottle.length;
     const thisWeekDiaperCount = thisWeekDiaper.length;
     const lastWeekDiaperCount = lastWeekDiaper.length;
+    const thisWeekPlayTotal = thisWeekPlay.reduce((sum, s) => sum + s.duration, 0);
+    const lastWeekPlayTotal = lastWeekPlay.reduce((sum, s) => sum + s.duration, 0);
+    const thisWeekWalkTotal = thisWeekWalks.reduce((sum, s) => sum + s.duration, 0);
+    const lastWeekWalkTotal = lastWeekWalks.reduce((sum, s) => sum + s.duration, 0);
 
     // Calculate percentage changes
     const calcChange = (current: number, previous: number): number => {
@@ -391,12 +452,16 @@ export function StatsView() {
     const sleepChange = calcChange(thisWeekSleepTotal, lastWeekSleepTotal);
     const feedingChange = calcChange(thisWeekFeedingCount, lastWeekFeedingCount);
     const diaperChange = calcChange(thisWeekDiaperCount, lastWeekDiaperCount);
+    const playChange = calcChange(thisWeekPlayTotal, lastWeekPlayTotal);
+    const walkChange = calcChange(thisWeekWalkTotal, lastWeekWalkTotal);
 
     // Calculate daily averages for this week
     const daysInWeek = Math.min(7, Math.ceil((now.getTime() - thisWeekStart.getTime()) / (1000 * 60 * 60 * 24)) + 1);
     const avgDailySleep = thisWeekSleepTotal / daysInWeek;
     const avgDailyFeedings = thisWeekFeedingCount / daysInWeek;
     const avgDailyDiapers = thisWeekDiaperCount / daysInWeek;
+    const avgDailyPlay = thisWeekPlayTotal / daysInWeek;
+    const avgDailyWalk = thisWeekWalkTotal / daysInWeek;
 
     // Pattern detection - find most common hours for activities
     const getHourDistribution = (items: { startTime?: string; timestamp?: string }[]): Record<number, number> => {
@@ -483,22 +548,30 @@ export function StatsView() {
       sleepChange,
       feedingChange,
       diaperChange,
+      playChange,
+      walkChange,
       thisWeekSleepTotal,
       lastWeekSleepTotal,
       thisWeekFeedingCount,
       lastWeekFeedingCount,
       thisWeekDiaperCount,
       lastWeekDiaperCount,
+      thisWeekPlayTotal,
+      lastWeekPlayTotal,
+      thisWeekWalkTotal,
+      lastWeekWalkTotal,
       // Daily averages
       avgDailySleep,
       avgDailyFeedings,
       avgDailyDiapers,
+      avgDailyPlay,
+      avgDailyWalk,
       // Patterns
       patterns,
       // Data availability
       hasEnoughData: feedingSessions.length >= 5 || sleepSessions.length >= 5,
     };
-  }, [feedingSessions, bottleSessions, sleepSessions, diaperChanges]);
+  }, [feedingSessions, bottleSessions, sleepSessions, diaperChanges, playSessions, walkSessions]);
 
   if (babies.length === 0) {
     return <NoBabiesHeader />;
@@ -519,6 +592,10 @@ export function StatsView() {
         return <Sun className={iconClass} style={{ color }} />;
       case 'leaf':
         return <Leaf className={iconClass} style={{ color }} />;
+      case 'gamepad':
+        return <Gamepad2 className={iconClass} style={{ color }} />;
+      case 'footprints':
+        return <Footprints className={iconClass} style={{ color }} />;
       default:
         return null;
     }
@@ -589,6 +666,26 @@ export function StatsView() {
             </div>
             <p className="text-2xl font-bold text-gray-900">{formatSleepDuration(stats.sleepTime)}</p>
             <p className="text-xs text-gray-500">{stats.napCount} naps, {stats.nightCount} night</p>
+          </Card>
+
+          {/* Play */}
+          <Card className="border-l-4 border-l-orange-500">
+            <div className="flex items-center gap-2 mb-2">
+              <Gamepad2 className="w-4 h-4 text-orange-500" />
+              <span className="text-sm font-medium text-gray-600">Play Time</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{formatDuration(stats.playTime)}</p>
+            <p className="text-xs text-gray-500">{stats.playCount} sessions</p>
+          </Card>
+
+          {/* Walks */}
+          <Card className="border-l-4 border-l-lime-500">
+            <div className="flex items-center gap-2 mb-2">
+              <Footprints className="w-4 h-4 text-lime-500" />
+              <span className="text-sm font-medium text-gray-600">Walks</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{formatDuration(stats.walkTime)}</p>
+            <p className="text-xs text-gray-500">{stats.walkCount} walks</p>
           </Card>
         </div>
 
@@ -835,6 +932,64 @@ export function StatsView() {
                         {insights.diaperChange > 0 ? '+' : ''}{insights.diaperChange}%
                       </div>
                     </div>
+
+                    {/* Play comparison */}
+                    <div className="flex items-center justify-between p-3 bg-orange-50 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <Gamepad2 className="w-5 h-5 text-orange-600" />
+                        <div>
+                          <p className="font-medium text-gray-900">Play Time</p>
+                          <p className="text-sm text-gray-500">
+                            {formatDuration(insights.thisWeekPlayTotal)} this week
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                        insights.playChange > 0
+                          ? 'bg-green-100 text-green-700'
+                          : insights.playChange < 0
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {insights.playChange > 0 ? (
+                          <TrendingUp className="w-4 h-4" />
+                        ) : insights.playChange < 0 ? (
+                          <TrendingDown className="w-4 h-4" />
+                        ) : (
+                          <Minus className="w-4 h-4" />
+                        )}
+                        {insights.playChange > 0 ? '+' : ''}{insights.playChange}%
+                      </div>
+                    </div>
+
+                    {/* Walks comparison */}
+                    <div className="flex items-center justify-between p-3 bg-lime-50 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <Footprints className="w-5 h-5 text-lime-600" />
+                        <div>
+                          <p className="font-medium text-gray-900">Walks</p>
+                          <p className="text-sm text-gray-500">
+                            {formatDuration(insights.thisWeekWalkTotal)} this week
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                        insights.walkChange > 0
+                          ? 'bg-green-100 text-green-700'
+                          : insights.walkChange < 0
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {insights.walkChange > 0 ? (
+                          <TrendingUp className="w-4 h-4" />
+                        ) : insights.walkChange < 0 ? (
+                          <TrendingDown className="w-4 h-4" />
+                        ) : (
+                          <Minus className="w-4 h-4" />
+                        )}
+                        {insights.walkChange > 0 ? '+' : ''}{insights.walkChange}%
+                      </div>
+                    </div>
                   </div>
                 </Card>
 
@@ -859,6 +1014,18 @@ export function StatsView() {
                         {insights.avgDailyDiapers.toFixed(1)}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">Diapers/day</p>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-xl">
+                      <p className="text-2xl font-bold text-orange-600">
+                        {formatDuration(insights.avgDailyPlay)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Play/day</p>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-xl">
+                      <p className="text-2xl font-bold text-lime-600">
+                        {formatDuration(insights.avgDailyWalk)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Walk/day</p>
                     </div>
                   </div>
                 </Card>

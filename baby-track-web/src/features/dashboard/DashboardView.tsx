@@ -21,17 +21,19 @@ import {
   BREAST_SIDE_CONFIG,
   DIAPER_TYPE_CONFIG,
   SLEEP_TYPE_CONFIG,
+  BABY_COLOR_CONFIG,
+  calculateBabyAge,
 } from '@/types';
 import {
   Baby,
   Moon,
   Leaf,
-  Droplet,
-  Clock,
   Milk,
   Sun,
   ChevronRight,
   Gamepad2,
+  Footprints,
+  Calendar,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -116,15 +118,15 @@ function QuickAction({ label, icon, color, onClick }: QuickActionProps) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-2 p-4 rounded-2xl border-2 border-gray-100 hover:border-gray-200 transition-all hover:scale-105 active:scale-95"
+      className="flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 border-gray-100 hover:border-gray-200 transition-all hover:scale-105 active:scale-95"
     >
       <div
-        className="w-14 h-14 rounded-xl flex items-center justify-center"
+        className="w-12 h-12 rounded-xl flex items-center justify-center"
         style={{ backgroundColor: `${color}15` }}
       >
         <span style={{ color }}>{icon}</span>
       </div>
-      <span className="text-sm font-medium text-gray-700">{label}</span>
+      <span className="text-xs font-medium text-gray-700">{label}</span>
     </button>
   );
 }
@@ -246,21 +248,58 @@ export function DashboardView() {
     return <NoBabiesHeader />;
   }
 
+  // Calculate baby's age
+  const babyAge = selectedBaby?.birthDate ? calculateBabyAge(selectedBaby.birthDate) : null;
+  const babyColor = selectedBaby?.color ? BABY_COLOR_CONFIG[selectedBaby.color]?.hex : '#9c27b0';
+
   return (
     <div>
       <Header title="Home" />
 
       <div className="px-4 py-4 space-y-6">
-        {/* Welcome message */}
+        {/* Baby Profile Card */}
         {selectedBaby && (
-          <div className="text-center py-2">
-            <h2 className="text-xl font-semibold text-gray-900">
-              {selectedBaby.name}'s Day
-            </h2>
-            <p className="text-sm text-gray-500">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-            </p>
-          </div>
+          <Card className="overflow-hidden">
+            <div
+              className="h-2 -mx-4 -mt-4 mb-4"
+              style={{ backgroundColor: babyColor }}
+            />
+            <div className="flex items-center gap-4">
+              {/* Baby Avatar */}
+              <div
+                className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg"
+                style={{ backgroundColor: babyColor }}
+              >
+                {selectedBaby.photoUrl ? (
+                  <img
+                    src={selectedBaby.photoUrl}
+                    alt={selectedBaby.name}
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  selectedBaby.name.charAt(0).toUpperCase()
+                )}
+              </div>
+
+              {/* Baby Info */}
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {selectedBaby.name}
+                </h2>
+                {babyAge && (
+                  <p className="text-lg font-medium" style={{ color: babyColor }}>
+                    {babyAge.text}
+                  </p>
+                )}
+                <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>
+                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Card>
         )}
 
         {/* Status Cards */}
@@ -318,14 +357,14 @@ export function DashboardView() {
         {/* Quick Actions */}
         <div>
           <h3 className="text-sm font-semibold text-gray-500 mb-3 px-1">Quick Actions</h3>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-5 gap-2">
             <QuickAction
               label={settings?.feedingTypePreference === 'formula' ? 'Bottle' : 'Feed'}
               icon={
                 settings?.feedingTypePreference === 'formula' ? (
-                  <Milk className="w-7 h-7" />
+                  <Milk className="w-6 h-6" />
                 ) : (
-                  <Baby className="w-7 h-7" />
+                  <Baby className="w-6 h-6" />
                 )
               }
               color="#e91e63"
@@ -333,21 +372,27 @@ export function DashboardView() {
             />
             <QuickAction
               label="Sleep"
-              icon={<Moon className="w-7 h-7" />}
+              icon={<Moon className="w-6 h-6" />}
               color="#3f51b5"
               onClick={() => navigate('/sleep')}
             />
             <QuickAction
               label="Diaper"
-              icon={<Leaf className="w-7 h-7" />}
+              icon={<Leaf className="w-6 h-6" />}
               color="#4caf50"
               onClick={() => navigate('/diaper')}
             />
             <QuickAction
               label="Play"
-              icon={<Gamepad2 className="w-7 h-7" />}
+              icon={<Gamepad2 className="w-6 h-6" />}
               color="#ff9800"
               onClick={() => navigate('/more/play')}
+            />
+            <QuickAction
+              label="Walk"
+              icon={<Footprints className="w-6 h-6" />}
+              color="#8bc34a"
+              onClick={() => navigate('/more/walks')}
             />
           </div>
         </div>
