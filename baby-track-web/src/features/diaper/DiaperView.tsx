@@ -12,7 +12,7 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
-import { Droplet, Circle, Layers, Clock, Check, Edit3, Trash2, Zap } from 'lucide-react';
+import { Droplet, Circle, Layers, Clock, Check, Edit3, Trash2, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 
 type EntryMode = 'quick' | 'manual';
 
@@ -48,6 +48,9 @@ export function DiaperView() {
 
   // Edit mode state
   const [editingChange, setEditingChange] = useState<DiaperChange | null>(null);
+
+  // Expandable details state
+  const [showDetails, setShowDetails] = useState(false);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -108,6 +111,7 @@ export function DiaperView() {
       setNotes('');
       setBabyMood(null);
       setShowForm(false);
+      setShowDetails(false);
       setJustSaved(true);
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = window.setTimeout(() => setJustSaved(false), 1500);
@@ -137,6 +141,7 @@ export function DiaperView() {
       setSelectedType(null);
       setNotes('');
       setBabyMood(null);
+      setShowDetails(false);
       setManualDate(new Date().toISOString().split('T')[0]);
       setManualTime(format(new Date(), 'HH:mm'));
 
@@ -154,6 +159,7 @@ export function DiaperView() {
     setNotes('');
     setBabyMood(null);
     setShowForm(false);
+    setShowDetails(false);
   };
 
   const handleEditClick = (change: DiaperChange) => {
@@ -163,6 +169,8 @@ export function DiaperView() {
     setBabyMood(change.babyMood);
     setManualDate(change.timestamp.split('T')[0]);
     setManualTime(format(parseISO(change.timestamp), 'HH:mm'));
+    // Auto-expand details if there's existing mood or notes
+    setShowDetails(!!(change.babyMood || change.notes));
   };
 
   const handleEditSave = async () => {
@@ -184,6 +192,7 @@ export function DiaperView() {
       setSelectedType(null);
       setNotes('');
       setBabyMood(null);
+      setShowDetails(false);
       setManualDate(new Date().toISOString().split('T')[0]);
       setManualTime(format(new Date(), 'HH:mm'));
 
@@ -201,6 +210,7 @@ export function DiaperView() {
     setSelectedType(null);
     setNotes('');
     setBabyMood(null);
+    setShowDetails(false);
     setManualDate(new Date().toISOString().split('T')[0]);
     setManualTime(format(new Date(), 'HH:mm'));
   };
@@ -215,6 +225,7 @@ export function DiaperView() {
       setSelectedType(null);
       setNotes('');
       setBabyMood(null);
+      setShowDetails(false);
       toast.info('Diaper change deleted');
     } catch (error) {
       console.error('Error deleting diaper change:', error);
@@ -411,20 +422,6 @@ export function DiaperView() {
                 />
               </div>
 
-              <BabyMoodSelector
-                label="Baby's mood"
-                value={babyMood}
-                onChange={setBabyMood}
-              />
-
-              <Textarea
-                label="Notes (optional)"
-                placeholder="Any notes about this change..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-              />
-
               <Button
                 onClick={handleManualSave}
                 className="w-full"
@@ -432,6 +429,33 @@ export function DiaperView() {
               >
                 {saving ? 'Saving...' : 'Save Diaper Change'}
               </Button>
+
+              {/* Expandable details section */}
+              <button
+                onClick={() => setShowDetails(!showDetails)}
+                className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
+              >
+                <span>Add details (optional)</span>
+                {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+
+              {showDetails && (
+                <div className="space-y-4 pt-2 border-t border-gray-100">
+                  <BabyMoodSelector
+                    label="Baby's mood"
+                    value={babyMood}
+                    onChange={setBabyMood}
+                  />
+
+                  <Textarea
+                    label="Notes (optional)"
+                    placeholder="Any notes about this change..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+              )}
             </div>
           </Card>
         )}
@@ -454,20 +478,6 @@ export function DiaperView() {
             </div>
 
             <div className="space-y-4">
-              <BabyMoodSelector
-                label="Baby's mood"
-                value={babyMood}
-                onChange={setBabyMood}
-              />
-
-              <Textarea
-                label="Notes (optional)"
-                placeholder="Any notes about this change..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-              />
-
               <div className="flex gap-3">
                 <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
                   Cancel
@@ -476,6 +486,33 @@ export function DiaperView() {
                   {saving ? 'Saving...' : 'Save'}
                 </Button>
               </div>
+
+              {/* Expandable details section */}
+              <button
+                onClick={() => setShowDetails(!showDetails)}
+                className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
+              >
+                <span>Add details (optional)</span>
+                {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+
+              {showDetails && (
+                <div className="space-y-4 pt-2 border-t border-gray-100">
+                  <BabyMoodSelector
+                    label="Baby's mood"
+                    value={babyMood}
+                    onChange={setBabyMood}
+                  />
+
+                  <Textarea
+                    label="Notes (optional)"
+                    placeholder="Any notes about this change..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+              )}
             </div>
           </Card>
         )}
@@ -541,20 +578,6 @@ export function DiaperView() {
                 />
               </div>
 
-              <BabyMoodSelector
-                label="Baby's mood"
-                value={babyMood}
-                onChange={setBabyMood}
-              />
-
-              <Textarea
-                label="Notes (optional)"
-                placeholder="Any notes about this change..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-              />
-
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -571,6 +594,33 @@ export function DiaperView() {
                   {saving ? 'Saving...' : 'Save'}
                 </Button>
               </div>
+
+              {/* Expandable details section */}
+              <button
+                onClick={() => setShowDetails(!showDetails)}
+                className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
+              >
+                <span>Add details (optional)</span>
+                {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+
+              {showDetails && (
+                <div className="space-y-4 pt-2 border-t border-gray-100">
+                  <BabyMoodSelector
+                    label="Baby's mood"
+                    value={babyMood}
+                    onChange={setBabyMood}
+                  />
+
+                  <Textarea
+                    label="Notes (optional)"
+                    placeholder="Any notes about this change..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+              )}
             </div>
           </Card>
         )}

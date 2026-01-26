@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { format, isToday, parseISO } from 'date-fns';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Timer } from '@/components/ui/Timer';
@@ -7,6 +7,7 @@ import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
 import { MomMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
 import { EditSessionModal } from '@/components/ui/EditSessionModal';
+import { StaleTimerModal, STALE_TIMER_THRESHOLD } from '@/components/ui/StaleTimerModal';
 import { Baby, PumpSession, PumpSide, MomMood, VolumeUnit, PUMP_SIDE_CONFIG, formatDuration, convertVolume } from '@/types';
 import { MilkStorageLocation } from '@/types/enums';
 import { createPumpSession, startPumpSession, endPumpSession, subscribeToPumpSessions, deletePumpSession, createMilkStash, createBottleSession } from '@/lib/firestore';
@@ -70,6 +71,10 @@ export function PumpView({ baby }: PumpViewProps) {
   // Expandable details state
   const [showDetails, setShowDetails] = useState(false);
 
+  // Stale timer modal state
+  const [showStaleModal, setShowStaleModal] = useState(false);
+  const staleModalDismissedRef = useRef(false);
+
   // Subscribe to sessions
   useEffect(() => {
     const unsubscribe = subscribeToPumpSessions(baby.id, setSessions);
@@ -99,9 +104,91 @@ export function PumpView({ baby }: PumpViewProps) {
     }
   }, [sessions, showForm]);
 
+  // Re-sync timer when app becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !showForm) {
+        const activeSession = sessions.find((s) => s.isActive);
+        if (activeSession) {
+          setActiveSessionId(activeSession.id);
+          setSelectedSide(activeSession.side);
+          setIsTimerRunning(true);
+          const startTime = new Date(activeSession.startTime);
+          const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+          setTimerSeconds(elapsed);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [sessions, showForm]);
+
+  // Check for stale timer (5+ hours)
+  useEffect(() => {
+    if (staleModalDismissedRef.current || showForm || showStaleModal) return;
+
+    const activeSession = sessions.find((s) => s.isActive);
+    if (activeSession) {
+      const startTime = new Date(activeSession.startTime);
+      const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+      if (elapsed >= STALE_TIMER_THRESHOLD) {
+        setShowStaleModal(true);
+      }
+    }
+  }, [sessions, showForm, showStaleModal]);
+
+  // Also check when app becomes visible
+  useEffect(() => {
+    const checkStaleOnVisibility = () => {
+      if (document.visibilityState === 'visible' && !staleModalDismissedRef.current && !showForm) {
+        const activeSession = sessions.find((s) => s.isActive);
+        if (activeSession) {
+          const startTime = new Date(activeSession.startTime);
+          const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+          if (elapsed >= STALE_TIMER_THRESHOLD) {
+            setShowStaleModal(true);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', checkStaleOnVisibility);
+    return () => document.removeEventListener('visibilitychange', checkStaleOnVisibility);
+  }, [sessions, showForm]);
+
+  const handleStaleTimerContinue = () => {
+    staleModalDismissedRef.current = true;
+    setShowStaleModal(false);
+  };
+
+  const handleStaleTimerStopAndSave = () => {
+    setShowStaleModal(false);
+    setIsTimerRunning(false);
+    setShowForm(true);
+  };
+
+  const handleStaleTimerDiscard = async () => {
+    setShowStaleModal(false);
+    const activeSession = sessions.find((s) => s.isActive);
+    if (activeSession) {
+      try {
+        await deletePumpSession(activeSession.id);
+        setActiveSessionId(null);
+        setTimerSeconds(0);
+        setIsTimerRunning(false);
+        toast.info('Pump session discarded');
+      } catch (error) {
+        console.error('Error discarding pump session:', error);
+        toast.error('Failed to discard session');
+      }
+    }
+  };
+
   const handleStart = useCallback(async () => {
     if (!user || starting) return;
 
+    staleModalDismissedRef.current = false; // Reset for new timer
     setStarting(true);
     try {
       const sessionId = await startPumpSession(baby.id, user.uid, {
@@ -647,6 +734,16 @@ export function PumpView({ baby }: PumpViewProps) {
           session={selectedSession}
         />
       )}
+
+      {/* Stale Timer Modal */}
+      <StaleTimerModal
+        isOpen={showStaleModal}
+        duration={timerSeconds}
+        activityName="pump"
+        onContinue={handleStaleTimerContinue}
+        onStopAndSave={handleStaleTimerStopAndSave}
+        onDiscard={handleStaleTimerDiscard}
+      />
     </div>
   );
 }

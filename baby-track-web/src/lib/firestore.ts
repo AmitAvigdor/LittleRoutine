@@ -1426,6 +1426,36 @@ export async function deletePlaySession(sessionId: string): Promise<void> {
   await deleteDoc(doc(db, 'playSessions', sessionId));
 }
 
+export async function updatePlaySession(
+  sessionId: string,
+  updates: {
+    startTime?: string;
+    endTime?: string | null;
+    type?: PlayType;
+    notes?: string | null;
+    babyMood?: BabyMood | null;
+  }
+): Promise<void> {
+  const docSnap = await getDoc(doc(db, 'playSessions', sessionId));
+  if (!docSnap.exists()) {
+    throw new Error(`Play session ${sessionId} not found`);
+  }
+
+  const session = convertTimestamps(docSnap.data());
+  const startTime = updates.startTime ? new Date(updates.startTime) : new Date(session.startTime);
+  const endTime = updates.endTime ? new Date(updates.endTime) : (session.endTime ? new Date(session.endTime) : null);
+
+  const duration = endTime
+    ? Math.max(0, Math.floor((endTime.getTime() - startTime.getTime()) / 1000))
+    : session.duration;
+
+  await updateDoc(doc(db, 'playSessions', sessionId), {
+    ...updates,
+    duration,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
 // ============ WALK SESSIONS ============
 export async function createWalkSession(
   babyId: string,
@@ -1521,6 +1551,35 @@ export function subscribeToWalkSessions(
 
 export async function deleteWalkSession(sessionId: string): Promise<void> {
   await deleteDoc(doc(db, 'walkSessions', sessionId));
+}
+
+export async function updateWalkSession(
+  sessionId: string,
+  updates: {
+    startTime?: string;
+    endTime?: string | null;
+    notes?: string | null;
+    babyMood?: BabyMood | null;
+  }
+): Promise<void> {
+  const docSnap = await getDoc(doc(db, 'walkSessions', sessionId));
+  if (!docSnap.exists()) {
+    throw new Error(`Walk session ${sessionId} not found`);
+  }
+
+  const session = convertTimestamps(docSnap.data());
+  const startTime = updates.startTime ? new Date(updates.startTime) : new Date(session.startTime);
+  const endTime = updates.endTime ? new Date(updates.endTime) : (session.endTime ? new Date(session.endTime) : null);
+
+  const duration = endTime
+    ? Math.max(0, Math.floor((endTime.getTime() - startTime.getTime()) / 1000))
+    : session.duration;
+
+  await updateDoc(doc(db, 'walkSessions', sessionId), {
+    ...updates,
+    duration,
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 // ============ GENERIC DELETE OPERATION ============

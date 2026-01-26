@@ -10,6 +10,8 @@ import {
   FeedingSession,
   PumpSession,
   BottleSession,
+  PlaySession,
+  WalkSession,
   SleepType,
   BreastSide,
   PumpSide,
@@ -17,30 +19,36 @@ import {
   VolumeUnit,
   BabyMood,
   MomMood,
+  PlayType,
   SLEEP_TYPE_CONFIG,
   BREAST_SIDE_CONFIG,
   PUMP_SIDE_CONFIG,
   BOTTLE_CONTENT_CONFIG,
+  PLAY_TYPE_CONFIG,
 } from '@/types';
 import {
   updateSleepSession,
   updateFeedingSession,
   updatePumpSession,
   updateBottleSession,
+  updatePlaySession,
+  updateWalkSession,
   deleteSleepSession,
   deleteFeedingSession,
   deletePumpSession,
   deleteBottleSession,
+  deletePlaySession,
+  deleteWalkSession,
 } from '@/lib/firestore';
-import { X, Trash2, AlertTriangle, Moon, Sun } from 'lucide-react';
+import { X, Trash2, AlertTriangle, Moon, Sun, Footprints } from 'lucide-react';
 
-type SessionType = 'sleep' | 'breastfeeding' | 'pump' | 'bottle';
+type SessionType = 'sleep' | 'breastfeeding' | 'pump' | 'bottle' | 'play' | 'walk';
 
 interface EditSessionModalProps {
   isOpen: boolean;
   onClose: () => void;
   sessionType: SessionType;
-  session: SleepSession | FeedingSession | PumpSession | BottleSession;
+  session: SleepSession | FeedingSession | PumpSession | BottleSession | PlaySession | WalkSession;
 }
 
 export function EditSessionModal({ isOpen, onClose, sessionType, session }: EditSessionModalProps) {
@@ -73,6 +81,17 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
   const [bottleVolume, setBottleVolume] = useState('');
   const [bottleVolumeUnit, setBottleVolumeUnit] = useState<VolumeUnit>('oz');
   const [contentType, setContentType] = useState<BottleContentType>('breastMilk');
+
+  // Play fields
+  const [playType, setPlayType] = useState<PlayType>('tummy_time');
+  const [playDate, setPlayDate] = useState('');
+  const [playStartTime, setPlayStartTime] = useState('');
+  const [playEndTime, setPlayEndTime] = useState('');
+
+  // Walk fields
+  const [walkDate, setWalkDate] = useState('');
+  const [walkStartTime, setWalkStartTime] = useState('');
+  const [walkEndTime, setWalkEndTime] = useState('');
 
   // Common fields
   const [notes, setNotes] = useState('');
@@ -123,6 +142,23 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
       setBottleVolume(s.volume.toString());
       setBottleVolumeUnit(s.volumeUnit);
       setContentType(s.contentType);
+    } else if (sessionType === 'play') {
+      const s = session as PlaySession;
+      setPlayType(s.type);
+      setBabyMood(s.babyMood);
+      setPlayDate(s.startTime.split('T')[0]);
+      setPlayStartTime(format(parseISO(s.startTime), 'HH:mm'));
+      if (s.endTime) {
+        setPlayEndTime(format(parseISO(s.endTime), 'HH:mm'));
+      }
+    } else if (sessionType === 'walk') {
+      const s = session as WalkSession;
+      setBabyMood(s.babyMood);
+      setWalkDate(s.startTime.split('T')[0]);
+      setWalkStartTime(format(parseISO(s.startTime), 'HH:mm'));
+      if (s.endTime) {
+        setWalkEndTime(format(parseISO(s.endTime), 'HH:mm'));
+      }
     }
   }, [session, sessionType]);
 
@@ -172,6 +208,25 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
           notes: notes || null,
           babyMood,
         });
+      } else if (sessionType === 'play') {
+        const startTime = new Date(`${playDate}T${playStartTime}`).toISOString();
+        const endTime = playEndTime ? new Date(`${playDate}T${playEndTime}`).toISOString() : null;
+        await updatePlaySession(session.id, {
+          startTime,
+          endTime,
+          type: playType,
+          notes: notes || null,
+          babyMood,
+        });
+      } else if (sessionType === 'walk') {
+        const startTime = new Date(`${walkDate}T${walkStartTime}`).toISOString();
+        const endTime = walkEndTime ? new Date(`${walkDate}T${walkEndTime}`).toISOString() : null;
+        await updateWalkSession(session.id, {
+          startTime,
+          endTime,
+          notes: notes || null,
+          babyMood,
+        });
       }
       onClose();
     } catch (error) {
@@ -192,6 +247,10 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
         await deletePumpSession(session.id);
       } else if (sessionType === 'bottle') {
         await deleteBottleSession(session.id);
+      } else if (sessionType === 'play') {
+        await deletePlaySession(session.id);
+      } else if (sessionType === 'walk') {
+        await deleteWalkSession(session.id);
       }
       onClose();
     } catch (error) {
@@ -214,6 +273,10 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
         return 'Edit Pump Session';
       case 'bottle':
         return 'Edit Bottle Feeding';
+      case 'play':
+        return 'Edit Play Session';
+      case 'walk':
+        return 'Edit Walk';
       default:
         return 'Edit Session';
     }
@@ -240,6 +303,11 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
     { value: 'formula', label: 'Formula', color: BOTTLE_CONTENT_CONFIG.formula.color },
     { value: 'mixed', label: 'Mixed', color: BOTTLE_CONTENT_CONFIG.mixed.color },
   ];
+
+  const playTypeOptions = Object.entries(PLAY_TYPE_CONFIG).map(([value, config]) => ({
+    value,
+    label: config.emoji,
+  }));
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -474,6 +542,84 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
                       size="sm"
                     />
                   </div>
+                </div>
+                <BabyMoodSelector
+                  label="Baby's mood"
+                  value={babyMood}
+                  onChange={setBabyMood}
+                />
+              </>
+            )}
+
+            {/* Play fields */}
+            {sessionType === 'play' && (
+              <>
+                <div className="flex justify-center">
+                  <SegmentedControl
+                    options={playTypeOptions}
+                    value={playType}
+                    onChange={(value) => setPlayType(value as PlayType)}
+                  />
+                </div>
+                <Input
+                  type="date"
+                  label="Date"
+                  value={playDate}
+                  onChange={(e) => setPlayDate(e.target.value)}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    type="time"
+                    label="Start Time"
+                    value={playStartTime}
+                    onChange={(e) => setPlayStartTime(e.target.value)}
+                  />
+                  <Input
+                    type="time"
+                    label="End Time"
+                    value={playEndTime}
+                    onChange={(e) => setPlayEndTime(e.target.value)}
+                  />
+                </div>
+                <BabyMoodSelector
+                  label="Baby's mood"
+                  value={babyMood}
+                  onChange={setBabyMood}
+                />
+              </>
+            )}
+
+            {/* Walk fields */}
+            {sessionType === 'walk' && (
+              <>
+                <div className="flex items-center justify-center gap-2 py-2">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: '#8bc34a20' }}
+                  >
+                    <Footprints className="w-5 h-5" style={{ color: '#8bc34a' }} />
+                  </div>
+                  <span className="font-medium text-gray-700">Walk</span>
+                </div>
+                <Input
+                  type="date"
+                  label="Date"
+                  value={walkDate}
+                  onChange={(e) => setWalkDate(e.target.value)}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    type="time"
+                    label="Start Time"
+                    value={walkStartTime}
+                    onChange={(e) => setWalkStartTime(e.target.value)}
+                  />
+                  <Input
+                    type="time"
+                    label="End Time"
+                    value={walkEndTime}
+                    onChange={(e) => setWalkEndTime(e.target.value)}
+                  />
                 </div>
                 <BabyMoodSelector
                   label="Baby's mood"

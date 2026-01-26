@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
-import { ChevronDown, Plus, Baby as BabyIcon, Check } from 'lucide-react';
+import { ChevronDown, Plus, Baby as BabyIcon, Check, UserPlus } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
+import { useAuth } from '@/features/auth/AuthContext';
+import { joinBabyByShareCode } from '@/lib/firestore';
+import { toast } from '@/stores/toastStore';
 import { BABY_COLOR_CONFIG } from '@/types';
 
 interface HeaderProps {
@@ -141,6 +144,29 @@ export function Header({
 // Empty state when no babies
 export function NoBabiesHeader() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { setSelectedBabyId } = useAppStore();
+  const [showJoinForm, setShowJoinForm] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
+  const [joining, setJoining] = useState(false);
+
+  const handleJoinBaby = async () => {
+    if (!user || !joinCode.trim()) return;
+
+    setJoining(true);
+    try {
+      const baby = await joinBabyByShareCode(user.uid, joinCode);
+      toast.success(`You now have access to ${baby.name}`);
+      setShowJoinForm(false);
+      setJoinCode('');
+      setSelectedBabyId(baby.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to join';
+      toast.error(message);
+    } finally {
+      setJoining(false);
+    }
+  };
 
   return (
     <header className="bg-white border-b border-gray-100">
@@ -158,6 +184,49 @@ export function NoBabiesHeader() {
             <Plus className="w-4 h-4" />
             Add Baby
           </button>
+
+          {/* Join a shared baby option */}
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            {!showJoinForm ? (
+              <button
+                onClick={() => setShowJoinForm(true)}
+                className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Or join a shared baby</span>
+              </button>
+            ) : (
+              <div className="max-w-xs mx-auto space-y-3">
+                <p className="text-sm text-gray-600">Enter the share code from your partner</p>
+                <input
+                  type="text"
+                  placeholder="Enter 6-letter code"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  maxLength={6}
+                  className="w-full px-4 py-2 text-center font-mono text-lg tracking-widest border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setShowJoinForm(false);
+                      setJoinCode('');
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleJoinBaby}
+                    disabled={joinCode.length !== 6 || joining}
+                    className="flex-1 px-4 py-2 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {joining ? 'Joining...' : 'Join'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>

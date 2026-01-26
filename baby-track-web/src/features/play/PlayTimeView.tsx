@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { format, isToday, parseISO } from 'date-fns';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
 import { BabyMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
+import { EditSessionModal } from '@/components/ui/EditSessionModal';
+import { StaleTimerModal, STALE_TIMER_THRESHOLD } from '@/components/ui/StaleTimerModal';
 import { PlaySession, PlayType, BabyMood, PLAY_TYPE_CONFIG, formatDuration } from '@/types';
 import { createPlaySession, endPlaySession, createCompletePlaySession, subscribeToPlaySessions, deletePlaySession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -41,6 +43,11 @@ export function PlayTimeView() {
   const [saving, setSaving] = useState(false);
   const [starting, setStarting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<PlaySession | null>(null);
+
+  // Stale timer modal state
+  const [showStaleModal, setShowStaleModal] = useState(false);
+  const staleModalDismissedRef = useRef(false);
 
   // Entry mode state
   const [entryMode, setEntryMode] = useState<EntryMode>('timer');
@@ -90,9 +97,71 @@ export function PlayTimeView() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [sessions, showForm]);
 
+  // Check for stale timer (5+ hours)
+  useEffect(() => {
+    if (staleModalDismissedRef.current || showForm || showStaleModal) return;
+
+    const activeSession = sessions.find((s) => s.isActive);
+    if (activeSession) {
+      const startTime = new Date(activeSession.startTime);
+      const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+      if (elapsed >= STALE_TIMER_THRESHOLD) {
+        setShowStaleModal(true);
+      }
+    }
+  }, [sessions, showForm, showStaleModal]);
+
+  // Also check when app becomes visible
+  useEffect(() => {
+    const checkStaleOnVisibility = () => {
+      if (document.visibilityState === 'visible' && !staleModalDismissedRef.current && !showForm) {
+        const activeSession = sessions.find((s) => s.isActive);
+        if (activeSession) {
+          const startTime = new Date(activeSession.startTime);
+          const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+          if (elapsed >= STALE_TIMER_THRESHOLD) {
+            setShowStaleModal(true);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', checkStaleOnVisibility);
+    return () => document.removeEventListener('visibilitychange', checkStaleOnVisibility);
+  }, [sessions, showForm]);
+
+  const handleStaleTimerContinue = () => {
+    staleModalDismissedRef.current = true;
+    setShowStaleModal(false);
+  };
+
+  const handleStaleTimerStopAndSave = () => {
+    setShowStaleModal(false);
+    setIsTimerRunning(false);
+    setShowForm(true);
+  };
+
+  const handleStaleTimerDiscard = async () => {
+    setShowStaleModal(false);
+    const activeSession = sessions.find((s) => s.isActive);
+    if (activeSession) {
+      try {
+        await deletePlaySession(activeSession.id);
+        setActiveSessionId(null);
+        setTimerSeconds(0);
+        setIsTimerRunning(false);
+        toast.info('Play session discarded');
+      } catch (error) {
+        console.error('Error discarding play session:', error);
+        toast.error('Failed to discard session');
+      }
+    }
+  };
+
   const handleStart = useCallback(async () => {
     if (!user || !selectedBaby || starting) return;
 
+    staleModalDismissedRef.current = false; // Reset for new timer
     setStarting(true);
     try {
       const sessionId = await createPlaySession(selectedBaby.id, user.uid, {
@@ -445,39 +514,55 @@ export function PlayTimeView() {
 
         {/* Recent Sessions */}
         {completedSessions.length > 0 && (
-          <Card>
-            <h3 className="font-semibold text-gray-900 mb-3">Recent Play Sessions</h3>
-            <div className="space-y-2">
+          <Card padding="none">
+            <div className="px-4 py-3 border-b border-gray-100">
+              <h3 className="font-semibold text-gray-900">Recent Play Sessions</h3>
+            </div>
+            <div className="divide-y divide-gray-50">
               {completedSessions.slice(0, 5).map((session) => (
-                <div
+                <button
                   key={session.id}
-                  className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
+                  onClick={() => setSelectedSession(session)}
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">{PLAY_TYPE_CONFIG[session.type].emoji}</span>
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {PLAY_TYPE_CONFIG[session.type].label}
-                      </p>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Clock className="w-3 h-3" />
-                        <span>{format(parseISO(session.startTime), 'MMM d, h:mm a')}</span>
-                      </div>
+                  <span className="text-xl">{PLAY_TYPE_CONFIG[session.type].emoji}</span>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">
+                      {PLAY_TYPE_CONFIG[session.type].label}
+                    </p>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Clock className="w-3 h-3" />
+                      <span>{formatDuration(session.duration)}</span>
+                      <span>•</span>
+                      <span>{format(parseISO(session.startTime), 'MMM d, h:mm a')}</span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold" style={{ color: PLAY_TYPE_CONFIG[session.type].color }}>
-                      {formatDuration(session.duration)}
-                    </p>
-                    {session.babyMood && (
-                      <MoodIndicator babyMood={session.babyMood} size="sm" />
-                    )}
-                  </div>
-                </div>
+                  <MoodIndicator babyMood={session.babyMood} size="sm" />
+                </button>
               ))}
             </div>
           </Card>
         )}
+
+        {/* Edit Session Modal */}
+        {selectedSession && (
+          <EditSessionModal
+            isOpen={!!selectedSession}
+            onClose={() => setSelectedSession(null)}
+            sessionType="play"
+            session={selectedSession}
+          />
+        )}
+
+        {/* Stale Timer Modal */}
+        <StaleTimerModal
+          isOpen={showStaleModal}
+          duration={timerSeconds}
+          activityName="play time"
+          onContinue={handleStaleTimerContinue}
+          onStopAndSave={handleStaleTimerStopAndSave}
+          onDiscard={handleStaleTimerDiscard}
+        />
       </div>
     </div>
   );

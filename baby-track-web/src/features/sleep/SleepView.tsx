@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { format, isToday, parseISO } from 'date-fns';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -8,6 +8,7 @@ import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
 import { BabyMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
 import { EditSessionModal } from '@/components/ui/EditSessionModal';
+import { StaleTimerModal, STALE_TIMER_THRESHOLD } from '@/components/ui/StaleTimerModal';
 import { SleepSession, SleepType, BabyMood, SLEEP_TYPE_CONFIG, formatSleepDuration } from '@/types';
 import { createSleepSession, endSleepSession, createCompleteSleepSession, subscribeToSleepSessions, deleteSleepSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -44,14 +45,18 @@ export function SleepView() {
   // Entry mode state
   const [entryMode, setEntryMode] = useState<EntryMode>('timer');
   const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
-  const [manualStartTime, setManualStartTime] = useState(format(new Date(), 'HH:mm'));
-  const [manualEndTime, setManualEndTime] = useState(format(new Date(), 'HH:mm'));
+  const [manualTime, setManualTime] = useState(format(new Date(), 'HH:mm'));
+  const [manualDuration, setManualDuration] = useState('');
 
   // Edit modal state
   const [selectedSession, setSelectedSession] = useState<SleepSession | null>(null);
 
   // Expandable details state
   const [showDetails, setShowDetails] = useState(false);
+
+  // Stale timer modal state
+  const [showStaleModal, setShowStaleModal] = useState(false);
+  const staleModalDismissedRef = useRef(false);
 
   // Subscribe to sessions
   useEffect(() => {
@@ -97,9 +102,71 @@ export function SleepView() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [sessions, showForm]);
 
+  // Check for stale timer (5+ hours)
+  useEffect(() => {
+    if (staleModalDismissedRef.current || showForm || showStaleModal) return;
+
+    const activeSession = sessions.find((s) => s.isActive);
+    if (activeSession) {
+      const startTime = new Date(activeSession.startTime);
+      const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+      if (elapsed >= STALE_TIMER_THRESHOLD) {
+        setShowStaleModal(true);
+      }
+    }
+  }, [sessions, showForm, showStaleModal]);
+
+  // Also check when app becomes visible
+  useEffect(() => {
+    const checkStaleOnVisibility = () => {
+      if (document.visibilityState === 'visible' && !staleModalDismissedRef.current && !showForm) {
+        const activeSession = sessions.find((s) => s.isActive);
+        if (activeSession) {
+          const startTime = new Date(activeSession.startTime);
+          const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+          if (elapsed >= STALE_TIMER_THRESHOLD) {
+            setShowStaleModal(true);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', checkStaleOnVisibility);
+    return () => document.removeEventListener('visibilitychange', checkStaleOnVisibility);
+  }, [sessions, showForm]);
+
+  const handleStaleTimerContinue = () => {
+    staleModalDismissedRef.current = true;
+    setShowStaleModal(false);
+  };
+
+  const handleStaleTimerStopAndSave = () => {
+    setShowStaleModal(false);
+    setIsTimerRunning(false);
+    setShowForm(true);
+  };
+
+  const handleStaleTimerDiscard = async () => {
+    setShowStaleModal(false);
+    const activeSession = sessions.find((s) => s.isActive);
+    if (activeSession) {
+      try {
+        await deleteSleepSession(activeSession.id);
+        setActiveSessionId(null);
+        setTimerSeconds(0);
+        setIsTimerRunning(false);
+        toast.info('Sleep session discarded');
+      } catch (error) {
+        console.error('Error discarding sleep session:', error);
+        toast.error('Failed to discard session');
+      }
+    }
+  };
+
   const handleStart = useCallback(async () => {
     if (!user || !selectedBaby || starting) return;
 
+    staleModalDismissedRef.current = false; // Reset for new timer
     setStarting(true);
     try {
       const sessionId = await createSleepSession(selectedBaby.id, user.uid, {
@@ -167,27 +234,22 @@ export function SleepView() {
   };
 
   const handleManualSave = async () => {
-    if (!user || !selectedBaby || !manualStartTime || !manualEndTime) return;
+    if (!user || !selectedBaby || !manualDuration) return;
 
-    const startTime = new Date(`${manualDate}T${manualStartTime}`);
-    let endTime = new Date(`${manualDate}T${manualEndTime}`);
-
-    // If end time is before start time, assume it's the next day
-    if (endTime <= startTime) {
-      endTime = new Date(endTime.getTime() + 24 * 60 * 60 * 1000);
-    }
-
-    const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (60 * 1000));
-    if (durationMinutes <= 0 || durationMinutes > 720) {
-      toast.error('Please enter valid times (max 12 hours).');
+    const durationMinutes = parseInt(manualDuration, 10);
+    if (isNaN(durationMinutes) || durationMinutes <= 0 || durationMinutes > 720) {
+      toast.error('Please enter a valid duration (1-720 minutes).');
       return;
     }
+
+    const startTime = new Date(`${manualDate}T${manualTime}`);
+    const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000);
 
     const savedType = sleepType;
 
     setSaving(true);
     try {
-      const sessionId = await createCompleteSleepSession(selectedBaby.id, user.uid, {
+      await createCompleteSleepSession(selectedBaby.id, user.uid, {
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
         type: sleepType,
@@ -197,8 +259,8 @@ export function SleepView() {
 
       // Reset form
       setManualDate(new Date().toISOString().split('T')[0]);
-      setManualStartTime(format(new Date(), 'HH:mm'));
-      setManualEndTime(format(new Date(), 'HH:mm'));
+      setManualTime(format(new Date(), 'HH:mm'));
+      setManualDuration('');
       setNotes('');
       setBabyMood(null);
 
@@ -345,54 +407,70 @@ export function SleepView() {
           <Card>
             <CardHeader
               title="Log Past Sleep"
-              subtitle={`Enter ${sleepType === 'nap' ? 'nap' : 'night sleep'} details manually`}
+              subtitle={sleepType === 'nap' ? 'Nap' : 'Night Sleep'}
             />
 
             <div className="space-y-4">
-              <Input
-                type="date"
-                label="Date"
-                value={manualDate}
-                onChange={(e) => setManualDate(e.target.value)}
-              />
-
               <div className="grid grid-cols-2 gap-3">
                 <Input
-                  type="time"
-                  label="Start Time"
-                  value={manualStartTime}
-                  onChange={(e) => setManualStartTime(e.target.value)}
+                  type="date"
+                  label="Date"
+                  value={manualDate}
+                  onChange={(e) => setManualDate(e.target.value)}
                 />
                 <Input
                   type="time"
-                  label="End Time"
-                  value={manualEndTime}
-                  onChange={(e) => setManualEndTime(e.target.value)}
+                  label="Time"
+                  value={manualTime}
+                  onChange={(e) => setManualTime(e.target.value)}
                 />
               </div>
 
-              <BabyMoodSelector
-                label="Baby's mood when waking"
-                value={babyMood}
-                onChange={setBabyMood}
-              />
-
-              <Textarea
-                label="Notes (optional)"
-                placeholder="Any notes about this sleep..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
+              <Input
+                type="number"
+                label="Duration (minutes)"
+                placeholder="e.g. 45"
+                value={manualDuration}
+                onChange={(e) => setManualDuration(e.target.value)}
+                min="1"
+                max="720"
               />
 
               <Button
                 onClick={handleManualSave}
                 className="w-full"
-                disabled={!manualStartTime || !manualEndTime || saving}
+                disabled={!manualDuration || saving}
                 style={{ backgroundColor: SLEEP_TYPE_CONFIG[sleepType].color }}
               >
-                {saving ? 'Saving...' : 'Save Sleep'}
+                {saving ? 'Saving...' : 'Save'}
               </Button>
+
+              {/* Expandable details section */}
+              <button
+                onClick={() => setShowDetails(!showDetails)}
+                className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
+              >
+                <span>Add details (optional)</span>
+                {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+
+              {showDetails && (
+                <div className="space-y-4 pt-2 border-t border-gray-100">
+                  <BabyMoodSelector
+                    label="Baby's mood when waking"
+                    value={babyMood}
+                    onChange={setBabyMood}
+                  />
+
+                  <Textarea
+                    label="Notes (optional)"
+                    placeholder="Any notes about this sleep..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+              )}
             </div>
           </Card>
         )}
@@ -524,6 +602,16 @@ export function SleepView() {
             session={selectedSession}
           />
         )}
+
+        {/* Stale Timer Modal */}
+        <StaleTimerModal
+          isOpen={showStaleModal}
+          duration={timerSeconds}
+          activityName="sleep"
+          onContinue={handleStaleTimerContinue}
+          onStopAndSave={handleStaleTimerStopAndSave}
+          onDiscard={handleStaleTimerDiscard}
+        />
       </div>
     </div>
   );
