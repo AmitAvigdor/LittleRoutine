@@ -386,14 +386,23 @@ export function DashboardView() {
     return () => clearInterval(interval);
   }, [medicines, medicineLogs, lastReminderDate]);
 
-  // Update counters every minute
+  // Update counters - every second when there are active timers, otherwise every minute
   useEffect(() => {
+    const hasActiveTimers =
+      feedingSessions.some(s => s.isActive) ||
+      pumpSessions.some(s => s.isActive) ||
+      sleepSessions.some(s => s.isActive) ||
+      playSessions.some(s => s.isActive) ||
+      walkSessions.some(s => s.isActive);
+
+    const intervalMs = hasActiveTimers ? 1000 : 60000; // 1 second or 1 minute
+
     const interval = setInterval(() => {
       setTick((t) => t + 1);
-    }, 60000); // Update every minute
+    }, intervalMs);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [feedingSessions, pumpSessions, sleepSessions, playSessions, walkSessions]);
 
   // Get all active timers
   const activeTimers = useMemo(() => {
