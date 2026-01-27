@@ -102,12 +102,15 @@ export function SleepView() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [sessions, showForm]);
 
-  // Check for stale timer (5+ hours)
+  // Check for stale timer (5+ hours) - skip for night sleep
   useEffect(() => {
     if (staleModalDismissedRef.current || showForm || showStaleModal) return;
 
     const activeSession = sessions.find((s) => s.isActive);
     if (activeSession) {
+      // Don't show stale modal for night sleep - it's expected to be long
+      if (activeSession.type === 'night') return;
+
       const startTime = new Date(activeSession.startTime);
       const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
       if (elapsed >= STALE_TIMER_THRESHOLD) {
@@ -122,6 +125,9 @@ export function SleepView() {
       if (document.visibilityState === 'visible' && !staleModalDismissedRef.current && !showForm) {
         const activeSession = sessions.find((s) => s.isActive);
         if (activeSession) {
+          // Don't show stale modal for night sleep - it's expected to be long
+          if (activeSession.type === 'night') return;
+
           const startTime = new Date(activeSession.startTime);
           const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
           if (elapsed >= STALE_TIMER_THRESHOLD) {
