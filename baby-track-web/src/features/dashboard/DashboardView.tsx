@@ -216,7 +216,8 @@ export function DashboardView() {
   const [medicineLogs, setMedicineLogs] = useState<Record<string, MedicineLog[]>>({});
   const [showMedicineReminder, setShowMedicineReminder] = useState(false);
   const [missedMedicines, setMissedMedicines] = useState<Medicine[]>([]);
-  const [reminderShownToday, setReminderShownToday] = useState(false);
+  // Track the date when reminder was last shown (fixes midnight reset bug)
+  const [lastReminderDate, setLastReminderDate] = useState<string | null>(null);
 
   // Subscribe to all data
   useEffect(() => {
@@ -259,9 +260,11 @@ export function DashboardView() {
     const checkMissedMedicines = () => {
       const now = new Date();
       const hour = now.getHours();
+      const todayStr = now.toISOString().split('T')[0];
 
       // Only show reminder at 9 PM (21:00) or later, and only once per day
-      if (hour >= 21 && !reminderShownToday) {
+      // Use date comparison instead of session flag (fixes midnight reset bug)
+      if (hour >= 21 && lastReminderDate !== todayStr) {
         const activeMeds = medicines.filter(m => m.isActive && m.frequency !== 'asNeeded');
         const missed: Medicine[] = [];
 
@@ -273,9 +276,19 @@ export function DashboardView() {
           if (maxDoses !== null && todayLogs.length < maxDoses) {
             missed.push(medicine);
           } else if (medicine.frequency === 'everyHours' && medicine.hoursInterval) {
-            // For everyHours, check if they've given at least one dose today
+            // For everyHours, check if next dose is overdue
+            // A dose is considered missed if: we have no doses today, OR
+            // the time since last dose exceeds the interval
             if (todayLogs.length === 0) {
               missed.push(medicine);
+            } else {
+              // Check if current time exceeds last dose + interval
+              const lastDose = todayLogs[0]; // Sorted newest first
+              const lastDoseTime = new Date(lastDose.timestamp);
+              const hoursSinceLastDose = (now.getTime() - lastDoseTime.getTime()) / (1000 * 60 * 60);
+              if (hoursSinceLastDose >= medicine.hoursInterval) {
+                missed.push(medicine);
+              }
             }
           }
         });
@@ -283,7 +296,7 @@ export function DashboardView() {
         if (missed.length > 0) {
           setMissedMedicines(missed);
           setShowMedicineReminder(true);
-          setReminderShownToday(true);
+          setLastReminderDate(todayStr);
         }
       }
     };
@@ -295,20 +308,7 @@ export function DashboardView() {
     const interval = setInterval(checkMissedMedicines, 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [medicines, medicineLogs, reminderShownToday]);
-
-  // Reset reminder flag at midnight
-  useEffect(() => {
-    const checkMidnight = () => {
-      const now = new Date();
-      if (now.getHours() === 0 && now.getMinutes() === 0) {
-        setReminderShownToday(false);
-      }
-    };
-
-    const interval = setInterval(checkMidnight, 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [medicines, medicineLogs, lastReminderDate]);
 
   // Update counters every minute
   useEffect(() => {
@@ -426,11 +426,17 @@ export function DashboardView() {
       });
       toast.success(`${medicine.name} dose logged`);
 
-      // Remove from missed list
+      // Remove from missed list based on frequency type
       const logs = medicineLogs[medicine.id] || [];
       const todayLogs = logs.filter((log) => isTodayFns(parseISO(log.timestamp)));
       const maxDoses = getMaxDosesPerDay(medicine.frequency);
-      if (maxDoses !== null && todayLogs.length + 1 >= maxDoses) {
+
+      if (medicine.frequency === 'everyHours') {
+        // For everyHours, remove from missed list after giving any dose
+        // (the interval will be checked again at next reminder)
+        setMissedMedicines((prev) => prev.filter((m) => m.id !== medicine.id));
+      } else if (maxDoses !== null && todayLogs.length + 1 >= maxDoses) {
+        // For fixed-dose medicines, remove if all doses given
         setMissedMedicines((prev) => prev.filter((m) => m.id !== medicine.id));
       }
     } catch (error) {

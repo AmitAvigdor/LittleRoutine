@@ -300,9 +300,28 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
         return;
       }
 
+      // Validate date and time inputs
+      if (!manualDate || !manualTime) {
+        toast.error('Please enter a valid date and time.');
+        return;
+      }
+
+      const sessionStartTime = new Date(`${manualDate}T${manualTime}`);
+
+      // Check if date is valid
+      if (isNaN(sessionStartTime.getTime())) {
+        toast.error('Invalid date or time. Please check your input.');
+        return;
+      }
+
+      // Check if date is not in the future
+      if (sessionStartTime > new Date()) {
+        toast.error('Start time cannot be in the future.');
+        return;
+      }
+
       setSaving(true);
       try {
-        const sessionStartTime = new Date(`${manualDate}T${manualTime}`);
         const sessionEndTime = new Date(sessionStartTime.getTime() + durationMinutes * 60 * 1000);
 
         const sessionId = await createFeedingSession(baby.id, user.uid, {

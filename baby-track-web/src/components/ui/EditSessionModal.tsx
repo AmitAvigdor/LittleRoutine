@@ -41,6 +41,7 @@ import {
   deleteWalkSession,
 } from '@/lib/firestore';
 import { X, Trash2, AlertTriangle, Moon, Sun, Footprints } from 'lucide-react';
+import { toast } from '@/stores/toastStore';
 
 type SessionType = 'sleep' | 'breastfeeding' | 'pump' | 'bottle' | 'play' | 'walk';
 
@@ -162,12 +163,53 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
     }
   }, [session, sessionType]);
 
+  // Helper to validate date/time and check end > start
+  const validateTimes = (date: string, startTimeStr: string, endTimeStr: string | null, requireEnd: boolean = true): { startTime: Date; endTime: Date | null } | null => {
+    if (!date || !startTimeStr) {
+      toast.error('Please enter a valid date and time.');
+      return null;
+    }
+
+    const startTime = new Date(`${date}T${startTimeStr}`);
+    if (isNaN(startTime.getTime())) {
+      toast.error('Invalid start date or time.');
+      return null;
+    }
+
+    if (!endTimeStr) {
+      if (requireEnd) {
+        toast.error('Please enter an end time.');
+        return null;
+      }
+      return { startTime, endTime: null };
+    }
+
+    const endTime = new Date(`${date}T${endTimeStr}`);
+    if (isNaN(endTime.getTime())) {
+      toast.error('Invalid end date or time.');
+      return null;
+    }
+
+    // Check if end time is after start time
+    if (endTime <= startTime) {
+      toast.error('End time must be after start time.');
+      return null;
+    }
+
+    return { startTime, endTime };
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
       if (sessionType === 'sleep') {
-        const startTime = new Date(`${sleepDate}T${sleepStartTime}`).toISOString();
-        const endTime = sleepEndTime ? new Date(`${sleepDate}T${sleepEndTime}`).toISOString() : null;
+        const times = validateTimes(sleepDate, sleepStartTime, sleepEndTime, false);
+        if (!times) {
+          setSaving(false);
+          return;
+        }
+        const startTime = times.startTime.toISOString();
+        const endTime = times.endTime?.toISOString() || null;
         await updateSleepSession(session.id, {
           startTime,
           endTime,
@@ -176,54 +218,90 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
           babyMood,
         });
       } else if (sessionType === 'breastfeeding') {
-        const startTime = new Date(`${feedingDate}T${feedingStartTime}`).toISOString();
-        const endTime = new Date(`${feedingDate}T${feedingEndTime}`).toISOString();
+        const times = validateTimes(feedingDate, feedingStartTime, feedingEndTime, true);
+        if (!times) {
+          setSaving(false);
+          return;
+        }
         await updateFeedingSession(session.id, {
-          startTime,
-          endTime,
+          startTime: times.startTime.toISOString(),
+          endTime: times.endTime!.toISOString(),
           breastSide,
           notes: notes || null,
           babyMood,
           momMood,
         });
       } else if (sessionType === 'pump') {
-        const startTime = new Date(`${pumpDate}T${pumpStartTime}`).toISOString();
-        const endTime = new Date(`${pumpDate}T${pumpEndTime}`).toISOString();
+        const times = validateTimes(pumpDate, pumpStartTime, pumpEndTime, true);
+        if (!times) {
+          setSaving(false);
+          return;
+        }
+        // Validate volume
+        const volume = parseFloat(pumpVolume);
+        if (pumpVolume && (isNaN(volume) || volume < 0)) {
+          toast.error('Please enter a valid volume.');
+          setSaving(false);
+          return;
+        }
         await updatePumpSession(session.id, {
-          startTime,
-          endTime,
+          startTime: times.startTime.toISOString(),
+          endTime: times.endTime!.toISOString(),
           side: pumpSide,
-          volume: parseFloat(pumpVolume) || 0,
+          volume: volume || 0,
           volumeUnit: pumpVolumeUnit,
           notes: notes || null,
           momMood,
         });
       } else if (sessionType === 'bottle') {
-        const timestamp = new Date(`${bottleDate}T${bottleTime}`).toISOString();
+        if (!bottleDate || !bottleTime) {
+          toast.error('Please enter a valid date and time.');
+          setSaving(false);
+          return;
+        }
+        const timestamp = new Date(`${bottleDate}T${bottleTime}`);
+        if (isNaN(timestamp.getTime())) {
+          toast.error('Invalid date or time.');
+          setSaving(false);
+          return;
+        }
+        // Validate volume
+        const volume = parseFloat(bottleVolume);
+        if (bottleVolume && (isNaN(volume) || volume < 0)) {
+          toast.error('Please enter a valid volume.');
+          setSaving(false);
+          return;
+        }
         await updateBottleSession(session.id, {
-          timestamp,
-          volume: parseFloat(bottleVolume) || 0,
+          timestamp: timestamp.toISOString(),
+          volume: volume || 0,
           volumeUnit: bottleVolumeUnit,
           contentType,
           notes: notes || null,
           babyMood,
         });
       } else if (sessionType === 'play') {
-        const startTime = new Date(`${playDate}T${playStartTime}`).toISOString();
-        const endTime = playEndTime ? new Date(`${playDate}T${playEndTime}`).toISOString() : null;
+        const times = validateTimes(playDate, playStartTime, playEndTime, false);
+        if (!times) {
+          setSaving(false);
+          return;
+        }
         await updatePlaySession(session.id, {
-          startTime,
-          endTime,
+          startTime: times.startTime.toISOString(),
+          endTime: times.endTime?.toISOString() || null,
           type: playType,
           notes: notes || null,
           babyMood,
         });
       } else if (sessionType === 'walk') {
-        const startTime = new Date(`${walkDate}T${walkStartTime}`).toISOString();
-        const endTime = walkEndTime ? new Date(`${walkDate}T${walkEndTime}`).toISOString() : null;
+        const times = validateTimes(walkDate, walkStartTime, walkEndTime, false);
+        if (!times) {
+          setSaving(false);
+          return;
+        }
         await updateWalkSession(session.id, {
-          startTime,
-          endTime,
+          startTime: times.startTime.toISOString(),
+          endTime: times.endTime?.toISOString() || null,
           notes: notes || null,
           babyMood,
         });

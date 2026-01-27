@@ -242,7 +242,26 @@ export function SleepView() {
       return;
     }
 
+    // Validate date and time inputs
+    if (!manualDate || !manualTime) {
+      toast.error('Please enter a valid date and time.');
+      return;
+    }
+
     const startTime = new Date(`${manualDate}T${manualTime}`);
+
+    // Check if date is valid
+    if (isNaN(startTime.getTime())) {
+      toast.error('Invalid date or time. Please check your input.');
+      return;
+    }
+
+    // Check if date is not in the future
+    if (startTime > new Date()) {
+      toast.error('Start time cannot be in the future.');
+      return;
+    }
+
     const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000);
 
     const savedType = sleepType;

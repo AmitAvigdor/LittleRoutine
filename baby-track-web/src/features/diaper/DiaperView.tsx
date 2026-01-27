@@ -128,6 +128,18 @@ export function DiaperView() {
 
     const timestamp = new Date(`${manualDate}T${manualTime}`);
 
+    // Check if date is valid
+    if (isNaN(timestamp.getTime())) {
+      toast.error('Invalid date or time. Please check your input.');
+      return;
+    }
+
+    // Check if date is not in the future
+    if (timestamp > new Date()) {
+      toast.error('Time cannot be in the future.');
+      return;
+    }
+
     setSaving(true);
     try {
       await createDiaperChange(selectedBaby.id, user.uid, {
@@ -177,6 +189,18 @@ export function DiaperView() {
     if (!editingChange || !selectedType) return;
 
     const timestamp = new Date(`${manualDate}T${manualTime}`);
+
+    // Check if date is valid
+    if (isNaN(timestamp.getTime())) {
+      toast.error('Invalid date or time. Please check your input.');
+      return;
+    }
+
+    // Check if date is not in the future
+    if (timestamp > new Date()) {
+      toast.error('Time cannot be in the future.');
+      return;
+    }
 
     setSaving(true);
     try {

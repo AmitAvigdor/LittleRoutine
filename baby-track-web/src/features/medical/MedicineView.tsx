@@ -33,7 +33,9 @@ function getMaxDosesPerDay(frequency: MedicationFrequency): number | null {
 }
 
 // Check if enough time has passed for everyHours frequency
-function canGiveEveryHoursMedicine(logs: MedicineLog[], hoursInterval: number): boolean {
+function canGiveEveryHoursMedicine(logs: MedicineLog[], hoursInterval: number | null | undefined): boolean {
+  // Guard against invalid hoursInterval
+  if (!hoursInterval || isNaN(hoursInterval) || hoursInterval <= 0) return true;
   if (logs.length === 0) return true;
 
   const lastLog = logs[0]; // Logs are sorted newest first
@@ -45,7 +47,9 @@ function canGiveEveryHoursMedicine(logs: MedicineLog[], hoursInterval: number): 
 }
 
 // Get hours until next dose for everyHours frequency
-function getHoursUntilNextDose(logs: MedicineLog[], hoursInterval: number): number {
+function getHoursUntilNextDose(logs: MedicineLog[], hoursInterval: number | null | undefined): number {
+  // Guard against invalid hoursInterval
+  if (!hoursInterval || isNaN(hoursInterval) || hoursInterval <= 0) return 0;
   if (logs.length === 0) return 0;
 
   const lastLog = logs[0];
@@ -70,7 +74,8 @@ export function MedicineView() {
   // Reminder modal state
   const [showReminder, setShowReminder] = useState(false);
   const [missedMedicines, setMissedMedicines] = useState<Medicine[]>([]);
-  const [reminderShownToday, setReminderShownToday] = useState(false);
+  // Track the date when reminder was last shown (fixes midnight reset bug)
+  const [lastReminderDate, setLastReminderDate] = useState<string | null>(null);
 
   // Form state
   const [name, setName] = useState('');
@@ -114,9 +119,11 @@ export function MedicineView() {
     const checkMissedMedicines = () => {
       const now = new Date();
       const hour = now.getHours();
+      const todayStr = now.toISOString().split('T')[0];
 
       // Only show reminder at 9 PM (21:00) or later, and only once per day
-      if (hour >= 21 && !reminderShownToday) {
+      // Use date comparison instead of session flag (fixes midnight reset bug)
+      if (hour >= 21 && lastReminderDate !== todayStr) {
         const activeMeds = medicines.filter(m => m.isActive && m.frequency !== 'asNeeded');
         const missed: Medicine[] = [];
 
@@ -128,9 +135,19 @@ export function MedicineView() {
           if (maxDoses !== null && todayLogs.length < maxDoses) {
             missed.push(medicine);
           } else if (medicine.frequency === 'everyHours' && medicine.hoursInterval) {
-            // For everyHours, check if they've given at least one dose today
+            // For everyHours, check if next dose is overdue
+            // A dose is considered missed if: we have no doses today, OR
+            // the time since last dose exceeds the interval
             if (todayLogs.length === 0) {
               missed.push(medicine);
+            } else {
+              // Check if current time exceeds last dose + interval
+              const lastDose = todayLogs[0]; // Sorted newest first
+              const lastDoseTime = new Date(lastDose.timestamp);
+              const hoursSinceLastDose = (now.getTime() - lastDoseTime.getTime()) / (1000 * 60 * 60);
+              if (hoursSinceLastDose >= medicine.hoursInterval) {
+                missed.push(medicine);
+              }
             }
           }
         });
@@ -138,7 +155,7 @@ export function MedicineView() {
         if (missed.length > 0) {
           setMissedMedicines(missed);
           setShowReminder(true);
-          setReminderShownToday(true);
+          setLastReminderDate(todayStr);
         }
       }
     };
@@ -150,20 +167,7 @@ export function MedicineView() {
     const interval = setInterval(checkMissedMedicines, 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [medicines, medicineLogs, reminderShownToday]);
-
-  // Reset reminder flag at midnight
-  useEffect(() => {
-    const checkMidnight = () => {
-      const now = new Date();
-      if (now.getHours() === 0 && now.getMinutes() === 0) {
-        setReminderShownToday(false);
-      }
-    };
-
-    const interval = setInterval(checkMidnight, 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [medicines, medicineLogs, lastReminderDate]);
 
   // Helper to check if a medicine can receive a dose
   const canGiveDose = useCallback((medicine: Medicine): boolean => {
@@ -194,13 +198,28 @@ export function MedicineView() {
     e.preventDefault();
     if (!user || !selectedBaby || !name.trim()) return;
 
+    // Validate hoursInterval for everyHours frequency
+    if (frequency === 'everyHours') {
+      const parsedInterval = parseInt(hoursInterval);
+      if (!hoursInterval || isNaN(parsedInterval) || parsedInterval <= 0) {
+        toast.error('Please enter a valid hours interval (e.g., 4, 6, 8)');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
+      // Safely parse hoursInterval with NaN check
+      const parsedHoursInterval = hoursInterval ? parseInt(hoursInterval) : null;
+      const validHoursInterval = parsedHoursInterval !== null && !isNaN(parsedHoursInterval) && parsedHoursInterval > 0
+        ? parsedHoursInterval
+        : null;
+
       await createMedicine(selectedBaby.id, user.uid, {
         name: name.trim(),
         dosage: dosage || '',
         frequency,
-        hoursInterval: hoursInterval ? parseInt(hoursInterval) : null,
+        hoursInterval: validHoursInterval,
         instructions: instructions || null,
       });
 
@@ -347,7 +366,11 @@ export function MedicineView() {
                 onChange={(e) => setInstructions(e.target.value)}
               />
 
-              <Button type="submit" className="w-full" disabled={loading || !name.trim()}>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loading || !name.trim() || (frequency === 'everyHours' && !hoursInterval)}
+              >
                 {loading ? 'Saving...' : 'Add Medicine'}
               </Button>
             </form>
@@ -429,10 +452,16 @@ export function MedicineView() {
             onDismiss={() => setShowReminder(false)}
             onGive={(medicine) => {
               handleGiveMedicine(medicine);
-              // Remove from missed list if it was the only dose needed
+              // Remove from missed list based on frequency type
               const maxDoses = getMaxDosesPerDay(medicine.frequency);
               const dosesToday = getDosesToday(medicine);
-              if (maxDoses !== null && dosesToday + 1 >= maxDoses) {
+
+              if (medicine.frequency === 'everyHours') {
+                // For everyHours, remove from missed list after giving any dose
+                // (the interval will be checked again at next reminder)
+                setMissedMedicines((prev) => prev.filter((m) => m.id !== medicine.id));
+              } else if (maxDoses !== null && dosesToday + 1 >= maxDoses) {
+                // For fixed-dose medicines, remove if all doses given
                 setMissedMedicines((prev) => prev.filter((m) => m.id !== medicine.id));
               }
             }}

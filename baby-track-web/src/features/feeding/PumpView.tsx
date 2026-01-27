@@ -268,7 +268,13 @@ export function PumpView({ baby }: PumpViewProps) {
   const handleSave = async () => {
     if (!user) return;
 
-    const volumeValue = parseFloat(volume) || 0;
+    // Validate volume if provided
+    const parsedVolume = parseFloat(volume);
+    if (volume && (isNaN(parsedVolume) || parsedVolume < 0)) {
+      toast.error('Please enter a valid volume (0 or greater).');
+      return;
+    }
+    const volumeValue = parsedVolume || 0;
 
     // For timer mode, we need activeSessionId; for manual mode, we need duration
     if (entryMode === 'timer') {
@@ -326,9 +332,37 @@ export function PumpView({ baby }: PumpViewProps) {
         return;
       }
 
+      // Validate date and time inputs
+      if (!manualDate || !manualTime) {
+        toast.error('Please enter a valid date and time.');
+        return;
+      }
+
+      const sessionStartTime = new Date(`${manualDate}T${manualTime}`);
+
+      // Check if date is valid
+      if (isNaN(sessionStartTime.getTime())) {
+        toast.error('Invalid date or time. Please check your input.');
+        return;
+      }
+
+      // Check if date is not in the future
+      if (sessionStartTime > new Date()) {
+        toast.error('Start time cannot be in the future.');
+        return;
+      }
+
+      // Validate volume if provided
+      if (volume) {
+        const parsedVolume = parseFloat(volume);
+        if (isNaN(parsedVolume) || parsedVolume < 0) {
+          toast.error('Please enter a valid volume (0 or greater).');
+          return;
+        }
+      }
+
       setSaving(true);
       try {
-        const sessionStartTime = new Date(`${manualDate}T${manualTime}`);
         const sessionEndTime = new Date(sessionStartTime.getTime() + durationMinutes * 60 * 1000);
 
         await createPumpSession(baby.id, user.uid, {
