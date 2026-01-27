@@ -14,6 +14,8 @@ import {
   subscribeToDiaperChanges,
   subscribeToMedicines,
   subscribeToMedicineLogs,
+  subscribeToPlaySessions,
+  subscribeToWalkSessions,
   createMedicineLog,
 } from '@/lib/firestore';
 import {
@@ -22,10 +24,13 @@ import {
   BottleSession,
   SleepSession,
   DiaperChange,
+  PlaySession,
+  WalkSession,
   BREAST_SIDE_CONFIG,
   DIAPER_TYPE_CONFIG,
   SLEEP_TYPE_CONFIG,
   BABY_COLOR_CONFIG,
+  PLAY_TYPE_CONFIG,
   calculateBabyAge,
 } from '@/types';
 import type { Medicine, MedicineLog } from '@/types';
@@ -49,6 +54,32 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { toast } from '@/stores/toastStore';
+
+// Format elapsed time for active timers (e.g., "12:34" or "1:23:45")
+function formatElapsedTime(startTime: string, isPaused?: boolean, pausedAt?: string | null, totalPausedDuration?: number): string {
+  const start = new Date(startTime);
+  const pausedDuration = totalPausedDuration || 0;
+
+  let elapsedMs: number;
+  if (isPaused && pausedAt) {
+    // If paused, calculate time up to when it was paused
+    const pauseTime = new Date(pausedAt);
+    elapsedMs = pauseTime.getTime() - start.getTime() - (pausedDuration * 1000);
+  } else {
+    // If running, calculate from now
+    elapsedMs = Date.now() - start.getTime() - (pausedDuration * 1000);
+  }
+
+  const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
 
 // Format duration for display (e.g., "2h 15m ago")
 function formatTimeSince(timestamp: string): string {
@@ -159,6 +190,47 @@ function QuickAction({ label, icon, color, onClick }: QuickActionProps) {
   );
 }
 
+interface ActiveTimerCardProps {
+  icon: React.ReactNode;
+  iconBg: string;
+  title: string;
+  subtitle: string;
+  elapsedTime: string;
+  isPaused?: boolean;
+  onClick: () => void;
+}
+
+function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused, onClick }: ActiveTimerCardProps) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-3 p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] w-full"
+    >
+      <div
+        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 relative"
+        style={{ backgroundColor: iconBg }}
+      >
+        {icon}
+        {/* Pulsing indicator for running timer */}
+        {!isPaused && (
+          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+        )}
+        {isPaused && (
+          <span className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0 text-left">
+        <p className="text-sm font-medium text-gray-900">{title}</p>
+        <p className="text-xs text-gray-400">{subtitle}</p>
+      </div>
+      <div className="text-right flex-shrink-0">
+        <p className="text-xl font-bold text-gray-900 font-mono">{elapsedTime}</p>
+        {isPaused && <p className="text-xs text-yellow-600 font-medium">Paused</p>}
+      </div>
+    </button>
+  );
+}
+
 interface TodoItemProps {
   icon: React.ReactNode;
   iconBg: string;
@@ -210,6 +282,8 @@ export function DashboardView() {
   const [bottleSessions, setBottleSessions] = useState<BottleSession[]>([]);
   const [sleepSessions, setSleepSessions] = useState<SleepSession[]>([]);
   const [diaperChanges, setDiaperChanges] = useState<DiaperChange[]>([]);
+  const [playSessions, setPlaySessions] = useState<PlaySession[]>([]);
+  const [walkSessions, setWalkSessions] = useState<WalkSession[]>([]);
 
   // Medicine reminder states
   const [medicines, setMedicines] = useState<Medicine[]>([]);
@@ -230,6 +304,8 @@ export function DashboardView() {
       subscribeToSleepSessions(selectedBaby.id, setSleepSessions),
       subscribeToDiaperChanges(selectedBaby.id, setDiaperChanges),
       subscribeToMedicines(selectedBaby.id, setMedicines),
+      subscribeToPlaySessions(selectedBaby.id, setPlaySessions),
+      subscribeToWalkSessions(selectedBaby.id, setWalkSessions),
     ];
 
     return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
@@ -318,6 +394,104 @@ export function DashboardView() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Get all active timers
+  const activeTimers = useMemo(() => {
+    const timers: {
+      id: string;
+      type: 'feeding' | 'pump' | 'sleep' | 'play' | 'walk';
+      title: string;
+      subtitle: string;
+      startTime: string;
+      isPaused?: boolean;
+      pausedAt?: string | null;
+      totalPausedDuration?: number;
+      icon: React.ReactNode;
+      iconBg: string;
+      route: string;
+    }[] = [];
+
+    // Active breastfeeding
+    feedingSessions.filter(s => s.isActive).forEach(s => {
+      timers.push({
+        id: s.id,
+        type: 'feeding',
+        title: 'Breastfeeding',
+        subtitle: `${BREAST_SIDE_CONFIG[s.breastSide].label} side`,
+        startTime: s.startTime,
+        isPaused: s.isPaused,
+        pausedAt: s.pausedAt,
+        totalPausedDuration: s.totalPausedDuration,
+        icon: <Baby className="w-6 h-6 text-white" />,
+        iconBg: '#e91e63',
+        route: '/feed',
+      });
+    });
+
+    // Active pump
+    pumpSessions.filter(s => s.isActive).forEach(s => {
+      timers.push({
+        id: s.id,
+        type: 'pump',
+        title: 'Pumping',
+        subtitle: `${s.side === 'both' ? 'Both sides' : `${s.side.charAt(0).toUpperCase() + s.side.slice(1)} side`}`,
+        startTime: s.startTime,
+        isPaused: s.isPaused,
+        pausedAt: s.pausedAt,
+        totalPausedDuration: s.totalPausedDuration,
+        icon: <Droplets className="w-6 h-6 text-white" />,
+        iconBg: '#9c27b0',
+        route: '/more/pump',
+      });
+    });
+
+    // Active sleep
+    sleepSessions.filter(s => s.isActive).forEach(s => {
+      timers.push({
+        id: s.id,
+        type: 'sleep',
+        title: 'Sleeping',
+        subtitle: SLEEP_TYPE_CONFIG[s.type].label,
+        startTime: s.startTime,
+        icon: <Moon className="w-6 h-6 text-white" />,
+        iconBg: '#3f51b5',
+        route: '/sleep',
+      });
+    });
+
+    // Active play
+    playSessions.filter(s => s.isActive).forEach(s => {
+      timers.push({
+        id: s.id,
+        type: 'play',
+        title: 'Playing',
+        subtitle: PLAY_TYPE_CONFIG[s.type]?.label || s.type,
+        startTime: s.startTime,
+        icon: <Gamepad2 className="w-6 h-6 text-white" />,
+        iconBg: '#ff9800',
+        route: '/more/play',
+      });
+    });
+
+    // Active walk
+    walkSessions.filter(s => s.isActive).forEach(s => {
+      timers.push({
+        id: s.id,
+        type: 'walk',
+        title: 'Walking',
+        subtitle: 'In progress',
+        startTime: s.startTime,
+        icon: <Footprints className="w-6 h-6 text-white" />,
+        iconBg: '#8bc34a',
+        route: '/more/walks',
+      });
+    });
+
+    // Sort by start time (oldest first - they've been running longest)
+    timers.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+    return timers;
+  }, [feedingSessions, pumpSessions, sleepSessions, playSessions, walkSessions]);
 
   // Get last feeding info (breastfeeding, bottle, or pump)
   const lastFeeding = useMemo(() => {
@@ -496,6 +670,34 @@ export function DashboardView() {
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Active Timers */}
+        {activeTimers.length > 0 && (
+          <div>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
+              Active Timers
+            </h3>
+            <div className="space-y-2">
+              {activeTimers.map((timer) => (
+                <ActiveTimerCard
+                  key={timer.id}
+                  icon={timer.icon}
+                  iconBg={timer.iconBg}
+                  title={timer.title}
+                  subtitle={timer.subtitle}
+                  elapsedTime={formatElapsedTime(
+                    timer.startTime,
+                    timer.isPaused,
+                    timer.pausedAt,
+                    timer.totalPausedDuration
+                  )}
+                  isPaused={timer.isPaused}
+                  onClick={() => navigate(timer.route)}
+                />
+              ))}
             </div>
           </div>
         )}
