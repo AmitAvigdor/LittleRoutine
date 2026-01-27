@@ -449,25 +449,23 @@ export function MedicineView() {
         {showReminder && missedMedicines.length > 0 && (
           <MedicineReminderModal
             medicines={missedMedicines}
+            canGiveDose={canGiveDose}
+            getDosesToday={getDosesToday}
             onDismiss={() => setShowReminder(false)}
             onAddMedicine={() => {
               setShowReminder(false);
               setShowForm(true);
             }}
             onGive={(medicine) => {
-              handleGiveMedicine(medicine);
-              // Remove from missed list based on frequency type
-              const maxDoses = getMaxDosesPerDay(medicine.frequency);
-              const dosesToday = getDosesToday(medicine);
-
-              if (medicine.frequency === 'everyHours') {
-                // For everyHours, remove from missed list after giving any dose
-                // (the interval will be checked again at next reminder)
-                setMissedMedicines((prev) => prev.filter((m) => m.id !== medicine.id));
-              } else if (maxDoses !== null && dosesToday + 1 >= maxDoses) {
-                // For fixed-dose medicines, remove if all doses given
-                setMissedMedicines((prev) => prev.filter((m) => m.id !== medicine.id));
+              // Check if can give dose before proceeding
+              if (!canGiveDose(medicine)) {
+                return;
               }
+
+              handleGiveMedicine(medicine);
+              // Always remove from missed list after successfully giving a dose
+              // The reminder will re-check next time if more doses are needed
+              setMissedMedicines((prev) => prev.filter((m) => m.id !== medicine.id));
             }}
           />
         )}
@@ -567,11 +565,15 @@ function MedicineCard({
 
 function MedicineReminderModal({
   medicines,
+  canGiveDose,
+  getDosesToday,
   onDismiss,
   onGive,
   onAddMedicine,
 }: {
   medicines: Medicine[];
+  canGiveDose: (medicine: Medicine) => boolean;
+  getDosesToday: (medicine: Medicine) => number;
   onDismiss: () => void;
   onGive: (medicine: Medicine) => void;
   onAddMedicine: () => void;
@@ -594,6 +596,10 @@ function MedicineReminderModal({
         <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
           {medicines.map((medicine) => {
             const freqConfig = MEDICATION_FREQUENCY_CONFIG[medicine.frequency];
+            const canGive = canGiveDose(medicine);
+            const dosesToday = getDosesToday(medicine);
+            const maxDoses = getMaxDosesPerDay(medicine.frequency);
+
             return (
               <div
                 key={medicine.id}
@@ -606,11 +612,24 @@ function MedicineReminderModal({
                       <span className="text-xs text-gray-500">{medicine.dosage}</span>
                     )}
                     <span className="text-xs text-gray-400">{freqConfig.label}</span>
+                    {maxDoses !== null && (
+                      <span className={clsx(
+                        'text-xs px-1.5 py-0.5 rounded',
+                        dosesToday >= maxDoses ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                      )}>
+                        {dosesToday}/{maxDoses}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <Button size="sm" onClick={() => onGive(medicine)}>
+                <Button
+                  size="sm"
+                  onClick={() => onGive(medicine)}
+                  disabled={!canGive}
+                  className={clsx(!canGive && 'opacity-50 cursor-not-allowed')}
+                >
                   <Check className="w-4 h-4 mr-1" />
-                  Give
+                  {canGive ? 'Give' : 'Done'}
                 </Button>
               </div>
             );
