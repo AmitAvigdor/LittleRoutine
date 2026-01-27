@@ -12,6 +12,8 @@ import {
   Timestamp,
   arrayUnion,
   or,
+  writeBatch,
+  limit as firestoreLimit,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type {
@@ -51,15 +53,22 @@ function convertTimestamps<T extends object>(data: T): T {
   return result as T;
 }
 
+// Default limit for queries to prevent loading too much data
+const DEFAULT_QUERY_LIMIT = 100;
+
 // Generic subscribe function - uses only where clauses, sorts client-side
+// Now supports optional limit parameter for pagination
 function subscribeToCollectionSimple<T>(
   collectionPath: string,
   whereField: string,
   whereValue: string,
   sortField: string,
   sortDirection: 'asc' | 'desc',
-  callback: (items: T[]) => void
+  callback: (items: T[]) => void,
+  queryLimit: number = DEFAULT_QUERY_LIMIT
 ): () => void {
+  // Note: We fetch more than the limit to allow client-side sorting to work correctly
+  // The actual limit is applied after sorting
   const q = query(collection(db, collectionPath), where(whereField, '==', whereValue));
   return onSnapshot(q, (snapshot) => {
     const items = snapshot.docs.map((docSnap) => ({
@@ -75,7 +84,9 @@ function subscribeToCollectionSimple<T>(
       }
       return new Date(aVal).getTime() - new Date(bVal).getTime();
     });
-    callback(items);
+    // Apply limit after sorting to get the most relevant items
+    const limitedItems = queryLimit > 0 ? items.slice(0, queryLimit) : items;
+    callback(limitedItems);
   }, (error) => {
     console.error(`Error subscribing to ${collectionPath}:`, error);
     callback([]);
@@ -108,7 +119,62 @@ export async function updateBaby(babyId: string, input: UpdateBabyInput): Promis
   });
 }
 
+// Helper to delete all documents in a collection matching a babyId
+async function deleteCollectionByBabyId(collectionName: string, babyId: string): Promise<number> {
+  const q = query(collection(db, collectionName), where('babyId', '==', babyId));
+  const snapshot = await getDocs(q);
+
+  if (snapshot.empty) return 0;
+
+  // Use batched writes for efficiency (max 500 operations per batch)
+  const batchSize = 500;
+  let deleted = 0;
+
+  for (let i = 0; i < snapshot.docs.length; i += batchSize) {
+    const batch = writeBatch(db);
+    const chunk = snapshot.docs.slice(i, i + batchSize);
+
+    chunk.forEach((docSnap) => {
+      batch.delete(docSnap.ref);
+    });
+
+    await batch.commit();
+    deleted += chunk.length;
+  }
+
+  return deleted;
+}
+
+// Delete baby and all related data (cascade delete)
 export async function deleteBaby(babyId: string): Promise<void> {
+  // List of all collections that have babyId references
+  const collectionsToDelete = [
+    'feedingSessions',
+    'pumpSessions',
+    'bottleSessions',
+    'sleepSessions',
+    'diaperChanges',
+    'growthEntries',
+    'milestones',
+    'medicines',
+    'medicineLogs',
+    'vaccinations',
+    'teethingEvents',
+    'solidFoods',
+    'diaryEntries',
+    'pediatricianNotes',
+    'playSessions',
+    'walkSessions',
+  ];
+
+  // Delete all related data in parallel
+  await Promise.all(
+    collectionsToDelete.map((collectionName) =>
+      deleteCollectionByBabyId(collectionName, babyId)
+    )
+  );
+
+  // Finally delete the baby document itself
   await deleteDoc(doc(db, 'babies', babyId));
 }
 
@@ -314,6 +380,10 @@ export async function startFeedingSession(
     date: startTime.toISOString().split('T')[0],
     duration: 0,
     isActive: true,
+    // Pause state
+    isPaused: false,
+    pausedAt: null,
+    totalPausedDuration: 0,
     notes: null,
     babyMood: null,
     momMood: null,
@@ -322,6 +392,36 @@ export async function startFeedingSession(
     updatedAt: now,
   });
   return docRef.id;
+}
+
+// Pause a feeding session
+export async function pauseFeedingSession(sessionId: string): Promise<void> {
+  await updateDoc(doc(db, 'feedingSessions', sessionId), {
+    isPaused: true,
+    pausedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+// Resume a paused feeding session
+export async function resumeFeedingSession(sessionId: string): Promise<void> {
+  const docSnap = await getDoc(doc(db, 'feedingSessions', sessionId));
+  if (!docSnap.exists()) {
+    throw new Error(`Feeding session ${sessionId} not found`);
+  }
+
+  const session = convertTimestamps(docSnap.data());
+  const pausedAt = session.pausedAt ? new Date(session.pausedAt) : null;
+  const additionalPausedTime = pausedAt
+    ? Math.floor((Date.now() - pausedAt.getTime()) / 1000)
+    : 0;
+
+  await updateDoc(doc(db, 'feedingSessions', sessionId), {
+    isPaused: false,
+    pausedAt: null,
+    totalPausedDuration: (session.totalPausedDuration || 0) + additionalPausedTime,
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 // End an active feeding session
@@ -417,12 +517,46 @@ export async function startPumpSession(
     volume: 0,
     volumeUnit: input.volumeUnit,
     isActive: true,
+    // Pause state
+    isPaused: false,
+    pausedAt: null,
+    totalPausedDuration: 0,
     notes: null,
     momMood: null,
     createdAt: now,
     updatedAt: now,
   });
   return docRef.id;
+}
+
+// Pause a pump session
+export async function pausePumpSession(sessionId: string): Promise<void> {
+  await updateDoc(doc(db, 'pumpSessions', sessionId), {
+    isPaused: true,
+    pausedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+// Resume a paused pump session
+export async function resumePumpSession(sessionId: string): Promise<void> {
+  const docSnap = await getDoc(doc(db, 'pumpSessions', sessionId));
+  if (!docSnap.exists()) {
+    throw new Error(`Pump session ${sessionId} not found`);
+  }
+
+  const session = convertTimestamps(docSnap.data());
+  const pausedAt = session.pausedAt ? new Date(session.pausedAt) : null;
+  const additionalPausedTime = pausedAt
+    ? Math.floor((Date.now() - pausedAt.getTime()) / 1000)
+    : 0;
+
+  await updateDoc(doc(db, 'pumpSessions', sessionId), {
+    isPaused: false,
+    pausedAt: null,
+    totalPausedDuration: (session.totalPausedDuration || 0) + additionalPausedTime,
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 // End an active pump session

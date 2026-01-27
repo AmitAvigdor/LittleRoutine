@@ -10,7 +10,7 @@ import { EditSessionModal } from '@/components/ui/EditSessionModal';
 import { StaleTimerModal, STALE_TIMER_THRESHOLD } from '@/components/ui/StaleTimerModal';
 import { Baby, PumpSession, PumpSide, MomMood, VolumeUnit, PUMP_SIDE_CONFIG, formatDuration, convertVolume } from '@/types';
 import { MilkStorageLocation } from '@/types/enums';
-import { createPumpSession, startPumpSession, endPumpSession, subscribeToPumpSessions, deletePumpSession, createMilkStash, createBottleSession } from '@/lib/firestore';
+import { createPumpSession, startPumpSession, endPumpSession, subscribeToPumpSessions, deletePumpSession, createMilkStash, createBottleSession, pausePumpSession, resumePumpSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
@@ -50,6 +50,7 @@ export function PumpView({ baby }: PumpViewProps) {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   // Milk destination state
   const [showMilkDestination, setShowMilkDestination] = useState(false);
@@ -87,6 +88,21 @@ export function PumpView({ baby }: PumpViewProps) {
     }
   }, [settings?.preferredVolumeUnit]);
 
+  // Helper to calculate elapsed time accounting for paused duration
+  const calculateElapsedTime = useCallback((session: PumpSession): number => {
+    const startTime = new Date(session.startTime);
+    const totalPausedDuration = session.totalPausedDuration || 0;
+
+    if (session.isPaused && session.pausedAt) {
+      // If currently paused, elapsed time is up to when it was paused minus total paused duration
+      const pausedAt = new Date(session.pausedAt);
+      return Math.floor((pausedAt.getTime() - startTime.getTime()) / 1000) - totalPausedDuration;
+    }
+
+    // If running, elapsed time is current time minus start time minus total paused duration
+    return Math.floor((Date.now() - startTime.getTime()) / 1000) - totalPausedDuration;
+  }, []);
+
   // Check for active session on load and resume it
   useEffect(() => {
     // Don't override local state if user has already stopped the timer (showForm is true)
@@ -96,13 +112,14 @@ export function PumpView({ baby }: PumpViewProps) {
     if (activeSession) {
       setActiveSessionId(activeSession.id);
       setSelectedSide(activeSession.side);
-      setIsTimerRunning(true);
-      // Calculate elapsed time
-      const startTime = new Date(activeSession.startTime);
-      const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+      // Restore pause state from database
+      setIsPaused(activeSession.isPaused || false);
+      setIsTimerRunning(!activeSession.isPaused);
+      // Calculate elapsed time accounting for paused duration
+      const elapsed = calculateElapsedTime(activeSession);
       setTimerSeconds(elapsed);
     }
-  }, [sessions, showForm]);
+  }, [sessions, showForm, calculateElapsedTime]);
 
   // Re-sync timer when app becomes visible again
   useEffect(() => {
@@ -112,9 +129,11 @@ export function PumpView({ baby }: PumpViewProps) {
         if (activeSession) {
           setActiveSessionId(activeSession.id);
           setSelectedSide(activeSession.side);
-          setIsTimerRunning(true);
-          const startTime = new Date(activeSession.startTime);
-          const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+          // Restore pause state from database
+          setIsPaused(activeSession.isPaused || false);
+          setIsTimerRunning(!activeSession.isPaused);
+          // Calculate elapsed time accounting for paused duration
+          const elapsed = calculateElapsedTime(activeSession);
           setTimerSeconds(elapsed);
         }
       }
@@ -122,7 +141,7 @@ export function PumpView({ baby }: PumpViewProps) {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [sessions, showForm]);
+  }, [sessions, showForm, calculateElapsedTime]);
 
   // Check for stale timer (5+ hours)
   useEffect(() => {
@@ -208,9 +227,39 @@ export function PumpView({ baby }: PumpViewProps) {
     }
   }, [user, baby.id, selectedSide, volumeUnit, starting]);
 
-  const handlePause = useCallback(() => {
+  const handlePause = useCallback(async () => {
     setIsTimerRunning(false);
-  }, []);
+    setIsPaused(true);
+
+    // Persist pause state to Firestore
+    if (activeSessionId) {
+      try {
+        await pausePumpSession(activeSessionId);
+      } catch (error) {
+        console.error('Error pausing session:', error);
+        // Revert local state if Firestore update fails
+        setIsTimerRunning(true);
+        setIsPaused(false);
+      }
+    }
+  }, [activeSessionId]);
+
+  const handleResume = useCallback(async () => {
+    // Resume from pause - persist to Firestore
+    if (activeSessionId) {
+      try {
+        await resumePumpSession(activeSessionId);
+        setIsTimerRunning(true);
+        setIsPaused(false);
+      } catch (error) {
+        console.error('Error resuming session:', error);
+        toast.error('Failed to resume session');
+      }
+    } else {
+      setIsTimerRunning(true);
+      setIsPaused(false);
+    }
+  }, [activeSessionId]);
 
   const handleStop = useCallback((totalSeconds: number) => {
     setIsTimerRunning(false);
@@ -220,6 +269,7 @@ export function PumpView({ baby }: PumpViewProps) {
 
   const handleReset = useCallback(() => {
     setIsTimerRunning(false);
+    setIsPaused(false);
     setTimerSeconds(0);
     setActiveSessionId(null);
     setShowForm(false);
@@ -472,8 +522,10 @@ export function PumpView({ baby }: PumpViewProps) {
           <Timer
             initialSeconds={timerSeconds}
             isRunning={isTimerRunning}
+            isPaused={isPaused}
             onStart={handleStart}
             onPause={handlePause}
+            onResume={handleResume}
             onStop={handleStop}
             onReset={handleReset}
             onTimeUpdate={setTimerSeconds}

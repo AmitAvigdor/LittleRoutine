@@ -8,9 +8,11 @@ interface TimerProps {
   onTimeUpdate?: (seconds: number) => void;
   onStart?: () => void;
   onPause?: () => void;
+  onResume?: () => void; // Called when resuming from pause (seconds > 0)
   onStop?: (totalSeconds: number) => void;
   onReset?: () => void;
   isRunning?: boolean;
+  isPaused?: boolean; // External pause state for persistence
   showControls?: boolean;
   size?: 'sm' | 'md' | 'lg';
   color?: string;
@@ -21,9 +23,11 @@ export function Timer({
   onTimeUpdate,
   onStart,
   onPause,
+  onResume,
   onStop,
   onReset,
   isRunning: externalIsRunning,
+  isPaused: externalIsPaused,
   showControls = true,
   size = 'lg',
   color,
@@ -90,7 +94,14 @@ export function Timer({
 
   const handleStart = () => {
     setIsRunning(true);
-    onStart?.();
+    // Differentiate between fresh start and resume from pause
+    if (externalIsPaused || seconds > 0) {
+      // Resuming from pause
+      onResume?.() ?? onStart?.();
+    } else {
+      // Fresh start
+      onStart?.();
+    }
   };
 
   const handlePause = () => {

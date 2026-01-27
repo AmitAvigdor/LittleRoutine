@@ -11,6 +11,10 @@ export interface FeedingSession {
   startTime: string; // ISO datetime
   endTime: string | null; // ISO datetime, null when session is active
   isActive: boolean;
+  // Pause state persistence
+  isPaused: boolean;
+  pausedAt: string | null; // ISO datetime when paused
+  totalPausedDuration: number; // total seconds spent paused
   notes: string | null;
   babyMood: BabyMood | null;
   momMood: MomMood | null;
@@ -39,6 +43,10 @@ export interface PumpSession {
   startTime: string;
   endTime: string | null; // null when session is active
   isActive: boolean;
+  // Pause state persistence
+  isPaused: boolean;
+  pausedAt: string | null; // ISO datetime when paused
+  totalPausedDuration: number; // total seconds spent paused
   side: PumpSide;
   volume: number;
   volumeUnit: VolumeUnit;
