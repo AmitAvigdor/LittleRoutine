@@ -1,9 +1,15 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { onSnapshotsInSync } from 'firebase/firestore';
 import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ToastContainer } from '@/components/ui/Toast';
+import { OfflineIndicator } from '@/components/ui/OfflineIndicator';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useAppStore } from '@/stores/appStore';
+import { db } from '@/lib/firebase';
 import { FeedingHub } from '@/features/feeding/FeedingHub';
 import { PumpPage } from '@/features/feeding/PumpPage';
 import { SleepView } from '@/features/sleep/SleepView';
@@ -34,6 +40,27 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+function ConnectivityMonitor() {
+  const isOnline = useOnlineStatus();
+  const { setOnlineStatus, setPendingWrites } = useAppStore();
+
+  // Sync online status to store
+  useEffect(() => {
+    setOnlineStatus(isOnline);
+  }, [isOnline, setOnlineStatus]);
+
+  // Monitor Firestore sync status
+  useEffect(() => {
+    const unsubscribe = onSnapshotsInSync(db, () => {
+      setPendingWrites(false);
+    });
+
+    return () => unsubscribe();
+  }, [setPendingWrites]);
+
+  return null;
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -131,6 +158,8 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
+          <ConnectivityMonitor />
+          <OfflineIndicator />
           <AppRoutes />
           <ToastContainer />
         </AuthProvider>

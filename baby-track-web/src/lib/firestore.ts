@@ -16,6 +16,12 @@ import {
   limit as firestoreLimit,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { useAppStore } from '@/stores/appStore';
+
+// Helper to mark pending writes for offline indicator
+function markPendingWrite() {
+  useAppStore.getState().setPendingWrites(true);
+}
 import type {
   Baby, CreateBabyInput, UpdateBabyInput,
   FeedingSession, CreateFeedingSessionInput,
@@ -368,6 +374,7 @@ export async function startFeedingSession(
     breastSide: 'left' | 'right';
   }
 ): Promise<string> {
+  markPendingWrite();
   const now = new Date().toISOString();
   const startTime = new Date(input.startTime);
 
@@ -432,6 +439,7 @@ export async function endFeedingSession(
   babyMood?: BabyMood | null,
   momMood?: MomMood | null
 ): Promise<void> {
+  markPendingWrite();
   const docSnap = await getDoc(doc(db, 'feedingSessions', sessionId));
   if (!docSnap.exists()) {
     throw new Error(`Feeding session ${sessionId} not found`);
@@ -503,6 +511,7 @@ export async function startPumpSession(
     volumeUnit: 'oz' | 'ml';
   }
 ): Promise<string> {
+  markPendingWrite();
   const now = new Date().toISOString();
   const startTime = new Date(input.startTime);
 
@@ -736,6 +745,7 @@ export async function createSleepSession(
   userId: string,
   input: CreateSleepSessionInput
 ): Promise<string> {
+  markPendingWrite();
   const now = new Date().toISOString();
   const startTime = new Date(input.startTime);
 
@@ -833,6 +843,7 @@ export async function createDiaperChange(
   userId: string,
   input: CreateDiaperChangeInput
 ): Promise<string> {
+  markPendingWrite();
   const now = new Date().toISOString();
   const timestamp = new Date(input.timestamp);
 
@@ -1467,6 +1478,7 @@ export async function createPlaySession(
   userId: string,
   input: { type: PlayType; startTime: string; notes?: string | null; babyMood?: BabyMood | null }
 ): Promise<string> {
+  markPendingWrite();
   const now = new Date().toISOString();
 
   const docRef = await addDoc(collection(db, 'playSessions'), {

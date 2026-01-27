@@ -22,6 +22,10 @@ interface AppState {
   nightMode: boolean;
   sidebarOpen: boolean;
 
+  // Connectivity
+  isOnline: boolean;
+  hasPendingWrites: boolean;
+
   // Loading states
   isLoadingBabies: boolean;
   isLoadingSettings: boolean;
@@ -37,6 +41,8 @@ interface AppState {
   updateNightModeFromSettings: () => void;
   setLoadingBabies: (loading: boolean) => void;
   setLoadingSettings: (loading: boolean) => void;
+  setOnlineStatus: (online: boolean) => void;
+  setPendingWrites: (pending: boolean) => void;
   reset: () => void;
 }
 
@@ -49,6 +55,8 @@ const initialState = {
   settings: null,
   nightMode: false,
   sidebarOpen: false,
+  isOnline: true,
+  hasPendingWrites: false,
   isLoadingBabies: true,
   isLoadingSettings: true,
 };
@@ -107,6 +115,9 @@ export const useAppStore = create<AppState>()(
 
       setLoadingBabies: (loading) => set({ isLoadingBabies: loading }),
       setLoadingSettings: (loading) => set({ isLoadingSettings: loading }),
+
+      setOnlineStatus: (online) => set({ isOnline: online }),
+      setPendingWrites: (pending) => set({ hasPendingWrites: pending }),
 
       reset: () => set(initialState),
     }),

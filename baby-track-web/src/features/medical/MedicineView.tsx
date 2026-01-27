@@ -450,6 +450,10 @@ export function MedicineView() {
           <MedicineReminderModal
             medicines={missedMedicines}
             onDismiss={() => setShowReminder(false)}
+            onAddMedicine={() => {
+              setShowReminder(false);
+              setShowForm(true);
+            }}
             onGive={(medicine) => {
               handleGiveMedicine(medicine);
               // Remove from missed list based on frequency type
@@ -565,10 +569,12 @@ function MedicineReminderModal({
   medicines,
   onDismiss,
   onGive,
+  onAddMedicine,
 }: {
   medicines: Medicine[];
   onDismiss: () => void;
   onGive: (medicine: Medicine) => void;
+  onAddMedicine: () => void;
 }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -611,10 +617,16 @@ function MedicineReminderModal({
           })}
         </div>
 
-        {/* Dismiss button */}
-        <Button variant="outline" className="w-full" onClick={onDismiss}>
-          Dismiss
-        </Button>
+        {/* Action buttons */}
+        <div className="space-y-2">
+          <Button variant="outline" className="w-full" onClick={onAddMedicine}>
+            <Plus className="w-4 h-4 mr-1" />
+            Add New Medicine
+          </Button>
+          <Button variant="ghost" className="w-full text-gray-500" onClick={onDismiss}>
+            Dismiss
+          </Button>
+        </div>
       </Card>
     </div>
   );

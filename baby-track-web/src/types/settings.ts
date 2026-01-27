@@ -113,3 +113,8 @@ export function isNightModeTime(settings: AppSettings): boolean {
   // Handle same-day window (e.g., 22:00 to 23:00)
   return currentHour >= start && currentHour < end;
 }
+
+// Check if notifications should be suppressed (night mode silent)
+export function shouldSuppressNotifications(settings: AppSettings): boolean {
+  return settings.nightModeSilent && isNightModeTime(settings);
+}

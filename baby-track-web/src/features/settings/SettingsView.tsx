@@ -4,15 +4,22 @@ import { Card, CardHeader } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Toggle } from '@/components/ui/Toggle';
 import { SegmentedControl } from '@/components/ui/Select';
+import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/stores/appStore';
 import { updateSettings } from '@/lib/firestore';
 import { VolumeUnit, WeightUnit, LengthUnit, FeedingTypePreference } from '@/types';
 import { toast } from '@/stores/toastStore';
-import { User, Moon, Bell, Scale, Baby, Milk } from 'lucide-react';
+import {
+  isNotificationSupported,
+  getNotificationPermission,
+  requestNotificationPermission,
+} from '@/lib/notifications';
+import { User, Moon, Bell, Scale, Baby, Milk, BellOff } from 'lucide-react';
 
 export function SettingsView() {
   const { settings, setSettings } = useAppStore();
   const [saving, setSaving] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState(getNotificationPermission());
 
   // Local state for immediate UI updates
   const [userName, setUserName] = useState(settings?.userName || '');
@@ -24,6 +31,27 @@ export function SettingsView() {
       setPartnerName(settings.partnerName || '');
     }
   }, [settings]);
+
+  const handleReminderToggle = async (
+    key: 'feedingReminderEnabled' | 'diaperReminderEnabled' | 'medicineReminderEnabled',
+    enabled: boolean
+  ) => {
+    if (enabled && notificationPermission !== 'granted') {
+      // Request permission first
+      const result = await requestNotificationPermission();
+      setNotificationPermission(result);
+
+      if (result !== 'granted') {
+        toast.error('Please enable notifications in your browser settings to use reminders.');
+        return;
+      }
+    }
+
+    await handleSettingChange(key, enabled);
+    if (enabled) {
+      toast.success('Reminder enabled! You\'ll be notified when it\'s time.');
+    }
+  };
 
   const handleSettingChange = async <K extends keyof NonNullable<typeof settings>>(
     key: K,
@@ -207,43 +235,90 @@ export function SettingsView() {
           </div>
         </Card>
 
-        {/* Reminders - Coming in next version (requires push notifications backend)
+        {/* Reminders */}
         <Card>
           <CardHeader
             title="Reminders"
             subtitle="Get notified about activities"
           />
           <div className="space-y-4">
+            {/* Permission warning banner */}
+            {isNotificationSupported() && notificationPermission === 'denied' && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-3">
+                <BellOff className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-800">Notifications blocked</p>
+                  <p className="text-amber-700">Enable notifications in your browser settings to use reminders.</p>
+                </div>
+              </div>
+            )}
+
+            {!isNotificationSupported() && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-start gap-3">
+                <BellOff className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-gray-700">Notifications not supported</p>
+                  <p className="text-gray-600">Your browser doesn't support notifications.</p>
+                </div>
+              </div>
+            )}
+
             <Toggle
               checked={settings.feedingReminderEnabled}
-              onChange={(checked) => handleSettingChange('feedingReminderEnabled', checked)}
+              onChange={(checked) => handleReminderToggle('feedingReminderEnabled', checked)}
               label="Feeding Reminders"
-              description={`Remind every ${settings.feedingReminderInterval} hours`}
+              description={`Remind if no feeding in ${settings.feedingReminderInterval} hours`}
             />
+
+            {settings.feedingReminderEnabled && (
+              <div className="ml-4 pl-4 border-l-2 border-gray-200">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reminder interval (hours)
+                </label>
+                <SegmentedControl
+                  options={[
+                    { value: '2', label: '2h' },
+                    { value: '3', label: '3h' },
+                    { value: '4', label: '4h' },
+                  ]}
+                  value={settings.feedingReminderInterval.toString()}
+                  onChange={(value) => handleSettingChange('feedingReminderInterval', parseInt(value, 10))}
+                />
+              </div>
+            )}
 
             <Toggle
               checked={settings.diaperReminderEnabled}
-              onChange={(checked) => handleSettingChange('diaperReminderEnabled', checked)}
+              onChange={(checked) => handleReminderToggle('diaperReminderEnabled', checked)}
               label="Diaper Reminders"
-              description={`Remind every ${settings.diaperReminderInterval} hours`}
+              description={`Remind if no change in ${settings.diaperReminderInterval} hours`}
             />
+
+            {settings.diaperReminderEnabled && (
+              <div className="ml-4 pl-4 border-l-2 border-gray-200">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reminder interval (hours)
+                </label>
+                <SegmentedControl
+                  options={[
+                    { value: '2', label: '2h' },
+                    { value: '3', label: '3h' },
+                    { value: '4', label: '4h' },
+                  ]}
+                  value={settings.diaperReminderInterval.toString()}
+                  onChange={(value) => handleSettingChange('diaperReminderInterval', parseInt(value, 10))}
+                />
+              </div>
+            )}
 
             <Toggle
               checked={settings.medicineReminderEnabled}
-              onChange={(checked) => handleSettingChange('medicineReminderEnabled', checked)}
+              onChange={(checked) => handleReminderToggle('medicineReminderEnabled', checked)}
               label="Medicine Reminders"
-              description={`Remind ${settings.medicineReminderMinutesBefore} minutes before`}
-            />
-
-            <Toggle
-              checked={settings.dailySummaryEnabled}
-              onChange={(checked) => handleSettingChange('dailySummaryEnabled', checked)}
-              label="Daily Summaries"
-              description="Receive morning and evening activity summaries"
+              description={`Remind ${settings.medicineReminderMinutesBefore} min before medicine is due`}
             />
           </div>
         </Card>
-        */}
 
         {/* Version */}
         <p className="text-xs text-center text-gray-400 pt-4">

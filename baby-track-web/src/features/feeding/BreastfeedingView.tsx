@@ -53,6 +53,11 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
   // Expandable details state
   const [showDetails, setShowDetails] = useState(false);
 
+  // Pre-save edit state
+  const [showEditBeforeSave, setShowEditBeforeSave] = useState(false);
+  const [editStartTime, setEditStartTime] = useState('');
+  const [editDuration, setEditDuration] = useState('');
+
   // Stale timer modal state
   const [showStaleModal, setShowStaleModal] = useState(false);
   const staleModalDismissedRef = useRef(false);
@@ -299,6 +304,33 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Open edit modal before saving
+  const handleEditBeforeSave = () => {
+    // Find the active session to get the start time
+    const activeSession = sessions.find((s) => s.isActive);
+    if (activeSession) {
+      const startDate = new Date(activeSession.startTime);
+      setEditStartTime(format(startDate, "yyyy-MM-dd'T'HH:mm"));
+    } else {
+      // Fallback: calculate start time from current time minus timer seconds
+      const startDate = new Date(Date.now() - timerSeconds * 1000);
+      setEditStartTime(format(startDate, "yyyy-MM-dd'T'HH:mm"));
+    }
+    setEditDuration(Math.floor(timerSeconds / 60).toString());
+    setShowEditBeforeSave(true);
+  };
+
+  // Apply edit changes
+  const handleApplyEdit = () => {
+    const durationMinutes = parseInt(editDuration, 10);
+    if (isNaN(durationMinutes) || durationMinutes <= 0) {
+      toast.error('Please enter a valid duration');
+      return;
+    }
+    setTimerSeconds(durationMinutes * 60);
+    setShowEditBeforeSave(false);
   };
 
   const handleSave = async () => {
@@ -580,6 +612,14 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
               >
                 <Trash2 className="w-4 h-4 text-red-500" />
               </Button>
+              <Button
+                variant="outline"
+                onClick={handleEditBeforeSave}
+                className="px-3"
+                disabled={saving}
+              >
+                <Edit3 className="w-4 h-4 text-gray-600" />
+              </Button>
               <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
                 Resume
               </Button>
@@ -692,6 +732,43 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
         onStopAndSave={handleStaleTimerStopAndSave}
         onDiscard={handleStaleTimerDiscard}
       />
+
+      {/* Pre-save Edit Modal */}
+      {showEditBeforeSave && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-sm">
+            <CardHeader title="Edit Session" subtitle="Adjust the time before saving" />
+            <div className="space-y-4">
+              <Input
+                type="datetime-local"
+                label="Start Time"
+                value={editStartTime}
+                onChange={(e) => setEditStartTime(e.target.value)}
+              />
+              <Input
+                type="number"
+                label="Duration (minutes)"
+                value={editDuration}
+                onChange={(e) => setEditDuration(e.target.value)}
+                min="1"
+                max="180"
+              />
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowEditBeforeSave(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleApplyEdit} className="flex-1">
+                  Apply
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

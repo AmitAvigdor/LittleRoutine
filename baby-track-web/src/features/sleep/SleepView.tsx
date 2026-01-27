@@ -14,7 +14,7 @@ import { createSleepSession, endSleepSession, createCompleteSleepSession, subscr
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
-import { Moon, Sun, Clock, Bed, Timer as TimerIcon, Edit3, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Moon, Sun, Clock, Bed, Timer as TimerIcon, Edit3, Trash2, ChevronDown, ChevronUp, X } from 'lucide-react';
 
 type EntryMode = 'timer' | 'manual';
 
@@ -53,6 +53,11 @@ export function SleepView() {
 
   // Expandable details state
   const [showDetails, setShowDetails] = useState(false);
+
+  // Pre-save edit state
+  const [showEditBeforeSave, setShowEditBeforeSave] = useState(false);
+  const [editStartTime, setEditStartTime] = useState('');
+  const [editDuration, setEditDuration] = useState('');
 
   // Stale timer modal state
   const [showStaleModal, setShowStaleModal] = useState(false);
@@ -305,6 +310,33 @@ export function SleepView() {
     setIsTimerRunning(true);
   };
 
+  // Open edit modal before saving
+  const handleEditBeforeSave = () => {
+    // Find the active session to get the start time
+    const activeSession = sessions.find((s) => s.isActive);
+    if (activeSession) {
+      const startDate = new Date(activeSession.startTime);
+      setEditStartTime(format(startDate, "yyyy-MM-dd'T'HH:mm"));
+    } else {
+      // Fallback: calculate start time from current time minus timer seconds
+      const startDate = new Date(Date.now() - timerSeconds * 1000);
+      setEditStartTime(format(startDate, "yyyy-MM-dd'T'HH:mm"));
+    }
+    setEditDuration(Math.floor(timerSeconds / 60).toString());
+    setShowEditBeforeSave(true);
+  };
+
+  // Apply edit changes
+  const handleApplyEdit = () => {
+    const durationMinutes = parseInt(editDuration, 10);
+    if (isNaN(durationMinutes) || durationMinutes <= 0) {
+      toast.error('Please enter a valid duration');
+      return;
+    }
+    setTimerSeconds(durationMinutes * 60);
+    setShowEditBeforeSave(false);
+  };
+
   const handleDiscard = async () => {
     // Find the session to delete
     let sessionIdToDelete = activeSessionId;
@@ -519,6 +551,14 @@ export function SleepView() {
                 >
                   <Trash2 className="w-4 h-4 text-red-500" />
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleEditBeforeSave}
+                  className="px-3"
+                  disabled={saving}
+                >
+                  <Edit3 className="w-4 h-4 text-blue-500" />
+                </Button>
                 <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
                   Resume
                 </Button>
@@ -637,6 +677,50 @@ export function SleepView() {
           onStopAndSave={handleStaleTimerStopAndSave}
           onDiscard={handleStaleTimerDiscard}
         />
+
+        {/* Pre-save Edit Modal */}
+        {showEditBeforeSave && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Edit Before Saving</h3>
+                <button
+                  onClick={() => setShowEditBeforeSave(false)}
+                  className="p-1 rounded-full hover:bg-gray-100"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <Input
+                  type="datetime-local"
+                  label="Start Time"
+                  value={editStartTime}
+                  onChange={(e) => setEditStartTime(e.target.value)}
+                />
+                <Input
+                  type="number"
+                  label="Duration (minutes)"
+                  value={editDuration}
+                  onChange={(e) => setEditDuration(e.target.value)}
+                  min="1"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowEditBeforeSave(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={handleApplyEdit} className="flex-1">
+                    Apply
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );

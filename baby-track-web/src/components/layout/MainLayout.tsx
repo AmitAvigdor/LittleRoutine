@@ -4,6 +4,7 @@ import { BottomNav } from './BottomNav';
 import { useAppStore } from '@/stores/appStore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { subscribeToBabies, subscribeToSettings, getOrCreateSettings } from '@/lib/firestore';
+import { useNotifications } from '@/hooks/useNotifications';
 import { clsx } from 'clsx';
 
 export function MainLayout() {
@@ -17,6 +18,9 @@ export function MainLayout() {
     setLoadingBabies,
     setLoadingSettings,
   } = useAppStore();
+
+  // Initialize notifications/reminders system
+  useNotifications();
 
   // Subscribe to babies and settings
   useEffect(() => {
