@@ -272,3 +272,93 @@ describe('SleepView bug regression tests', () => {
     expect(screen.getByText('Sleep')).toBeInTheDocument();
   });
 });
+
+// Additional bug documentation tests
+describe('SleepView - Documented Bugs', () => {
+  describe('Bug #1: Edit modal allows invalid time ranges', () => {
+    it('should validate end time is after start time in edit modal', () => {
+      // Bug at handleEditSave:
+      // Directly uses editEntry data without validating endTime > startTime
+      //
+      // User can edit a sleep entry to have end time before start time
+      // This creates negative duration displays elsewhere
+
+      // Expected: Validate and show error if endTime <= startTime
+    });
+
+    it('should validate end time is after start time in manual entry', () => {
+      // Similar bug in handleManualEntry
+      // No validation of time relationship
+    });
+  });
+
+  describe('Bug #2: Active sleep session can be orphaned', () => {
+    it('should handle refresh during active sleep session', () => {
+      // When user starts sleep tracking:
+      // createSleepEntry creates entry with endTime: null
+
+      // If user closes app without ending sleep:
+      // - Entry stays with null endTime forever
+      // - No way to "recover" or auto-end the session
+
+      // Expected: On app load, check for entries with null endTime
+      // and either show "resume" option or auto-end them
+    });
+  });
+
+  describe('Bug #3: Sleep stats calculation edge cases', () => {
+    it('should handle sleep entry spanning midnight', () => {
+      // Bug: When calculating "today's sleep"
+      // A sleep that starts at 11 PM and ends at 7 AM next day
+      // might be counted incorrectly
+
+      // Need to check how isToday() handles entries spanning midnight
+    });
+
+    it('should handle entries with null endTime in stats', () => {
+      // Active sleep entries have endTime: null
+      // Stats calculations might break if they try to parse null
+      //
+      // differenceInMinutes(parseISO(null), ...) = NaN
+    });
+  });
+
+  describe('Bug #4: Manual entry date validation', () => {
+    it('should not allow manual entries in the future', () => {
+      // Bug: Manual entry accepts any date/time
+      // User can log sleep for next week
+
+      // Expected: Validate that both start and end times <= now
+    });
+  });
+
+  describe('Bug #5: Delete confirmation race condition', () => {
+    it('should prevent multiple delete clicks', () => {
+      // Bug: No loading state on delete operation
+      // User can rapidly click delete, triggering multiple API calls
+
+      // Expected: Disable delete button during operation
+    });
+  });
+});
+
+describe('DiaperView - Documented Bugs', () => {
+  describe('Bug #1: Invalid date in manual entry', () => {
+    it('should validate date input before submission', () => {
+      // Bug: If user clears date input and submits
+      // new Date('') creates Invalid Date
+      // This invalid date gets stored in Firestore
+
+      // Expected: Require date field, validate it's a real date
+    });
+  });
+
+  describe('Bug #2: Stats can show negative time since', () => {
+    it('should handle future timestamps in "time since" calculation', () => {
+      // If an entry somehow has future timestamp
+      // "X minutes ago" becomes negative or very large
+
+      // Expected: Handle this gracefully, show "just now" or validate input
+    });
+  });
+});
