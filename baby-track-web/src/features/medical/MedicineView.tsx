@@ -73,7 +73,6 @@ export function MedicineView() {
 
   // Reminder modal state
   const [showReminder, setShowReminder] = useState(false);
-  const [missedMedicines, setMissedMedicines] = useState<Medicine[]>([]);
   // Track the date when reminder was last shown (fixes midnight reset bug)
   const [lastReminderDate, setLastReminderDate] = useState<string | null>(null);
 
@@ -114,6 +113,37 @@ export function MedicineView() {
     };
   }, [medicines]);
 
+  // Helper to get medicines that still need doses today
+  const getMissedMedicines = useCallback((): Medicine[] => {
+    const activeMeds = medicines.filter(m => m.isActive && m.frequency !== 'asNeeded');
+    const missed: Medicine[] = [];
+    const now = new Date();
+
+    activeMeds.forEach((medicine) => {
+      const logs = medicineLogs[medicine.id] || [];
+      const todayLogs = logs.filter((log) => isToday(parseISO(log.timestamp)));
+      const maxDoses = getMaxDosesPerDay(medicine.frequency);
+
+      if (maxDoses !== null && todayLogs.length < maxDoses) {
+        missed.push(medicine);
+      } else if (medicine.frequency === 'everyHours' && medicine.hoursInterval) {
+        // For everyHours, check if next dose is overdue
+        if (todayLogs.length === 0) {
+          missed.push(medicine);
+        } else {
+          const lastDose = todayLogs[0];
+          const lastDoseTime = new Date(lastDose.timestamp);
+          const hoursSinceLastDose = (now.getTime() - lastDoseTime.getTime()) / (1000 * 60 * 60);
+          if (hoursSinceLastDose >= medicine.hoursInterval) {
+            missed.push(medicine);
+          }
+        }
+      }
+    });
+
+    return missed;
+  }, [medicines, medicineLogs]);
+
   // Check for missed medicines at 9 PM
   useEffect(() => {
     const checkMissedMedicines = () => {
@@ -122,38 +152,10 @@ export function MedicineView() {
       const todayStr = now.toISOString().split('T')[0];
 
       // Only show reminder at 9 PM (21:00) or later, and only once per day
-      // Use date comparison instead of session flag (fixes midnight reset bug)
       if (hour >= 21 && lastReminderDate !== todayStr) {
-        const activeMeds = medicines.filter(m => m.isActive && m.frequency !== 'asNeeded');
-        const missed: Medicine[] = [];
-
-        activeMeds.forEach((medicine) => {
-          const logs = medicineLogs[medicine.id] || [];
-          const todayLogs = logs.filter((log) => isToday(parseISO(log.timestamp)));
-          const maxDoses = getMaxDosesPerDay(medicine.frequency);
-
-          if (maxDoses !== null && todayLogs.length < maxDoses) {
-            missed.push(medicine);
-          } else if (medicine.frequency === 'everyHours' && medicine.hoursInterval) {
-            // For everyHours, check if next dose is overdue
-            // A dose is considered missed if: we have no doses today, OR
-            // the time since last dose exceeds the interval
-            if (todayLogs.length === 0) {
-              missed.push(medicine);
-            } else {
-              // Check if current time exceeds last dose + interval
-              const lastDose = todayLogs[0]; // Sorted newest first
-              const lastDoseTime = new Date(lastDose.timestamp);
-              const hoursSinceLastDose = (now.getTime() - lastDoseTime.getTime()) / (1000 * 60 * 60);
-              if (hoursSinceLastDose >= medicine.hoursInterval) {
-                missed.push(medicine);
-              }
-            }
-          }
-        });
+        const missed = getMissedMedicines();
 
         if (missed.length > 0) {
-          setMissedMedicines(missed);
           setShowReminder(true);
           setLastReminderDate(todayStr);
         }
@@ -167,7 +169,17 @@ export function MedicineView() {
     const interval = setInterval(checkMissedMedicines, 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [medicines, medicineLogs, lastReminderDate]);
+  }, [medicines, medicineLogs, lastReminderDate, getMissedMedicines]);
+
+  // Compute current missed medicines dynamically (for the modal)
+  const currentMissedMedicines = showReminder ? getMissedMedicines() : [];
+
+  // Auto-close modal when all medicines are given
+  useEffect(() => {
+    if (showReminder && currentMissedMedicines.length === 0) {
+      setShowReminder(false);
+    }
+  }, [showReminder, currentMissedMedicines.length]);
 
   // Helper to check if a medicine can receive a dose
   const canGiveDose = useCallback((medicine: Medicine): boolean => {
@@ -446,9 +458,9 @@ export function MedicineView() {
         )}
 
         {/* Medicine Reminder Modal */}
-        {showReminder && missedMedicines.length > 0 && (
+        {showReminder && currentMissedMedicines.length > 0 && (
           <MedicineReminderModal
-            medicines={missedMedicines}
+            medicines={currentMissedMedicines}
             canGiveDose={canGiveDose}
             getDosesToday={getDosesToday}
             onDismiss={() => setShowReminder(false)}
@@ -461,11 +473,8 @@ export function MedicineView() {
               if (!canGiveDose(medicine)) {
                 return;
               }
-
               handleGiveMedicine(medicine);
-              // Always remove from missed list after successfully giving a dose
-              // The reminder will re-check next time if more doses are needed
-              setMissedMedicines((prev) => prev.filter((m) => m.id !== medicine.id));
+              // Modal will auto-update since currentMissedMedicines is computed dynamically
             }}
           />
         )}
