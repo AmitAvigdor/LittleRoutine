@@ -520,7 +520,7 @@ export function DashboardView() {
               label="Pump"
               icon={<Droplets className="w-5 h-5" />}
               color="#9c27b0"
-              onClick={() => navigate('/feed?tab=pump')}
+              onClick={() => navigate('/more/pump')}
             />
             <QuickAction
               label="Sleep"
