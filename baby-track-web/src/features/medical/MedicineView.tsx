@@ -70,6 +70,8 @@ export function MedicineView() {
 
   // Track logs for each medicine
   const [medicineLogs, setMedicineLogs] = useState<Record<string, MedicineLog[]>>({});
+  // Track which medicines have had their logs loaded
+  const [logsLoadedFor, setLogsLoadedFor] = useState<Set<string>>(new Set());
 
   // Reminder modal state
   const [showReminder, setShowReminder] = useState(false);
@@ -98,12 +100,16 @@ export function MedicineView() {
     const activeMeds = medicines.filter(m => m.isActive);
     const unsubscribes: (() => void)[] = [];
 
+    // Reset loaded tracking when medicines change
+    setLogsLoadedFor(new Set());
+
     activeMeds.forEach((medicine) => {
       const unsubscribe = subscribeToMedicineLogs(medicine.id, (logs) => {
         setMedicineLogs((prev) => ({
           ...prev,
           [medicine.id]: logs,
         }));
+        setLogsLoadedFor((prev) => new Set([...prev, medicine.id]));
       });
       unsubscribes.push(unsubscribe);
     });
@@ -112,6 +118,11 @@ export function MedicineView() {
       unsubscribes.forEach((unsub) => unsub());
     };
   }, [medicines]);
+
+  // Check if all active medicine logs have been loaded
+  const allLogsLoaded = medicines
+    .filter(m => m.isActive)
+    .every(m => logsLoadedFor.has(m.id));
 
   // Helper to get medicines that still need doses today
   const getMissedMedicines = useCallback((): Medicine[] => {
@@ -146,6 +157,9 @@ export function MedicineView() {
 
   // Check for missed medicines at 9 PM
   useEffect(() => {
+    // Don't check until all logs are loaded to avoid false positives
+    if (!allLogsLoaded) return;
+
     const checkMissedMedicines = () => {
       const now = new Date();
       const hour = now.getHours();
@@ -162,14 +176,14 @@ export function MedicineView() {
       }
     };
 
-    // Check immediately on load
+    // Check immediately once logs are loaded
     checkMissedMedicines();
 
     // Check every minute
     const interval = setInterval(checkMissedMedicines, 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [medicines, medicineLogs, lastReminderDate, getMissedMedicines]);
+  }, [allLogsLoaded, lastReminderDate, getMissedMedicines]);
 
   // Compute current missed medicines dynamically (for the modal)
   const currentMissedMedicines = showReminder ? getMissedMedicines() : [];
