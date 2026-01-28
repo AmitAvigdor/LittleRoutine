@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { format, isToday, parseISO } from 'date-fns';
+import { clsx } from 'clsx';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Timer } from '@/components/ui/Timer';
 import { Button } from '@/components/ui/Button';
@@ -28,12 +29,6 @@ const entryModeOptions = [
 interface PumpViewProps {
   baby: Baby;
 }
-
-const sideOptions = [
-  { value: 'left', label: 'Left', color: PUMP_SIDE_CONFIG.left.color },
-  { value: 'right', label: 'Right', color: PUMP_SIDE_CONFIG.right.color },
-  { value: 'both', label: 'Both', color: PUMP_SIDE_CONFIG.both.color },
-];
 
 export function PumpView({ baby }: PumpViewProps) {
   const { user } = useAuth();
@@ -540,30 +535,77 @@ export function PumpView({ baby }: PumpViewProps) {
       )}
 
       {/* Side Selector */}
-      <div className="flex justify-center">
-        <SegmentedControl
-          options={sideOptions}
-          value={selectedSide}
-          onChange={(value) => !isTimerRunning && !activeSessionId && setSelectedSide(value as PumpSide)}
-        />
+      <div className="flex justify-center gap-3">
+        {(['left', 'right', 'both'] as PumpSide[]).map((side) => {
+          const config = PUMP_SIDE_CONFIG[side];
+          const isSelected = selectedSide === side;
+          const isDisabled = isTimerRunning || !!activeSessionId;
+
+          return (
+            <button
+              key={side}
+              onClick={() => !isDisabled && setSelectedSide(side)}
+              disabled={isDisabled}
+              className={clsx(
+                'relative px-6 py-3 rounded-xl font-medium transition-all duration-300',
+                isSelected
+                  ? 'text-white shadow-lg scale-105'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200',
+                isDisabled && !isSelected && 'opacity-40 cursor-not-allowed'
+              )}
+              style={isSelected ? {
+                background: `linear-gradient(135deg, ${config.color} 0%, ${config.color}dd 100%)`,
+                boxShadow: `0 8px 20px -8px ${config.color}80`
+              } : undefined}
+            >
+              <span className="relative z-10">{config.label}</span>
+              {isSelected && (
+                <Droplet
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30"
+                />
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Timer Mode */}
       {entryMode === 'timer' && (
-        <Card variant="elevated" className="text-center py-8">
-          <Timer
-            initialSeconds={timerSeconds}
-            isRunning={isTimerRunning}
-            isPaused={isPaused}
-            onStart={handleStart}
-            onPause={handlePause}
-            onResume={handleResume}
-            onStop={handleStop}
-            onReset={handleReset}
-            onTimeUpdate={setTimerSeconds}
-            color={PUMP_SIDE_CONFIG[selectedSide].color}
+        <div
+          className="relative rounded-3xl overflow-hidden"
+          style={{
+            background: `linear-gradient(180deg, ${PUMP_SIDE_CONFIG[selectedSide].color}08 0%, ${PUMP_SIDE_CONFIG[selectedSide].color}03 100%)`,
+          }}
+        >
+          {/* Decorative elements */}
+          <div
+            className="absolute -top-16 -right-16 w-32 h-32 rounded-full opacity-10"
+            style={{ backgroundColor: PUMP_SIDE_CONFIG[selectedSide].color }}
           />
-        </Card>
+          <div
+            className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full opacity-5"
+            style={{ backgroundColor: PUMP_SIDE_CONFIG[selectedSide].color }}
+          />
+          <div
+            className="absolute top-1/2 left-4 w-2 h-16 rounded-full opacity-20 -translate-y-1/2"
+            style={{ backgroundColor: PUMP_SIDE_CONFIG[selectedSide].color }}
+          />
+
+          <div className="relative py-10 px-4">
+            <Timer
+              initialSeconds={timerSeconds}
+              isRunning={isTimerRunning}
+              isPaused={isPaused}
+              onStart={handleStart}
+              onPause={handlePause}
+              onResume={handleResume}
+              onStop={handleStop}
+              onReset={handleReset}
+              onTimeUpdate={setTimerSeconds}
+              color={PUMP_SIDE_CONFIG[selectedSide].color}
+            />
+          </div>
+        </div>
       )}
 
       {/* Manual Entry Mode */}
@@ -734,16 +776,22 @@ export function PumpView({ baby }: PumpViewProps) {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-3">
-        <Card className="text-center">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl p-4 text-center border border-blue-100">
+          <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-2">
+            <TimerIcon className="w-5 h-5 text-blue-600" />
+          </div>
           <p className="text-3xl font-bold text-blue-600">{todaySessions.length}</p>
-          <p className="text-sm text-gray-500">Sessions today</p>
-        </Card>
-        <Card className="text-center">
-          <p className="text-3xl font-bold text-blue-600">
+          <p className="text-sm text-gray-500 mt-1">Sessions today</p>
+        </div>
+        <div className="bg-gradient-to-br from-cyan-50 to-cyan-100/50 rounded-2xl p-4 text-center border border-cyan-100">
+          <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center mx-auto mb-2">
+            <Droplet className="w-5 h-5 text-cyan-600" />
+          </div>
+          <p className="text-3xl font-bold text-cyan-600">
             {todayTotalVolume.toFixed(1)} {volumeUnit}
           </p>
-          <p className="text-sm text-gray-500">Total volume</p>
-        </Card>
+          <p className="text-sm text-gray-500 mt-1">Total volume</p>
+        </div>
       </div>
 
       {/* Milk Destination Dialog */}
@@ -816,8 +864,8 @@ export function PumpView({ baby }: PumpViewProps) {
 
       {/* Session History */}
       {completedSessions.length > 0 && (
-        <Card padding="none">
-          <div className="px-4 py-3 border-b border-gray-100">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
             <h3 className="font-semibold text-gray-900">Recent Sessions</h3>
           </div>
           <div className="divide-y divide-gray-50">
@@ -825,30 +873,32 @@ export function PumpView({ baby }: PumpViewProps) {
               <button
                 key={session.id}
                 onClick={() => setSelectedSession(session)}
-                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50/80 active:bg-gray-100 transition-colors text-left"
               >
                 <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white"
-                  style={{ backgroundColor: PUMP_SIDE_CONFIG[session.side].color }}
+                  className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-sm"
+                  style={{
+                    background: `linear-gradient(135deg, ${PUMP_SIDE_CONFIG[session.side].color} 0%, ${PUMP_SIDE_CONFIG[session.side].color}cc 100%)`
+                  }}
                 >
                   <Droplet className="w-5 h-5" />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-900">
                     {session.volume} {session.volumeUnit} • {PUMP_SIDE_CONFIG[session.side].label}
                   </p>
                   <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <Clock className="w-3 h-3" />
-                    <span>{formatDuration(session.duration)}</span>
+                    <Clock className="w-3 h-3 flex-shrink-0" />
+                    <span className="font-medium">{formatDuration(session.duration)}</span>
                     <span>•</span>
-                    <span>{format(parseISO(session.startTime), 'MMM d, h:mm a')}</span>
+                    <span className="truncate">{format(parseISO(session.startTime), 'MMM d, h:mm a')}</span>
                   </div>
                 </div>
                 <MoodIndicator momMood={session.momMood} size="sm" />
               </button>
             ))}
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Edit Session Modal */}
