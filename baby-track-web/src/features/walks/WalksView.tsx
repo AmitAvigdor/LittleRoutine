@@ -1,52 +1,36 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { format, isToday, parseISO } from 'date-fns';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { Card, CardHeader } from '@/components/ui/Card';
-import { Timer } from '@/components/ui/Timer';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
-import { SegmentedControl } from '@/components/ui/Select';
 import { BabyMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
 import { EditSessionModal } from '@/components/ui/EditSessionModal';
-import { StaleTimerModal, STALE_TIMER_THRESHOLD } from '@/components/ui/StaleTimerModal';
 import { WalkSession, BabyMood, formatDuration } from '@/types';
-import { createWalkSession, endWalkSession, createCompleteWalkSession, subscribeToWalkSessions, deleteWalkSession } from '@/lib/firestore';
+import { createCompleteWalkSession, subscribeToWalkSessions } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
-import { Clock, Timer as TimerIcon, Edit3, Trash2, Footprints, ChevronDown, ChevronUp } from 'lucide-react';
-
-type EntryMode = 'timer' | 'manual';
-
-const entryModeOptions = [
-  { value: 'timer', label: 'Timer', icon: <TimerIcon className="w-4 h-4" /> },
-  { value: 'manual', label: 'Manual', icon: <Edit3 className="w-4 h-4" /> },
-];
+import { Clock, Footprints, ChevronDown, ChevronUp } from 'lucide-react';
 
 const WALK_COLOR = '#8bc34a';
+
+// Quick duration options in minutes
+const QUICK_DURATIONS = [10, 15, 20, 30, 45, 60];
 
 export function WalksView() {
   const { user } = useAuth();
   const { selectedBaby, babies } = useAppStore();
 
   const [sessions, setSessions] = useState<WalkSession[]>([]);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [timerSeconds, setTimerSeconds] = useState(0);
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [babyMood, setBabyMood] = useState<BabyMood | null>(null);
-  const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [starting, setStarting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [selectedSession, setSelectedSession] = useState<WalkSession | null>(null);
 
-  // Stale timer modal state
-  const [showStaleModal, setShowStaleModal] = useState(false);
-  const staleModalDismissedRef = useRef(false);
-
-  // Entry mode state
-  const [entryMode, setEntryMode] = useState<EntryMode>('timer');
+  // Manual entry state
+  const [showManual, setShowManual] = useState(false);
   const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
   const [manualStartTime, setManualStartTime] = useState(format(new Date(), 'HH:mm'));
   const [manualEndTime, setManualEndTime] = useState(format(new Date(), 'HH:mm'));
@@ -58,157 +42,27 @@ export function WalksView() {
     return () => unsubscribe();
   }, [selectedBaby]);
 
-  // Check for active session on load
-  useEffect(() => {
-    if (showForm) return;
+  const handleQuickLog = async (durationMinutes: number) => {
+    if (!user || !selectedBaby || saving) return;
 
-    const activeSession = sessions.find((s) => s.isActive);
-    if (activeSession) {
-      setActiveSessionId(activeSession.id);
-      setIsTimerRunning(true);
-      const startTime = new Date(activeSession.startTime);
-      const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
-      setTimerSeconds(elapsed);
-    }
-  }, [sessions, showForm]);
-
-  // Re-sync timer when app becomes visible again (e.g., after closing and reopening)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && !showForm) {
-        const activeSession = sessions.find((s) => s.isActive);
-        if (activeSession) {
-          setActiveSessionId(activeSession.id);
-          setIsTimerRunning(true);
-          const startTime = new Date(activeSession.startTime);
-          const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
-          setTimerSeconds(elapsed);
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [sessions, showForm]);
-
-  // Check for stale timer (5+ hours)
-  useEffect(() => {
-    if (staleModalDismissedRef.current || showForm || showStaleModal) return;
-
-    const activeSession = sessions.find((s) => s.isActive);
-    if (activeSession) {
-      const startTime = new Date(activeSession.startTime);
-      const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
-      if (elapsed >= STALE_TIMER_THRESHOLD) {
-        setShowStaleModal(true);
-      }
-    }
-  }, [sessions, showForm, showStaleModal]);
-
-  // Also check when app becomes visible
-  useEffect(() => {
-    const checkStaleOnVisibility = () => {
-      if (document.visibilityState === 'visible' && !staleModalDismissedRef.current && !showForm) {
-        const activeSession = sessions.find((s) => s.isActive);
-        if (activeSession) {
-          const startTime = new Date(activeSession.startTime);
-          const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
-          if (elapsed >= STALE_TIMER_THRESHOLD) {
-            setShowStaleModal(true);
-          }
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', checkStaleOnVisibility);
-    return () => document.removeEventListener('visibilitychange', checkStaleOnVisibility);
-  }, [sessions, showForm]);
-
-  const handleStaleTimerContinue = () => {
-    staleModalDismissedRef.current = true;
-    setShowStaleModal(false);
-  };
-
-  const handleStaleTimerStopAndSave = () => {
-    setShowStaleModal(false);
-    setIsTimerRunning(false);
-    setShowForm(true);
-  };
-
-  const handleStaleTimerDiscard = async () => {
-    setShowStaleModal(false);
-    const activeSession = sessions.find((s) => s.isActive);
-    if (activeSession) {
-      try {
-        await deleteWalkSession(activeSession.id);
-        setActiveSessionId(null);
-        setTimerSeconds(0);
-        setIsTimerRunning(false);
-        toast.info('Walk discarded');
-      } catch (error) {
-        console.error('Error discarding walk session:', error);
-        toast.error('Failed to discard walk');
-      }
-    }
-  };
-
-  const handleStart = useCallback(async () => {
-    if (!user || !selectedBaby || starting) return;
-
-    staleModalDismissedRef.current = false; // Reset for new timer
-    setStarting(true);
-    try {
-      const sessionId = await createWalkSession(selectedBaby.id, user.uid, {
-        startTime: new Date().toISOString(),
-      });
-      setActiveSessionId(sessionId);
-      setIsTimerRunning(true);
-      setTimerSeconds(0);
-    } catch (error) {
-      console.error('Error starting walk session:', error);
-      toast.error('Failed to start walk. Please try again.');
-    } finally {
-      setStarting(false);
-    }
-  }, [user, selectedBaby, starting]);
-
-  const handleStop = useCallback(async (totalSeconds: number) => {
-    setIsTimerRunning(false);
-    setTimerSeconds(totalSeconds);
-    setShowForm(true);
-  }, []);
-
-  const handleSave = async () => {
-    let sessionIdToSave = activeSessionId;
-    if (!sessionIdToSave) {
-      const activeSession = sessions.find((s) => s.isActive);
-      sessionIdToSave = activeSession?.id ?? null;
-    }
-
-    if (!sessionIdToSave) {
-      console.error('No active session to save');
-      return;
-    }
-
-    const savedDuration = timerSeconds;
+    const endTime = new Date();
+    const startTime = new Date(endTime.getTime() - durationMinutes * 60 * 1000);
 
     setSaving(true);
     try {
-      await endWalkSession(
-        sessionIdToSave,
-        new Date().toISOString(),
-        notes || null,
-        babyMood
-      );
+      await createCompleteWalkSession(selectedBaby.id, user.uid, {
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        notes: notes || null,
+        babyMood,
+      });
 
-      setActiveSessionId(null);
-      setTimerSeconds(0);
       setNotes('');
       setBabyMood(null);
-      setShowForm(false);
       setShowDetails(false);
 
-      toast.success(`${formatDuration(savedDuration)} walk logged`);
+      const label = durationMinutes >= 60 ? `${durationMinutes / 60}h` : `${durationMinutes} min`;
+      toast.success(`${label} walk logged`);
     } catch (error) {
       console.error('Error saving walk session:', error);
       toast.error('Failed to save walk. Please try again.');
@@ -247,52 +101,12 @@ export function WalksView() {
       setManualEndTime(format(new Date(), 'HH:mm'));
       setNotes('');
       setBabyMood(null);
+      setShowManual(false);
 
       toast.success(`${formatDuration(durationMinutes * 60)} walk logged`);
     } catch (error) {
       console.error('Error saving walk session:', error);
       toast.error('Failed to save walk. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setShowForm(false);
-    setShowDetails(false);
-    setIsTimerRunning(true);
-  };
-
-  const handleDiscard = async () => {
-    let sessionIdToDelete = activeSessionId;
-    if (!sessionIdToDelete) {
-      const activeSession = sessions.find((s) => s.isActive);
-      sessionIdToDelete = activeSession?.id ?? null;
-    }
-
-    if (!sessionIdToDelete) {
-      setActiveSessionId(null);
-      setTimerSeconds(0);
-      setNotes('');
-      setBabyMood(null);
-      setShowForm(false);
-      setShowDetails(false);
-      return;
-    }
-
-    setSaving(true);
-    try {
-      await deleteWalkSession(sessionIdToDelete);
-      setActiveSessionId(null);
-      setTimerSeconds(0);
-      setNotes('');
-      setBabyMood(null);
-      setShowForm(false);
-      setShowDetails(false);
-      toast.info('Walk discarded');
-    } catch (error) {
-      console.error('Error discarding walk session:', error);
-      toast.error('Failed to discard walk. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -312,20 +126,9 @@ export function WalksView() {
       <Header title="Walks" />
 
       <div className="px-4 py-4 space-y-4">
-        {/* Entry Mode Toggle */}
-        {!isTimerRunning && !showForm && (
-          <div className="flex justify-center">
-            <SegmentedControl
-              options={entryModeOptions}
-              value={entryMode}
-              onChange={(value) => setEntryMode(value as EntryMode)}
-            />
-          </div>
-        )}
-
-        {/* Timer Mode */}
-        {entryMode === 'timer' && !showForm && (
-          <Card className="text-center">
+        {/* Quick Log Card */}
+        {!showManual && (
+          <Card>
             <div className="flex justify-center mb-4">
               <div
                 className="w-16 h-16 rounded-full flex items-center justify-center"
@@ -335,19 +138,72 @@ export function WalksView() {
               </div>
             </div>
 
-            <Timer
-              isRunning={isTimerRunning}
-              initialSeconds={timerSeconds}
-              onTimeUpdate={setTimerSeconds}
-              onStart={handleStart}
-              onStop={handleStop}
-              color={WALK_COLOR}
+            <CardHeader
+              title="Quick Log"
+              subtitle={`How long was the walk?`}
             />
+
+            {/* Quick Duration Buttons */}
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {QUICK_DURATIONS.map((duration) => (
+                <Button
+                  key={duration}
+                  variant="outline"
+                  onClick={() => handleQuickLog(duration)}
+                  disabled={saving}
+                  className="flex flex-col items-center py-3"
+                  style={{
+                    borderColor: WALK_COLOR,
+                    color: WALK_COLOR
+                  }}
+                >
+                  <span className="text-lg font-bold">
+                    {duration >= 60 ? `${duration / 60}` : duration}
+                  </span>
+                  <span className="text-xs">{duration >= 60 ? 'hour' : 'min'}</span>
+                </Button>
+              ))}
+            </div>
+
+            {/* Expandable details section */}
+            <button
+              onClick={() => setShowDetails(!showDetails)}
+              className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
+            >
+              <span>Add details (optional)</span>
+              {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {showDetails && (
+              <div className="space-y-4 pt-2 border-t border-gray-100">
+                <BabyMoodSelector
+                  label="Baby's mood"
+                  value={babyMood}
+                  onChange={setBabyMood}
+                />
+
+                <Textarea
+                  label="Notes (optional)"
+                  placeholder="Where did you go? How was the walk?"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                />
+              </div>
+            )}
+
+            {/* Link to manual entry */}
+            <button
+              onClick={() => setShowManual(true)}
+              className="w-full text-center text-sm text-gray-500 hover:text-gray-700 mt-4 py-2"
+            >
+              Log a past walk →
+            </button>
           </Card>
         )}
 
         {/* Manual Entry Mode */}
-        {entryMode === 'manual' && !showForm && !isTimerRunning && (
+        {showManual && (
           <Card>
             <CardHeader
               title="Log Past Walk"
@@ -377,15 +233,6 @@ export function WalksView() {
                 />
               </div>
 
-              <Button
-                onClick={handleManualSave}
-                className="w-full"
-                disabled={!manualStartTime || !manualEndTime || saving}
-                style={{ backgroundColor: WALK_COLOR }}
-              >
-                {saving ? 'Saving...' : 'Save'}
-              </Button>
-
               {/* Expandable details section */}
               <button
                 onClick={() => setShowDetails(!showDetails)}
@@ -412,63 +259,25 @@ export function WalksView() {
                   />
                 </div>
               )}
-            </div>
-          </Card>
-        )}
 
-        {/* Save Form (Timer mode only) */}
-        {showForm && entryMode === 'timer' && (
-          <Card>
-            <CardHeader
-              title="Walk Ended"
-              subtitle={`${formatDuration(timerSeconds)} walk`}
-            />
-
-            <div className="space-y-4">
-              {/* Action buttons at top */}
               <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  onClick={handleDiscard}
-                  className="px-3"
+                  onClick={() => setShowManual(false)}
+                  className="flex-1"
                   disabled={saving}
                 >
-                  <Trash2 className="w-4 h-4 text-red-500" />
+                  Cancel
                 </Button>
-                <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
-                  Resume
-                </Button>
-                <Button onClick={handleSave} className="flex-1" disabled={saving}>
+                <Button
+                  onClick={handleManualSave}
+                  className="flex-1"
+                  disabled={!manualStartTime || !manualEndTime || saving}
+                  style={{ backgroundColor: WALK_COLOR }}
+                >
                   {saving ? 'Saving...' : 'Save'}
                 </Button>
               </div>
-
-              {/* Expandable details section */}
-              <button
-                onClick={() => setShowDetails(!showDetails)}
-                className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
-              >
-                <span>Add details (optional)</span>
-                {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </button>
-
-              {showDetails && (
-                <div className="space-y-4 pt-2 border-t border-gray-100">
-                  <BabyMoodSelector
-                    label="Baby's mood"
-                    value={babyMood}
-                    onChange={setBabyMood}
-                  />
-
-                  <Textarea
-                    label="Notes (optional)"
-                    placeholder="Where did you go? How was the walk?"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={2}
-                  />
-                </div>
-              )}
             </div>
           </Card>
         )}
@@ -527,16 +336,6 @@ export function WalksView() {
             session={selectedSession}
           />
         )}
-
-        {/* Stale Timer Modal */}
-        <StaleTimerModal
-          isOpen={showStaleModal}
-          duration={timerSeconds}
-          activityName="walk"
-          onContinue={handleStaleTimerContinue}
-          onStopAndSave={handleStaleTimerStopAndSave}
-          onDiscard={handleStaleTimerDiscard}
-        />
       </div>
     </div>
   );

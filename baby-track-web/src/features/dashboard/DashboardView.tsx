@@ -14,9 +14,6 @@ import {
   subscribeToDiaperChanges,
   subscribeToMedicines,
   subscribeToMedicineLogs,
-  subscribeToPlaySessions,
-  subscribeToWalkSessions,
-  createMedicineLog,
 } from '@/lib/firestore';
 import {
   FeedingSession,
@@ -24,13 +21,10 @@ import {
   BottleSession,
   SleepSession,
   DiaperChange,
-  PlaySession,
-  WalkSession,
   BREAST_SIDE_CONFIG,
   DIAPER_TYPE_CONFIG,
   SLEEP_TYPE_CONFIG,
   BABY_COLOR_CONFIG,
-  PLAY_TYPE_CONFIG,
   calculateBabyAge,
 } from '@/types';
 import type { Medicine, MedicineLog } from '@/types';
@@ -46,14 +40,12 @@ import {
   Footprints,
   Calendar,
   AlertTriangle,
-  Check,
   Pill,
   Circle,
   CheckCircle2,
   Droplets,
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { toast } from '@/stores/toastStore';
 
 // Format elapsed time for active timers (e.g., "12:34" or "1:23:45")
 function formatElapsedTime(startTime: string, isPaused?: boolean, pausedAt?: string | null, totalPausedDuration?: number): string {
@@ -282,12 +274,11 @@ export function DashboardView() {
   const [bottleSessions, setBottleSessions] = useState<BottleSession[]>([]);
   const [sleepSessions, setSleepSessions] = useState<SleepSession[]>([]);
   const [diaperChanges, setDiaperChanges] = useState<DiaperChange[]>([]);
-  const [playSessions, setPlaySessions] = useState<PlaySession[]>([]);
-  const [walkSessions, setWalkSessions] = useState<WalkSession[]>([]);
 
   // Medicine reminder states
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [medicineLogs, setMedicineLogs] = useState<Record<string, MedicineLog[]>>({});
+  const [logsLoadedFor, setLogsLoadedFor] = useState<Set<string>>(new Set());
   const [showMedicineReminder, setShowMedicineReminder] = useState(false);
   const [missedMedicines, setMissedMedicines] = useState<Medicine[]>([]);
   // Track the date when reminder was last shown (fixes midnight reset bug)
@@ -304,8 +295,6 @@ export function DashboardView() {
       subscribeToSleepSessions(selectedBaby.id, setSleepSessions),
       subscribeToDiaperChanges(selectedBaby.id, setDiaperChanges),
       subscribeToMedicines(selectedBaby.id, setMedicines),
-      subscribeToPlaySessions(selectedBaby.id, setPlaySessions),
-      subscribeToWalkSessions(selectedBaby.id, setWalkSessions),
     ];
 
     return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
@@ -391,9 +380,7 @@ export function DashboardView() {
     const hasActiveTimers =
       feedingSessions.some(s => s.isActive) ||
       pumpSessions.some(s => s.isActive) ||
-      sleepSessions.some(s => s.isActive) ||
-      playSessions.some(s => s.isActive) ||
-      walkSessions.some(s => s.isActive);
+      sleepSessions.some(s => s.isActive);
 
     const intervalMs = hasActiveTimers ? 1000 : 60000; // 1 second or 1 minute
 
@@ -402,13 +389,13 @@ export function DashboardView() {
     }, intervalMs);
 
     return () => clearInterval(interval);
-  }, [feedingSessions, pumpSessions, sleepSessions, playSessions, walkSessions]);
+  }, [feedingSessions, pumpSessions, sleepSessions]);
 
   // Get all active timers
   const activeTimers = useMemo(() => {
     const timers: {
       id: string;
-      type: 'feeding' | 'pump' | 'sleep' | 'play' | 'walk';
+      type: 'feeding' | 'pump' | 'sleep';
       title: string;
       subtitle: string;
       startTime: string;
@@ -468,39 +455,11 @@ export function DashboardView() {
       });
     });
 
-    // Active play
-    playSessions.filter(s => s.isActive).forEach(s => {
-      timers.push({
-        id: s.id,
-        type: 'play',
-        title: 'Playing',
-        subtitle: PLAY_TYPE_CONFIG[s.type]?.label || s.type,
-        startTime: s.startTime,
-        icon: <Gamepad2 className="w-6 h-6 text-white" />,
-        iconBg: '#ff9800',
-        route: '/more/play',
-      });
-    });
-
-    // Active walk
-    walkSessions.filter(s => s.isActive).forEach(s => {
-      timers.push({
-        id: s.id,
-        type: 'walk',
-        title: 'Walking',
-        subtitle: 'In progress',
-        startTime: s.startTime,
-        icon: <Footprints className="w-6 h-6 text-white" />,
-        iconBg: '#8bc34a',
-        route: '/more/walks',
-      });
-    });
-
     // Sort by start time (oldest first - they've been running longest)
     timers.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
     return timers;
-  }, [feedingSessions, pumpSessions, sleepSessions, playSessions, walkSessions]);
+  }, [feedingSessions, pumpSessions, sleepSessions]);
 
   // Get last feeding info (breastfeeding, bottle, or pump)
   const lastFeeding = useMemo(() => {
@@ -598,35 +557,6 @@ export function DashboardView() {
       };
     });
   }, [medicines, medicineLogs]);
-
-  // Handle giving medicine from reminder
-  const handleGiveMedicine = async (medicine: Medicine) => {
-    if (!user || !selectedBaby) return;
-
-    try {
-      await createMedicineLog(medicine.id, selectedBaby.id, user.uid, {
-        timestamp: new Date().toISOString(),
-      });
-      toast.success(`${medicine.name} dose logged`);
-
-      // Remove from missed list based on frequency type
-      const logs = medicineLogs[medicine.id] || [];
-      const todayLogs = logs.filter((log) => isTodayFns(parseISO(log.timestamp)));
-      const maxDoses = getMaxDosesPerDay(medicine.frequency);
-
-      if (medicine.frequency === 'everyHours') {
-        // For everyHours, remove from missed list after giving any dose
-        // (the interval will be checked again at next reminder)
-        setMissedMedicines((prev) => prev.filter((m) => m.id !== medicine.id));
-      } else if (maxDoses !== null && todayLogs.length + 1 >= maxDoses) {
-        // For fixed-dose medicines, remove if all doses given
-        setMissedMedicines((prev) => prev.filter((m) => m.id !== medicine.id));
-      }
-    } catch (error) {
-      console.error('Error logging medicine:', error);
-      toast.error('Failed to log dose');
-    }
-  };
 
   if (babies.length === 0) {
     return <NoBabiesHeader />;
@@ -885,7 +815,6 @@ export function DashboardView() {
         <MedicineReminderModal
           medicines={missedMedicines}
           onDismiss={() => setShowMedicineReminder(false)}
-          onGive={handleGiveMedicine}
         />
       )}
     </div>
@@ -906,11 +835,9 @@ function isToday(timestamp: string): boolean {
 function MedicineReminderModal({
   medicines,
   onDismiss,
-  onGive,
 }: {
   medicines: Medicine[];
   onDismiss: () => void;
-  onGive: (medicine: Medicine) => void;
 }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -933,21 +860,15 @@ function MedicineReminderModal({
             return (
               <div
                 key={medicine.id}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                className="p-3 bg-gray-50 rounded-lg"
               >
-                <div>
-                  <p className="font-medium text-gray-900">{medicine.name}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {medicine.dosage && (
-                      <span className="text-xs text-gray-500">{medicine.dosage}</span>
-                    )}
-                    <span className="text-xs text-gray-400">{freqConfig.label}</span>
-                  </div>
+                <p className="font-medium text-gray-900">{medicine.name}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  {medicine.dosage && (
+                    <span className="text-xs text-gray-500">{medicine.dosage}</span>
+                  )}
+                  <span className="text-xs text-gray-400">{freqConfig.label}</span>
                 </div>
-                <Button size="sm" onClick={() => onGive(medicine)}>
-                  <Check className="w-4 h-4 mr-1" />
-                  Give
-                </Button>
               </div>
             );
           })}
