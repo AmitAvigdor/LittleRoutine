@@ -122,10 +122,10 @@ export function WalksView() {
   const todayTotalWalk = todaySessions.reduce((sum, s) => sum + s.duration, 0);
 
   return (
-    <div>
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       <Header title="Walks" />
 
-      <div className="px-4 py-4 space-y-4">
+      <div className="px-4 py-4 space-y-5">
         {/* Quick Log Card */}
         {!showManual && (
           <Card>

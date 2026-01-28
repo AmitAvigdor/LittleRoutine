@@ -44,8 +44,19 @@ import {
   Circle,
   CheckCircle2,
   Droplets,
+  Sparkles,
 } from 'lucide-react';
 import { clsx } from 'clsx';
+
+// Get greeting based on time of day
+function getGreeting(): { text: string; emoji: string } {
+  const hour = new Date().getHours();
+  if (hour < 6) return { text: 'Good night', emoji: '🌙' };
+  if (hour < 12) return { text: 'Good morning', emoji: '☀️' };
+  if (hour < 17) return { text: 'Good afternoon', emoji: '🌤️' };
+  if (hour < 21) return { text: 'Good evening', emoji: '🌅' };
+  return { text: 'Good night', emoji: '🌙' };
+}
 
 // Format elapsed time for active timers (e.g., "12:34" or "1:23:45")
 function formatElapsedTime(startTime: string, isPaused?: boolean, pausedAt?: string | null, totalPausedDuration?: number): string {
@@ -133,27 +144,27 @@ interface StatusCardProps {
 function StatusCard({ title, icon, iconBg, timeSince, subtitle, urgencyColor, onClick }: StatusCardProps) {
   return (
     <button
-      className="w-full flex items-center gap-3 p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+      className="w-full flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] border border-gray-100"
       onClick={onClick}
     >
       <div
-        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
         style={{ backgroundColor: iconBg }}
       >
         {icon}
       </div>
       <div className="flex-1 min-w-0 text-left">
-        <p className="text-xs text-gray-400">{title}</p>
+        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{title}</p>
         {timeSince ? (
-          <p className={clsx('text-base font-semibold', urgencyColor || 'text-gray-900')}>
+          <p className={clsx('text-lg font-bold', urgencyColor || 'text-gray-900')}>
             {timeSince}
           </p>
         ) : (
-          <p className="text-sm text-gray-400">No data yet</p>
+          <p className="text-sm text-gray-400 italic">No data yet</p>
         )}
-        {subtitle && timeSince && <p className="text-xs text-gray-400 truncate">{subtitle}</p>}
+        {subtitle && timeSince && <p className="text-xs text-gray-500 truncate mt-0.5">{subtitle}</p>}
       </div>
-      <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+      <ChevronRight className="w-5 h-5 text-gray-300 flex-shrink-0" />
     </button>
   );
 }
@@ -169,15 +180,17 @@ function QuickAction({ label, icon, color, onClick }: QuickActionProps) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white shadow-sm border border-gray-100 hover:shadow-md transition-all hover:scale-105 active:scale-95"
+      className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-white shadow-sm border border-gray-100 hover:shadow-lg transition-all hover:scale-105 active:scale-95"
     >
       <div
-        className="w-10 h-10 rounded-lg flex items-center justify-center"
-        style={{ backgroundColor: `${color}15` }}
+        className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm"
+        style={{
+          background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
+        }}
       >
-        <span style={{ color }}>{icon}</span>
+        <span className="text-white">{icon}</span>
       </div>
-      <span className="text-[10px] font-medium text-gray-600">{label}</span>
+      <span className="text-[11px] font-semibold text-gray-700">{label}</span>
     </button>
   );
 }
@@ -196,28 +209,31 @@ function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused,
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-3 p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] w-full"
+      className={clsx(
+        'flex items-center gap-4 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] w-full border',
+        isPaused ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-green-200'
+      )}
     >
       <div
-        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 relative"
+        className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 relative shadow-sm"
         style={{ backgroundColor: iconBg }}
       >
         {icon}
         {/* Pulsing indicator for running timer */}
         {!isPaused && (
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-pulse ring-2 ring-white" />
         )}
         {isPaused && (
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full" />
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full ring-2 ring-white" />
         )}
       </div>
       <div className="flex-1 min-w-0 text-left">
-        <p className="text-sm font-medium text-gray-900">{title}</p>
-        <p className="text-xs text-gray-400">{subtitle}</p>
+        <p className="text-base font-semibold text-gray-900">{title}</p>
+        <p className="text-sm text-gray-500">{subtitle}</p>
       </div>
       <div className="text-right flex-shrink-0">
-        <p className="text-xl font-bold text-gray-900 font-mono">{elapsedTime}</p>
-        {isPaused && <p className="text-xs text-yellow-600 font-medium">Paused</p>}
+        <p className="text-2xl font-bold text-gray-900 font-mono">{elapsedTime}</p>
+        {isPaused && <p className="text-xs text-yellow-600 font-semibold">Paused</p>}
       </div>
     </button>
   );
@@ -237,26 +253,31 @@ function TodoItem({ icon, iconBg, title, subtitle, done, onClick }: TodoItemProp
     <button
       onClick={onClick}
       className={clsx(
-        'flex items-center gap-3 w-full p-3 rounded-xl transition-all',
-        done ? 'bg-gray-50 opacity-60' : 'bg-white shadow-sm hover:shadow-md'
+        'flex items-center gap-4 w-full p-4 rounded-2xl transition-all border',
+        done
+          ? 'bg-green-50/50 border-green-100'
+          : 'bg-white shadow-sm hover:shadow-md border-gray-100'
       )}
     >
       <div
-        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+        className={clsx(
+          'w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm',
+          done && 'opacity-60'
+        )}
         style={{ backgroundColor: iconBg }}
       >
         {icon}
       </div>
       <div className="flex-1 text-left min-w-0">
-        <p className={clsx('font-medium text-sm', done ? 'text-gray-400 line-through' : 'text-gray-900')}>
+        <p className={clsx('font-semibold text-sm', done ? 'text-gray-400 line-through' : 'text-gray-900')}>
           {title}
         </p>
-        <p className="text-xs text-gray-400 truncate">{subtitle}</p>
+        <p className={clsx('text-xs truncate mt-0.5', done ? 'text-gray-400' : 'text-gray-500')}>{subtitle}</p>
       </div>
       {done ? (
-        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+        <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0" />
       ) : (
-        <Circle className="w-5 h-5 text-gray-300 flex-shrink-0" />
+        <Circle className="w-6 h-6 text-gray-300 flex-shrink-0" />
       )}
     </button>
   );
@@ -569,41 +590,57 @@ export function DashboardView() {
   // Count incomplete medicine todos
   const incompleteMedicineTodos = medicineTodos.filter(t => !t.isComplete);
 
+  // Get greeting
+  const greeting = getGreeting();
+
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       <Header title="Home" />
 
       <div className="px-4 py-4 space-y-5">
         {/* Baby Profile Card */}
         {selectedBaby && (
           <div
-            className="rounded-2xl p-4 text-white shadow-lg"
+            className="rounded-3xl p-5 text-white shadow-xl relative overflow-hidden"
             style={{
-              background: `linear-gradient(135deg, ${babyColor} 0%, ${babyColor}dd 100%)`,
+              background: `linear-gradient(135deg, ${babyColor} 0%, ${babyColor}bb 100%)`,
             }}
           >
-            <div className="flex items-center gap-4">
+            {/* Decorative elements */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
+            <Sparkles className="absolute top-4 right-4 w-5 h-5 text-white/40" />
+
+            {/* Greeting */}
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-xl">{greeting.emoji}</span>
+              <span className="text-white/80 font-medium">{greeting.text}!</span>
+            </div>
+
+            <div className="flex items-center gap-4 relative">
               {/* Baby Avatar */}
-              <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-xl font-bold shadow-inner">
-                {selectedBaby.photoUrl ? (
-                  <img
-                    src={selectedBaby.photoUrl}
-                    alt={selectedBaby.name}
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  selectedBaby.name.charAt(0).toUpperCase()
-                )}
+              <div className="relative">
+                <div className="w-20 h-20 rounded-full bg-white/25 flex items-center justify-center shadow-lg ring-4 ring-white/40">
+                  {selectedBaby.photoUrl ? (
+                    <img
+                      src={selectedBaby.photoUrl}
+                      alt={selectedBaby.name}
+                      className="w-[72px] h-[72px] rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-5xl">👶</span>
+                  )}
+                </div>
               </div>
 
               {/* Baby Info */}
               <div className="flex-1">
-                <h2 className="text-xl font-bold">{selectedBaby.name}</h2>
+                <h2 className="text-2xl font-bold tracking-tight">{selectedBaby.name}</h2>
                 {babyAge && (
-                  <p className="text-white/90 text-sm font-medium">{babyAge.text}</p>
+                  <p className="text-white/90 text-sm font-medium mt-1">{babyAge.text}</p>
                 )}
-                <div className="flex items-center gap-1 text-white/70 text-xs mt-1">
-                  <Calendar className="w-3 h-3" />
+                <div className="flex items-center gap-1.5 text-white/70 text-xs mt-2 bg-white/10 rounded-full px-3 py-1 w-fit">
+                  <Calendar className="w-3.5 h-3.5" />
                   <span>
                     {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                   </span>
@@ -616,9 +653,10 @@ export function DashboardView() {
         {/* Active Timers */}
         {activeTimers.length > 0 && (
           <div>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
-              Active Timers
-            </h3>
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <span className="text-base">⏱️</span>
+              <h3 className="text-sm font-bold text-gray-700">Active Timers</h3>
+            </div>
             <div className="space-y-2">
               {activeTimers.map((timer) => (
                 <ActiveTimerCard
@@ -643,7 +681,10 @@ export function DashboardView() {
 
         {/* Quick Actions */}
         <div>
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">Quick Actions</h3>
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <span className="text-base">⚡</span>
+            <h3 className="text-sm font-bold text-gray-700">Quick Actions</h3>
+          </div>
           <div className="grid grid-cols-6 gap-2">
             <QuickAction
               label={settings?.feedingTypePreference === 'formula' ? 'Bottle' : 'Feed'}
@@ -693,12 +734,13 @@ export function DashboardView() {
         {/* Today's To Do */}
         {medicineTodos.length > 0 && (
           <div>
-            <div className="flex items-center justify-between mb-2 px-1">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                Today's To Do
-              </h3>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <div className="flex items-center gap-2">
+                <span className="text-base">✅</span>
+                <h3 className="text-sm font-bold text-gray-700">Today's To Do</h3>
+              </div>
               {incompleteMedicineTodos.length > 0 && (
-                <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full">
                   {incompleteMedicineTodos.length} pending
                 </span>
               )}
@@ -725,7 +767,10 @@ export function DashboardView() {
 
         {/* Status Cards */}
         <div>
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">Status</h3>
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <span className="text-base">📊</span>
+            <h3 className="text-sm font-bold text-gray-700">Status</h3>
+          </div>
           <div className="space-y-2">
             {/* Last Feeding */}
             <StatusCard
@@ -779,18 +824,23 @@ export function DashboardView() {
         </div>
 
         {/* Today's Summary */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Today's Summary</h3>
+        <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-base">📈</span>
+            <h3 className="text-sm font-bold text-gray-700">Today's Summary</h3>
+          </div>
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-pink-50 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-pink-600">
+            <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-2xl p-4 text-center shadow-sm">
+              <span className="text-2xl mb-1 block">🍼</span>
+              <p className="text-3xl font-bold text-pink-600">
                 {feedingSessions.filter((s) => !s.isActive && isToday(s.startTime)).length +
                   bottleSessions.filter((s) => isToday(s.timestamp)).length}
               </p>
-              <p className="text-xs text-pink-600/70 font-medium">Feedings</p>
+              <p className="text-xs text-pink-600/80 font-semibold mt-1">Feedings</p>
             </div>
-            <div className="bg-indigo-50 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-indigo-600">
+            <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-4 text-center shadow-sm">
+              <span className="text-2xl mb-1 block">😴</span>
+              <p className="text-3xl font-bold text-indigo-600">
                 {sleepSessions.filter((s) => {
                   if (s.isActive || !s.endTime) return false;
                   return s.type === 'nap'
@@ -798,16 +848,20 @@ export function DashboardView() {
                     : isToday(s.endTime);
                 }).length}
               </p>
-              <p className="text-xs text-indigo-600/70 font-medium">Sleeps</p>
+              <p className="text-xs text-indigo-600/80 font-semibold mt-1">Sleeps</p>
             </div>
-            <div className="bg-green-50 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-green-600">
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 text-center shadow-sm">
+              <span className="text-2xl mb-1 block">🧷</span>
+              <p className="text-3xl font-bold text-green-600">
                 {diaperChanges.filter((c) => isToday(c.timestamp)).length}
               </p>
-              <p className="text-xs text-green-600/70 font-medium">Diapers</p>
+              <p className="text-xs text-green-600/80 font-semibold mt-1">Diapers</p>
             </div>
           </div>
         </div>
+
+        {/* Bottom spacing */}
+        <div className="h-4" />
       </div>
 
       {/* Medicine Reminder Modal */}
@@ -815,6 +869,10 @@ export function DashboardView() {
         <MedicineReminderModal
           medicines={missedMedicines}
           onDismiss={() => setShowMedicineReminder(false)}
+          onGoToMedicines={() => {
+            setShowMedicineReminder(false);
+            navigate('/more/medicine');
+          }}
         />
       )}
     </div>
@@ -835,49 +893,54 @@ function isToday(timestamp: string): boolean {
 function MedicineReminderModal({
   medicines,
   onDismiss,
+  onGoToMedicines,
 }: {
   medicines: Medicine[];
   onDismiss: () => void;
+  onGoToMedicines: () => void;
 }) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-sm">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-sm rounded-3xl shadow-2xl">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
-            <AlertTriangle className="w-6 h-6 text-amber-600" />
+        <div className="text-center mb-5">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mx-auto mb-3 shadow-sm">
+            <span className="text-3xl">💊</span>
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Medicine Reminder</h3>
-            <p className="text-sm text-gray-500">Don't forget to give:</p>
-          </div>
+          <h3 className="text-xl font-bold text-gray-900">Medicine Reminder</h3>
+          <p className="text-sm text-gray-500 mt-1">Don't forget to give:</p>
         </div>
 
         {/* Medicines list */}
-        <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
+        <div className="space-y-2 mb-5 max-h-60 overflow-y-auto">
           {medicines.map((medicine) => {
             const freqConfig = MEDICATION_FREQUENCY_CONFIG[medicine.frequency];
             return (
               <div
                 key={medicine.id}
-                className="p-3 bg-gray-50 rounded-lg"
+                className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border border-purple-100"
               >
-                <p className="font-medium text-gray-900">{medicine.name}</p>
-                <div className="flex items-center gap-2 mt-0.5">
+                <p className="font-semibold text-gray-900">{medicine.name}</p>
+                <div className="flex items-center gap-2 mt-1">
                   {medicine.dosage && (
-                    <span className="text-xs text-gray-500">{medicine.dosage}</span>
+                    <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">{medicine.dosage}</span>
                   )}
-                  <span className="text-xs text-gray-400">{freqConfig.label}</span>
+                  <span className="text-xs text-gray-500">{freqConfig.label}</span>
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* Dismiss button */}
-        <Button variant="outline" className="w-full" onClick={onDismiss}>
-          Dismiss
-        </Button>
+        {/* Action buttons */}
+        <div className="flex gap-3">
+          <Button variant="outline" className="flex-1 rounded-xl" onClick={onDismiss}>
+            Dismiss
+          </Button>
+          <Button className="flex-1 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600" onClick={onGoToMedicines}>
+            Go to Medicines
+          </Button>
+        </div>
       </Card>
     </div>
   );

@@ -121,10 +121,12 @@ export function Timer({
   };
 
   const sizeClasses = {
-    sm: 'text-3xl',
-    md: 'text-5xl',
+    sm: 'text-4xl',
+    md: 'text-6xl',
     lg: 'text-7xl',
   };
+
+  const themeColor = color || '#9c27b0';
 
   return (
     <div className="flex flex-col items-center">
@@ -134,49 +136,60 @@ export function Timer({
           'timer-display font-bold tracking-tight',
           sizeClasses[size]
         )}
-        style={{ color: color || '#9c27b0' }}
+        style={{ color: themeColor }}
       >
         {formatTime(seconds)}
       </div>
 
+      {/* Status indicator */}
+      {isRunning && (
+        <div className="flex items-center gap-2 mt-3">
+          <span
+            className="w-2 h-2 rounded-full animate-pulse"
+            style={{ backgroundColor: themeColor }}
+          />
+          <span className="text-sm font-medium text-gray-500">Recording</span>
+        </div>
+      )}
+
       {/* Controls */}
       {showControls && (
-        <div className="flex items-center gap-3 mt-6">
+        <div className="flex items-center gap-4 mt-6">
           {!isRunning ? (
-            <Button
+            <button
               onClick={handleStart}
-              className="w-14 h-14 rounded-full p-0"
-              style={{ backgroundColor: color || '#9c27b0' }}
+              className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95"
+              style={{
+                background: `linear-gradient(135deg, ${themeColor} 0%, ${themeColor}cc 100%)`,
+              }}
             >
-              <Play className="w-6 h-6 text-white ml-0.5" />
-            </Button>
+              <Play className="w-7 h-7 text-white ml-1" />
+            </button>
           ) : (
-            <Button
+            <button
               onClick={handlePause}
-              variant="outline"
-              className="w-14 h-14 rounded-full p-0"
+              className="w-16 h-16 rounded-full flex items-center justify-center border-2 bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95"
+              style={{ borderColor: themeColor }}
             >
-              <Pause className="w-6 h-6" />
-            </Button>
+              <Pause className="w-7 h-7" style={{ color: themeColor }} />
+            </button>
           )}
 
           {seconds > 0 && (
             <>
-              <Button
+              <button
                 onClick={handleStop}
-                variant="secondary"
-                className="w-14 h-14 rounded-full p-0"
+                className="w-14 h-14 rounded-full flex items-center justify-center bg-gradient-to-br from-green-500 to-green-600 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95"
               >
                 <Square className="w-5 h-5 text-white" />
-              </Button>
+              </button>
 
-              <Button
+              <button
                 onClick={handleReset}
-                variant="ghost"
-                className="w-14 h-14 rounded-full p-0"
+                className="w-14 h-14 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-all duration-200 hover:scale-105 active:scale-95"
               >
-                <RotateCcw className="w-5 h-5" />
-              </Button>
+                <RotateCcw className="w-5 h-5 text-gray-600" />
+              </button>
             </>
           )}
         </div>
@@ -205,9 +218,9 @@ export function TimeDisplay({ seconds, size = 'md', color }: TimeDisplayProps) {
   };
 
   const sizeClasses = {
-    sm: 'text-2xl',
-    md: 'text-4xl',
-    lg: 'text-6xl',
+    sm: 'text-3xl',
+    md: 'text-5xl',
+    lg: 'text-7xl',
   };
 
   return (
