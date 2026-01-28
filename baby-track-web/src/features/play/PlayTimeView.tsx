@@ -11,7 +11,6 @@ import { PlaySession, PlayType, BabyMood, PLAY_TYPE_CONFIG, formatDuration } fro
 import { createCompletePlaySession, subscribeToPlaySessions } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
-import { toast } from '@/stores/toastStore';
 import { Clock, ChevronDown, ChevronUp } from 'lucide-react';
 
 const playTypeOptions = Object.entries(PLAY_TYPE_CONFIG).map(([value, config]) => ({
@@ -68,10 +67,8 @@ export function PlayTimeView() {
       setBabyMood(null);
       setShowDetails(false);
 
-      toast.success(`${durationMinutes} min ${PLAY_TYPE_CONFIG[savedType].label} logged`);
     } catch (error) {
       console.error('Error saving play session:', error);
-      toast.error('Failed to save session. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -89,7 +86,6 @@ export function PlayTimeView() {
 
     const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (60 * 1000));
     if (durationMinutes <= 0 || durationMinutes > 180) {
-      toast.error('Please enter valid times (max 3 hours).');
       return;
     }
 
@@ -112,10 +108,8 @@ export function PlayTimeView() {
       setBabyMood(null);
       setShowManual(false);
 
-      toast.success(`${formatDuration(durationMinutes * 60)} ${PLAY_TYPE_CONFIG[savedType].label} logged`);
     } catch (error) {
       console.error('Error saving play session:', error);
-      toast.error('Failed to save session. Please try again.');
     } finally {
       setSaving(false);
     }

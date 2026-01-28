@@ -41,7 +41,6 @@ import {
   deleteWalkSession,
 } from '@/lib/firestore';
 import { X, Trash2, AlertTriangle, Moon, Sun, Footprints } from 'lucide-react';
-import { toast } from '@/stores/toastStore';
 
 type SessionType = 'sleep' | 'breastfeeding' | 'pump' | 'bottle' | 'play' | 'walk';
 
@@ -166,19 +165,16 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
   // Helper to validate date/time and check end > start
   const validateTimes = (date: string, startTimeStr: string, endTimeStr: string | null, requireEnd: boolean = true): { startTime: Date; endTime: Date | null } | null => {
     if (!date || !startTimeStr) {
-      toast.error('Please enter a valid date and time.');
       return null;
     }
 
     const startTime = new Date(`${date}T${startTimeStr}`);
     if (isNaN(startTime.getTime())) {
-      toast.error('Invalid start date or time.');
       return null;
     }
 
     if (!endTimeStr) {
       if (requireEnd) {
-        toast.error('Please enter an end time.');
         return null;
       }
       return { startTime, endTime: null };
@@ -186,13 +182,11 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
 
     const endTime = new Date(`${date}T${endTimeStr}`);
     if (isNaN(endTime.getTime())) {
-      toast.error('Invalid end date or time.');
       return null;
     }
 
     // Check if end time is after start time
     if (endTime <= startTime) {
-      toast.error('End time must be after start time.');
       return null;
     }
 
@@ -240,7 +234,6 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
         // Validate volume
         const volume = parseFloat(pumpVolume);
         if (pumpVolume && (isNaN(volume) || volume < 0)) {
-          toast.error('Please enter a valid volume.');
           setSaving(false);
           return;
         }
@@ -255,20 +248,17 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
         });
       } else if (sessionType === 'bottle') {
         if (!bottleDate || !bottleTime) {
-          toast.error('Please enter a valid date and time.');
           setSaving(false);
           return;
         }
         const timestamp = new Date(`${bottleDate}T${bottleTime}`);
         if (isNaN(timestamp.getTime())) {
-          toast.error('Invalid date or time.');
           setSaving(false);
           return;
         }
         // Validate volume
         const volume = parseFloat(bottleVolume);
         if (bottleVolume && (isNaN(volume) || volume < 0)) {
-          toast.error('Please enter a valid volume.');
           setSaving(false);
           return;
         }

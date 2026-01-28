@@ -11,7 +11,6 @@ import type { Medicine, MedicineLog } from '@/types';
 import { MedicationFrequency, MEDICATION_FREQUENCY_CONFIG } from '@/types/enums';
 import { Pill, Plus, X, Clock, Check, History, AlertTriangle } from 'lucide-react';
 import { clsx } from 'clsx';
-import { toast } from '@/stores/toastStore';
 
 // Get max doses per day based on frequency
 function getMaxDosesPerDay(frequency: MedicationFrequency): number | null {
@@ -228,7 +227,6 @@ export function MedicineView() {
     if (frequency === 'everyHours') {
       const parsedInterval = parseInt(hoursInterval);
       if (!hoursInterval || isNaN(parsedInterval) || parsedInterval <= 0) {
-        toast.error('Please enter a valid hours interval (e.g., 4, 6, 8)');
         return;
       }
     }
@@ -272,9 +270,7 @@ export function MedicineView() {
         const hoursLeft = getHoursUntilNextDose(logs, medicine.hoursInterval);
         const hours = Math.floor(hoursLeft);
         const minutes = Math.round((hoursLeft - hours) * 60);
-        toast.error(`Wait ${hours > 0 ? `${hours}h ` : ''}${minutes}m before next dose`);
       } else {
-        toast.error('Maximum doses for today already given');
       }
       return;
     }
@@ -283,10 +279,8 @@ export function MedicineView() {
       await createMedicineLog(medicine.id, selectedBaby.id, user.uid, {
         timestamp: new Date().toISOString(),
       });
-      toast.success(`${medicine.name} dose logged`);
     } catch (error) {
       console.error('Error logging medicine:', error);
-      toast.error('Failed to log dose');
     }
   };
 

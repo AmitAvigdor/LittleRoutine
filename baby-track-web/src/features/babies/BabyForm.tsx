@@ -10,7 +10,6 @@ import { createBaby, updateBaby, deleteBaby, generateShareCode, regenerateShareC
 import { uploadBabyPhoto } from '@/lib/storage';
 import { BabyColor, BABY_COLOR_CONFIG } from '@/types';
 import { clsx } from 'clsx';
-import { toast } from '@/stores/toastStore';
 import { Camera, Trash2, Share2, Copy, RefreshCw, X } from 'lucide-react';
 
 export function BabyForm() {
@@ -115,10 +114,8 @@ export function BabyForm() {
     try {
       const code = await generateShareCode(id);
       setShareCode(code);
-      toast.success('Share code generated');
     } catch (error) {
       console.error('Error generating share code:', error);
-      toast.error('Failed to generate share code');
     } finally {
       setGeneratingCode(false);
     }
@@ -131,10 +128,8 @@ export function BabyForm() {
     try {
       const code = await regenerateShareCode(id);
       setShareCode(code);
-      toast.success('Share code regenerated');
     } catch (error) {
       console.error('Error regenerating share code:', error);
-      toast.error('Failed to regenerate share code');
     } finally {
       setGeneratingCode(false);
     }
@@ -145,9 +140,7 @@ export function BabyForm() {
 
     try {
       await navigator.clipboard.writeText(shareCode);
-      toast.success('Code copied to clipboard');
     } catch (error) {
-      toast.error('Failed to copy code');
     }
   };
 
@@ -157,10 +150,8 @@ export function BabyForm() {
     try {
       await removeSharedUser(id, user.uid, userIdToRemove);
       setSharedWith(prev => prev.filter(uid => uid !== userIdToRemove));
-      toast.success('User removed');
     } catch (error) {
       console.error('Error removing shared user:', error);
-      toast.error('Failed to remove user');
     }
   };
 

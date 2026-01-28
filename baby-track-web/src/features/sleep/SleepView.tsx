@@ -13,7 +13,6 @@ import { SleepSession, SleepType, BabyMood, SLEEP_TYPE_CONFIG, formatSleepDurati
 import { createSleepSession, endSleepSession, createCompleteSleepSession, subscribeToSleepSessions, deleteSleepSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
-import { toast } from '@/stores/toastStore';
 import { Moon, Sun, Clock, Bed, Timer as TimerIcon, Edit3, Trash2, ChevronDown, ChevronUp, X } from 'lucide-react';
 
 type EntryMode = 'timer' | 'manual';
@@ -166,10 +165,8 @@ export function SleepView() {
         setActiveSessionId(null);
         setTimerSeconds(0);
         setIsTimerRunning(false);
-        toast.info('Sleep session discarded');
       } catch (error) {
         console.error('Error discarding sleep session:', error);
-        toast.error('Failed to discard session');
       }
     }
   };
@@ -189,7 +186,6 @@ export function SleepView() {
       setIsTimerRunning(true);
     } catch (error) {
       console.error('Error starting sleep session:', error);
-      toast.error('Failed to start sleep tracking. Please try again.');
     } finally {
       setStarting(false);
     }
@@ -235,10 +231,8 @@ export function SleepView() {
       setShowForm(false);
       setShowDetails(false);
 
-      toast.success(`${formatSleepDuration(savedDuration)} ${savedType} logged`);
     } catch (error) {
       console.error('Error saving sleep session:', error);
-      toast.error('Failed to save sleep session. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -249,13 +243,11 @@ export function SleepView() {
 
     const durationMinutes = parseInt(manualDuration, 10);
     if (isNaN(durationMinutes) || durationMinutes <= 0 || durationMinutes > 720) {
-      toast.error('Please enter a valid duration (1-720 minutes).');
       return;
     }
 
     // Validate date and time inputs
     if (!manualDate || !manualTime) {
-      toast.error('Please enter a valid date and time.');
       return;
     }
 
@@ -263,13 +255,11 @@ export function SleepView() {
 
     // Check if date is valid
     if (isNaN(startTime.getTime())) {
-      toast.error('Invalid date or time. Please check your input.');
       return;
     }
 
     // Check if date is not in the future
     if (startTime > new Date()) {
-      toast.error('Start time cannot be in the future.');
       return;
     }
 
@@ -294,10 +284,8 @@ export function SleepView() {
       setNotes('');
       setBabyMood(null);
 
-      toast.success(`${formatSleepDuration(durationMinutes * 60)} ${savedType} logged`);
     } catch (error) {
       console.error('Error saving sleep session:', error);
-      toast.error('Failed to save sleep session. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -330,7 +318,6 @@ export function SleepView() {
   const handleApplyEdit = () => {
     const durationMinutes = parseInt(editDuration, 10);
     if (isNaN(durationMinutes) || durationMinutes <= 0) {
-      toast.error('Please enter a valid duration');
       return;
     }
     setTimerSeconds(durationMinutes * 60);
@@ -365,10 +352,8 @@ export function SleepView() {
       setBabyMood(null);
       setShowForm(false);
       setShowDetails(false);
-      toast.info('Sleep session discarded');
     } catch (error) {
       console.error('Error discarding sleep session:', error);
-      toast.error('Failed to discard session. Please try again.');
     } finally {
       setSaving(false);
     }

@@ -11,7 +11,6 @@ import { StaleTimerModal, STALE_TIMER_THRESHOLD } from '@/components/ui/StaleTim
 import { Baby, FeedingSession, BreastSide, BabyMood, MomMood, BREAST_SIDE_CONFIG, formatDuration } from '@/types';
 import { createFeedingSession, startFeedingSession, endFeedingSession, subscribeToFeedingSessions, deleteFeedingSession, pauseFeedingSession, resumeFeedingSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
-import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
 import { Clock, Timer as TimerIcon, Edit3, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -176,10 +175,8 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
         setActiveSessionId(null);
         setTimerSeconds(0);
         setIsTimerRunning(false);
-        toast.info('Feeding session discarded');
       } catch (error) {
         console.error('Error discarding feeding session:', error);
-        toast.error('Failed to discard session');
       }
     }
   };
@@ -211,7 +208,6 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
       setShowForm(false);
     } catch (error) {
       console.error('Error starting feeding session:', error);
-      toast.error('Failed to start feeding session. Please try again.');
     } finally {
       setStarting(false);
     }
@@ -243,7 +239,6 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
         setIsPaused(false);
       } catch (error) {
         console.error('Error resuming session:', error);
-        toast.error('Failed to resume session');
       }
     } else {
       setIsTimerRunning(true);
@@ -297,10 +292,8 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
     try {
       await deleteFeedingSession(sessionIdToDelete);
       handleReset();
-      toast.info('Feeding session discarded');
     } catch (error) {
       console.error('Error discarding feeding session:', error);
-      toast.error('Failed to discard session. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -326,7 +319,6 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
   const handleApplyEdit = () => {
     const durationMinutes = parseInt(editDuration, 10);
     if (isNaN(durationMinutes) || durationMinutes <= 0) {
-      toast.error('Please enter a valid duration');
       return;
     }
     setTimerSeconds(durationMinutes * 60);
@@ -365,10 +357,8 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
         );
         handleReset();
 
-        toast.success(`${formatDuration(savedDuration)} ${BREAST_SIDE_CONFIG[savedSide].label} side logged`);
       } catch (error) {
         console.error('Error saving feeding session:', error);
-        toast.error('Failed to save feeding session. Please try again.');
       } finally {
         setSaving(false);
       }
@@ -378,13 +368,11 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
 
       const durationMinutes = parseInt(manualDuration, 10);
       if (isNaN(durationMinutes) || durationMinutes <= 0 || durationMinutes > 120) {
-        toast.error('Please enter a valid duration (1-120 minutes).');
         return;
       }
 
       // Validate date and time inputs
       if (!manualDate || !manualTime) {
-        toast.error('Please enter a valid date and time.');
         return;
       }
 
@@ -392,13 +380,11 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
 
       // Check if date is valid
       if (isNaN(sessionStartTime.getTime())) {
-        toast.error('Invalid date or time. Please check your input.');
         return;
       }
 
       // Check if date is not in the future
       if (sessionStartTime > new Date()) {
-        toast.error('Start time cannot be in the future.');
         return;
       }
 
@@ -417,10 +403,8 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
 
         const savedSide = selectedSide;
         handleReset();
-        toast.success(`${durationMinutes}min ${BREAST_SIDE_CONFIG[savedSide].label} side logged`);
       } catch (error) {
         console.error('Error saving feeding session:', error);
-        toast.error('Failed to save feeding session. Please try again.');
       } finally {
         setSaving(false);
       }
