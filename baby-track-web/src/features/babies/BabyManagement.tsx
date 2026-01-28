@@ -8,6 +8,7 @@ import { useAppStore } from '@/stores/appStore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { joinBabyByShareCode } from '@/lib/firestore';
 import { BABY_COLOR_CONFIG, calculateBabyAge } from '@/types';
+import { toast } from '@/stores/toastStore';
 import { Plus, Edit, Check, UserPlus, Users } from 'lucide-react';
 
 export function BabyManagement() {
@@ -28,11 +29,13 @@ export function BabyManagement() {
     setJoining(true);
     try {
       const baby = await joinBabyByShareCode(user.uid, joinCode);
+      toast.success(`You now have access to ${baby.name}`);
       setShowJoinForm(false);
       setJoinCode('');
       setSelectedBabyId(baby.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to join';
+      toast.error(message);
     } finally {
       setJoining(false);
     }

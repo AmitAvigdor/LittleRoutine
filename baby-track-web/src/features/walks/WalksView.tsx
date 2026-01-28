@@ -10,6 +10,7 @@ import { WalkSession, BabyMood, formatDuration } from '@/types';
 import { createCompleteWalkSession, subscribeToWalkSessions } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
+import { toast } from '@/stores/toastStore';
 import { Clock, Footprints, ChevronDown, ChevronUp } from 'lucide-react';
 
 const WALK_COLOR = '#8bc34a';
@@ -61,8 +62,10 @@ export function WalksView() {
       setShowDetails(false);
 
       const label = durationMinutes >= 60 ? `${durationMinutes / 60}h` : `${durationMinutes} min`;
+      toast.success(`${label} walk logged`);
     } catch (error) {
       console.error('Error saving walk session:', error);
+      toast.error('Failed to save walk. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -80,6 +83,7 @@ export function WalksView() {
 
     const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (60 * 1000));
     if (durationMinutes <= 0 || durationMinutes > 300) {
+      toast.error('Please enter valid times (max 5 hours).');
       return;
     }
 
@@ -99,8 +103,10 @@ export function WalksView() {
       setBabyMood(null);
       setShowManual(false);
 
+      toast.success(`${formatDuration(durationMinutes * 60)} walk logged`);
     } catch (error) {
       console.error('Error saving walk session:', error);
+      toast.error('Failed to save walk. Please try again.');
     } finally {
       setSaving(false);
     }

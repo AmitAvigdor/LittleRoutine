@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/stores/appStore';
 import { updateSettings } from '@/lib/firestore';
 import { VolumeUnit, WeightUnit, LengthUnit, FeedingTypePreference } from '@/types';
+import { toast } from '@/stores/toastStore';
 import {
   isNotificationSupported,
   getNotificationPermission,
@@ -41,12 +42,14 @@ export function SettingsView() {
       setNotificationPermission(result);
 
       if (result !== 'granted') {
+        toast.error('Please enable notifications in your browser settings to use reminders.');
         return;
       }
     }
 
     await handleSettingChange(key, enabled);
     if (enabled) {
+      toast.success('Reminder enabled! You\'ll be notified when it\'s time.');
     }
   };
 
@@ -69,6 +72,7 @@ export function SettingsView() {
       console.error('Error updating settings:', error);
       // Rollback on error
       setSettings({ ...settings, [key]: previousValue });
+      toast.error('Failed to save settings. Please try again.');
     } finally {
       setSaving(false);
     }

@@ -13,6 +13,7 @@ import { MilkStorageLocation } from '@/types/enums';
 import { createPumpSession, startPumpSession, endPumpSession, subscribeToPumpSessions, deletePumpSession, createMilkStash, createBottleSession, pausePumpSession, resumePumpSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
+import { toast } from '@/stores/toastStore';
 import { Clock, Droplet, Timer as TimerIcon, Edit3, Refrigerator, Snowflake, Baby as BabyIcon, X, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 
 type MilkDestination = 'fridge' | 'freezer' | 'use' | null;
@@ -200,8 +201,10 @@ export function PumpView({ baby }: PumpViewProps) {
         setActiveSessionId(null);
         setTimerSeconds(0);
         setIsTimerRunning(false);
+        toast.info('Pump session discarded');
       } catch (error) {
         console.error('Error discarding pump session:', error);
+        toast.error('Failed to discard session');
       }
     }
   };
@@ -223,6 +226,7 @@ export function PumpView({ baby }: PumpViewProps) {
       setShowForm(false);
     } catch (error) {
       console.error('Error starting pump session:', error);
+      toast.error('Failed to start pump session. Please try again.');
     } finally {
       setStarting(false);
     }
@@ -254,6 +258,7 @@ export function PumpView({ baby }: PumpViewProps) {
         setIsPaused(false);
       } catch (error) {
         console.error('Error resuming session:', error);
+        toast.error('Failed to resume session');
       }
     } else {
       setIsTimerRunning(true);
@@ -306,8 +311,10 @@ export function PumpView({ baby }: PumpViewProps) {
     try {
       await deletePumpSession(sessionIdToDelete);
       handleReset();
+      toast.info('Pump session discarded');
     } catch (error) {
       console.error('Error discarding pump session:', error);
+      toast.error('Failed to discard session. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -333,6 +340,7 @@ export function PumpView({ baby }: PumpViewProps) {
   const handleApplyEdit = () => {
     const durationMinutes = parseInt(editDuration, 10);
     if (isNaN(durationMinutes) || durationMinutes <= 0) {
+      toast.error('Please enter a valid duration');
       return;
     }
     setTimerSeconds(durationMinutes * 60);
@@ -345,6 +353,7 @@ export function PumpView({ baby }: PumpViewProps) {
     // Validate volume if provided
     const parsedVolume = parseFloat(volume);
     if (volume && (isNaN(parsedVolume) || parsedVolume < 0)) {
+      toast.error('Please enter a valid volume (0 or greater).');
       return;
     }
     const volumeValue = parsedVolume || 0;
@@ -391,6 +400,7 @@ export function PumpView({ baby }: PumpViewProps) {
         handleReset();
       } catch (error) {
         console.error('Error saving pump session:', error);
+        toast.error('Failed to save pump session. Please try again.');
       } finally {
         setSaving(false);
       }
@@ -400,11 +410,13 @@ export function PumpView({ baby }: PumpViewProps) {
 
       const durationMinutes = parseInt(manualDuration, 10);
       if (isNaN(durationMinutes) || durationMinutes <= 0 || durationMinutes > 120) {
+        toast.error('Please enter a valid duration (1-120 minutes).');
         return;
       }
 
       // Validate date and time inputs
       if (!manualDate || !manualTime) {
+        toast.error('Please enter a valid date and time.');
         return;
       }
 
@@ -412,11 +424,13 @@ export function PumpView({ baby }: PumpViewProps) {
 
       // Check if date is valid
       if (isNaN(sessionStartTime.getTime())) {
+        toast.error('Invalid date or time. Please check your input.');
         return;
       }
 
       // Check if date is not in the future
       if (sessionStartTime > new Date()) {
+        toast.error('Start time cannot be in the future.');
         return;
       }
 
@@ -424,6 +438,7 @@ export function PumpView({ baby }: PumpViewProps) {
       if (volume) {
         const parsedVolume = parseFloat(volume);
         if (isNaN(parsedVolume) || parsedVolume < 0) {
+          toast.error('Please enter a valid volume (0 or greater).');
           return;
         }
       }
@@ -455,6 +470,7 @@ export function PumpView({ baby }: PumpViewProps) {
         handleReset();
       } catch (error) {
         console.error('Error saving pump session:', error);
+        toast.error('Failed to save pump session. Please try again.');
       } finally {
         setSaving(false);
       }
@@ -493,6 +509,7 @@ export function PumpView({ baby }: PumpViewProps) {
       // If destination is null (skip), do nothing
     } catch (error) {
       console.error('Error handling milk destination:', error);
+      toast.error('Failed to save milk destination. Please try again.');
     } finally {
       setShowMilkDestination(false);
       setSavedSessionData(null);

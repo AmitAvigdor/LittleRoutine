@@ -5,6 +5,7 @@ import { ChevronDown, Plus, Baby as BabyIcon, Check, UserPlus } from 'lucide-rea
 import { useAppStore } from '@/stores/appStore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { joinBabyByShareCode } from '@/lib/firestore';
+import { toast } from '@/stores/toastStore';
 import { BABY_COLOR_CONFIG } from '@/types';
 
 interface HeaderProps {
@@ -165,11 +166,13 @@ export function NoBabiesHeader() {
     setJoining(true);
     try {
       const baby = await joinBabyByShareCode(user.uid, joinCode);
+      toast.success(`You now have access to ${baby.name}`);
       setShowJoinForm(false);
       setJoinCode('');
       setSelectedBabyId(baby.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to join';
+      toast.error(message);
     } finally {
       setJoining(false);
     }

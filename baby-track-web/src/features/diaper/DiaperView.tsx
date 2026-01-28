@@ -10,6 +10,7 @@ import { DiaperChange, DiaperType, BabyMood, DIAPER_TYPE_CONFIG } from '@/types'
 import { createDiaperChange, subscribeToDiaperChanges, deleteDiaperChange, updateDiaperChange } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
+import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
 import { Droplet, Circle, Layers, Clock, Check, Edit3, Trash2, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -81,8 +82,10 @@ export function DiaperView() {
         babyMood: null,
       });
 
+      toast.success(`${DIAPER_TYPE_CONFIG[type].label} diaper logged`);
     } catch (error) {
       console.error('Error saving diaper change:', error);
+      toast.error('Failed to save diaper change. Please try again.');
     }
   };
 
@@ -114,6 +117,7 @@ export function DiaperView() {
       saveTimeoutRef.current = window.setTimeout(() => setJustSaved(false), 1500);
     } catch (error) {
       console.error('Error saving diaper change:', error);
+      toast.error('Failed to save diaper change. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -126,11 +130,13 @@ export function DiaperView() {
 
     // Check if date is valid
     if (isNaN(timestamp.getTime())) {
+      toast.error('Invalid date or time. Please check your input.');
       return;
     }
 
     // Check if date is not in the future
     if (timestamp > new Date()) {
+      toast.error('Time cannot be in the future.');
       return;
     }
 
@@ -151,8 +157,10 @@ export function DiaperView() {
       setManualDate(new Date().toISOString().split('T')[0]);
       setManualTime(format(new Date(), 'HH:mm'));
 
+      toast.success(`${DIAPER_TYPE_CONFIG[selectedType].label} diaper logged`);
     } catch (error) {
       console.error('Error saving diaper change:', error);
+      toast.error('Failed to save diaper change. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -184,11 +192,13 @@ export function DiaperView() {
 
     // Check if date is valid
     if (isNaN(timestamp.getTime())) {
+      toast.error('Invalid date or time. Please check your input.');
       return;
     }
 
     // Check if date is not in the future
     if (timestamp > new Date()) {
+      toast.error('Time cannot be in the future.');
       return;
     }
 
@@ -210,8 +220,10 @@ export function DiaperView() {
       setManualDate(new Date().toISOString().split('T')[0]);
       setManualTime(format(new Date(), 'HH:mm'));
 
+      toast.success('Diaper change updated');
     } catch (error) {
       console.error('Error updating diaper change:', error);
+      toast.error('Failed to update diaper change. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -238,8 +250,10 @@ export function DiaperView() {
       setNotes('');
       setBabyMood(null);
       setShowDetails(false);
+      toast.info('Diaper change deleted');
     } catch (error) {
       console.error('Error deleting diaper change:', error);
+      toast.error('Failed to delete diaper change. Please try again.');
     } finally {
       setSaving(false);
     }

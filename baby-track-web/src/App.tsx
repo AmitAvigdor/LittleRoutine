@@ -5,6 +5,7 @@ import { onSnapshotsInSync } from 'firebase/firestore';
 import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { ToastContainer } from '@/components/ui/Toast';
 import { OfflineIndicator } from '@/components/ui/OfflineIndicator';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useAppStore } from '@/stores/appStore';
@@ -160,6 +161,7 @@ export default function App() {
           <ConnectivityMonitor />
           <OfflineIndicator />
           <AppRoutes />
+          <ToastContainer />
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
