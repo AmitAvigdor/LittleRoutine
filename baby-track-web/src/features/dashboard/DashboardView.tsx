@@ -2,8 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { parseISO, differenceInMinutes, isToday as isTodayFns } from 'date-fns';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/stores/appStore';
 import { useAuth } from '@/features/auth/AuthContext';
 import {
@@ -27,7 +25,7 @@ import {
   calculateBabyAge,
 } from '@/types';
 import type { Medicine, MedicineLog } from '@/types';
-import { MedicationFrequency, MEDICATION_FREQUENCY_CONFIG } from '@/types/enums';
+import { MedicationFrequency } from '@/types/enums';
 import {
   Baby,
   Moon,
@@ -282,14 +280,9 @@ export function DashboardView() {
   const [sleepSessions, setSleepSessions] = useState<SleepSession[]>([]);
   const [diaperChanges, setDiaperChanges] = useState<DiaperChange[]>([]);
 
-  // Medicine reminder states
+  // Medicine states
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [medicineLogs, setMedicineLogs] = useState<Record<string, MedicineLog[]>>({});
-  const [logsLoadedFor, setLogsLoadedFor] = useState<Set<string>>(new Set());
-  const [showMedicineReminder, setShowMedicineReminder] = useState(false);
-  const [missedMedicines, setMissedMedicines] = useState<Medicine[]>([]);
-  // Track the date when reminder was last shown (fixes midnight reset bug)
-  const [lastReminderDate, setLastReminderDate] = useState<string | null>(null);
 
   // Subscribe to all data
   useEffect(() => {
@@ -326,61 +319,6 @@ export function DashboardView() {
       unsubscribes.forEach((unsub) => unsub());
     };
   }, [medicines]);
-
-  // Check for missed medicines at 9 PM
-  useEffect(() => {
-    const checkMissedMedicines = () => {
-      const now = new Date();
-      const hour = now.getHours();
-      const todayStr = now.toISOString().split('T')[0];
-
-      // Only show reminder at 9 PM (21:00) or later, and only once per day
-      // Use date comparison instead of session flag (fixes midnight reset bug)
-      if (hour >= 21 && lastReminderDate !== todayStr) {
-        const activeMeds = medicines.filter(m => m.isActive && m.frequency !== 'asNeeded');
-        const missed: Medicine[] = [];
-
-        activeMeds.forEach((medicine) => {
-          const logs = medicineLogs[medicine.id] || [];
-          const todayLogs = logs.filter((log) => isTodayFns(parseISO(log.timestamp)));
-          const maxDoses = getMaxDosesPerDay(medicine.frequency);
-
-          if (maxDoses !== null && todayLogs.length < maxDoses) {
-            missed.push(medicine);
-          } else if (medicine.frequency === 'everyHours' && medicine.hoursInterval) {
-            // For everyHours, check if next dose is overdue
-            // A dose is considered missed if: we have no doses today, OR
-            // the time since last dose exceeds the interval
-            if (todayLogs.length === 0) {
-              missed.push(medicine);
-            } else {
-              // Check if current time exceeds last dose + interval
-              const lastDose = todayLogs[0]; // Sorted newest first
-              const lastDoseTime = new Date(lastDose.timestamp);
-              const hoursSinceLastDose = (now.getTime() - lastDoseTime.getTime()) / (1000 * 60 * 60);
-              if (hoursSinceLastDose >= medicine.hoursInterval) {
-                missed.push(medicine);
-              }
-            }
-          }
-        });
-
-        if (missed.length > 0) {
-          setMissedMedicines(missed);
-          setShowMedicineReminder(true);
-          setLastReminderDate(todayStr);
-        }
-      }
-    };
-
-    // Check immediately on load
-    checkMissedMedicines();
-
-    // Check every minute
-    const interval = setInterval(checkMissedMedicines, 60 * 1000);
-
-    return () => clearInterval(interval);
-  }, [medicines, medicineLogs, lastReminderDate]);
 
   // Update counters - every second when there are active timers, otherwise every minute
   useEffect(() => {
@@ -793,18 +731,6 @@ export function DashboardView() {
         {/* Bottom spacing */}
         <div className="h-4" />
       </div>
-
-      {/* Medicine Reminder Modal */}
-      {showMedicineReminder && missedMedicines.length > 0 && (
-        <MedicineReminderModal
-          medicines={missedMedicines}
-          onDismiss={() => setShowMedicineReminder(false)}
-          onGoToMedicines={() => {
-            setShowMedicineReminder(false);
-            navigate('/more/medicine');
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -817,61 +743,5 @@ function isToday(timestamp: string): boolean {
     date.getDate() === today.getDate() &&
     date.getMonth() === today.getMonth() &&
     date.getFullYear() === today.getFullYear()
-  );
-}
-
-function MedicineReminderModal({
-  medicines,
-  onDismiss,
-  onGoToMedicines,
-}: {
-  medicines: Medicine[];
-  onDismiss: () => void;
-  onGoToMedicines: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-sm rounded-3xl shadow-2xl">
-        {/* Header */}
-        <div className="text-center mb-5">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mx-auto mb-3 shadow-sm">
-            <span className="text-3xl">💊</span>
-          </div>
-          <h3 className="text-xl font-bold text-gray-900">Medicine Reminder</h3>
-          <p className="text-sm text-gray-500 mt-1">Don't forget to give:</p>
-        </div>
-
-        {/* Medicines list */}
-        <div className="space-y-2 mb-5 max-h-60 overflow-y-auto">
-          {medicines.map((medicine) => {
-            const freqConfig = MEDICATION_FREQUENCY_CONFIG[medicine.frequency];
-            return (
-              <div
-                key={medicine.id}
-                className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border border-purple-100"
-              >
-                <p className="font-semibold text-gray-900">{medicine.name}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  {medicine.dosage && (
-                    <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">{medicine.dosage}</span>
-                  )}
-                  <span className="text-xs text-gray-500">{freqConfig.label}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex gap-3">
-          <Button variant="outline" className="flex-1 rounded-xl" onClick={onDismiss}>
-            Dismiss
-          </Button>
-          <Button className="flex-1 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600" onClick={onGoToMedicines}>
-            Go to Medicines
-          </Button>
-        </div>
-      </Card>
-    </div>
   );
 }
