@@ -13,6 +13,7 @@ interface HeaderProps {
   showBabySwitcher?: boolean;
   rightAction?: React.ReactNode;
   gradient?: boolean;
+  subtitle?: string;
 }
 
 export function Header({
@@ -20,6 +21,7 @@ export function Header({
   showBabySwitcher = true,
   rightAction,
   gradient = false,
+  subtitle,
 }: HeaderProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const { selectedBaby, babies, setSelectedBabyId } = useAppStore();
@@ -72,6 +74,14 @@ export function Header({
                   {selectedBaby.name.charAt(0).toUpperCase()}
                 </div>
                 <span className="max-w-[80px] truncate">{selectedBaby.name}</span>
+                {subtitle && (
+                  <span className={clsx(
+                    'text-xs',
+                    gradient ? 'text-white/70' : 'text-gray-400'
+                  )}>
+                    ({subtitle})
+                  </span>
+                )}
                 <ChevronDown className="w-4 h-4" />
               </button>
 

@@ -24,7 +24,6 @@ import {
   BREAST_SIDE_CONFIG,
   DIAPER_TYPE_CONFIG,
   SLEEP_TYPE_CONFIG,
-  BABY_COLOR_CONFIG,
   calculateBabyAge,
 } from '@/types';
 import type { Medicine, MedicineLog } from '@/types';
@@ -35,6 +34,7 @@ import {
   Leaf,
   Milk,
   Sun,
+  ChevronRight,
   Gamepad2,
   Footprints,
   Pill,
@@ -43,16 +43,6 @@ import {
   Droplets,
 } from 'lucide-react';
 import { clsx } from 'clsx';
-
-// Get greeting based on time of day
-function getGreeting(): { text: string; emoji: string } {
-  const hour = new Date().getHours();
-  if (hour < 6) return { text: 'Good night', emoji: '🌙' };
-  if (hour < 12) return { text: 'Good morning', emoji: '☀️' };
-  if (hour < 17) return { text: 'Good afternoon', emoji: '🌤️' };
-  if (hour < 21) return { text: 'Good evening', emoji: '🌅' };
-  return { text: 'Good night', emoji: '🌙' };
-}
 
 // Format elapsed time for active timers (e.g., "12:34" or "1:23:45")
 function formatElapsedTime(startTime: string, isPaused?: boolean, pausedAt?: string | null, totalPausedDuration?: number): string {
@@ -140,25 +130,27 @@ interface StatusCardProps {
 function StatusCard({ title, icon, iconBg, timeSince, subtitle, urgencyColor, onClick }: StatusCardProps) {
   return (
     <button
-      className="flex-1 flex items-center gap-2 p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] border border-gray-100"
+      className="w-full flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] border border-gray-100"
       onClick={onClick}
     >
       <div
-        className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
         style={{ backgroundColor: iconBg }}
       >
         {icon}
       </div>
       <div className="flex-1 min-w-0 text-left">
-        <p className="text-[10px] font-medium text-gray-400 uppercase">{title}</p>
+        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{title}</p>
         {timeSince ? (
-          <p className={clsx('text-sm font-bold', urgencyColor || 'text-gray-900')}>
+          <p className={clsx('text-lg font-bold', urgencyColor || 'text-gray-900')}>
             {timeSince}
           </p>
         ) : (
-          <p className="text-xs text-gray-400">--</p>
+          <p className="text-sm text-gray-400 italic">No data yet</p>
         )}
+        {subtitle && timeSince && <p className="text-xs text-gray-500 truncate mt-0.5">{subtitle}</p>}
       </div>
+      <ChevronRight className="w-5 h-5 text-gray-300 flex-shrink-0" />
     </button>
   );
 }
@@ -174,17 +166,17 @@ function QuickAction({ label, icon, color, onClick }: QuickActionProps) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white shadow-sm border border-gray-100 hover:shadow-md transition-all hover:scale-105 active:scale-95"
+      className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-white shadow-sm border border-gray-100 hover:shadow-lg transition-all hover:scale-105 active:scale-95"
     >
       <div
-        className="w-10 h-10 rounded-lg flex items-center justify-center"
+        className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm"
         style={{
           background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
         }}
       >
         <span className="text-white">{icon}</span>
       </div>
-      <span className="text-[10px] font-semibold text-gray-600">{label}</span>
+      <span className="text-[11px] font-semibold text-gray-700">{label}</span>
     </button>
   );
 }
@@ -204,24 +196,31 @@ function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused,
     <button
       onClick={onClick}
       className={clsx(
-        'flex items-center gap-3 p-3 rounded-xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] w-full border',
+        'flex items-center gap-4 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] w-full border',
         isPaused ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-green-200'
       )}
     >
       <div
-        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 relative"
+        className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 relative shadow-sm"
         style={{ backgroundColor: iconBg }}
       >
         {icon}
+        {/* Pulsing indicator for running timer */}
         {!isPaused && (
-          <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full animate-pulse ring-2 ring-white" />
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-pulse ring-2 ring-white" />
+        )}
+        {isPaused && (
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full ring-2 ring-white" />
         )}
       </div>
       <div className="flex-1 min-w-0 text-left">
-        <p className="text-sm font-semibold text-gray-900">{title}</p>
-        <p className="text-xs text-gray-500">{subtitle}</p>
+        <p className="text-base font-semibold text-gray-900">{title}</p>
+        <p className="text-sm text-gray-500">{subtitle}</p>
       </div>
-      <p className="text-xl font-bold text-gray-900 font-mono">{elapsedTime}</p>
+      <div className="text-right flex-shrink-0">
+        <p className="text-2xl font-bold text-gray-900 font-mono">{elapsedTime}</p>
+        {isPaused && <p className="text-xs text-yellow-600 font-semibold">Paused</p>}
+      </div>
     </button>
   );
 }
@@ -240,7 +239,7 @@ function TodoItem({ icon, iconBg, title, subtitle, done, onClick }: TodoItemProp
     <button
       onClick={onClick}
       className={clsx(
-        'flex items-center gap-3 w-full p-3 rounded-xl transition-all border',
+        'flex items-center gap-4 w-full p-4 rounded-2xl transition-all border',
         done
           ? 'bg-green-50/50 border-green-100'
           : 'bg-white shadow-sm hover:shadow-md border-gray-100'
@@ -248,7 +247,7 @@ function TodoItem({ icon, iconBg, title, subtitle, done, onClick }: TodoItemProp
     >
       <div
         className={clsx(
-          'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
+          'w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm',
           done && 'opacity-60'
         )}
         style={{ backgroundColor: iconBg }}
@@ -256,15 +255,15 @@ function TodoItem({ icon, iconBg, title, subtitle, done, onClick }: TodoItemProp
         {icon}
       </div>
       <div className="flex-1 text-left min-w-0">
-        <p className={clsx('font-semibold text-xs', done ? 'text-gray-400 line-through' : 'text-gray-900')}>
+        <p className={clsx('font-semibold text-sm', done ? 'text-gray-400 line-through' : 'text-gray-900')}>
           {title}
         </p>
-        <p className={clsx('text-[10px] truncate', done ? 'text-gray-400' : 'text-gray-500')}>{subtitle}</p>
+        <p className={clsx('text-xs truncate mt-0.5', done ? 'text-gray-400' : 'text-gray-500')}>{subtitle}</p>
       </div>
       {done ? (
-        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+        <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0" />
       ) : (
-        <Circle className="w-5 h-5 text-gray-300 flex-shrink-0" />
+        <Circle className="w-6 h-6 text-gray-300 flex-shrink-0" />
       )}
     </button>
   );
@@ -572,88 +571,51 @@ export function DashboardView() {
 
   // Calculate baby's age
   const babyAge = selectedBaby?.birthDate ? calculateBabyAge(selectedBaby.birthDate) : null;
-  const babyColor = selectedBaby?.color ? BABY_COLOR_CONFIG[selectedBaby.color]?.hex : '#9c27b0';
 
   // Count incomplete medicine todos
   const incompleteMedicineTodos = medicineTodos.filter(t => !t.isComplete);
 
-  // Get greeting
-  const greeting = getGreeting();
-
-  // Today's counts
-  const todayFeedingCount = feedingSessions.filter((s) => !s.isActive && isToday(s.startTime)).length +
-    bottleSessions.filter((s) => isToday(s.timestamp)).length;
-  const todaySleepCount = sleepSessions.filter((s) => {
-    if (s.isActive || !s.endTime) return false;
-    return s.type === 'nap' ? isToday(s.startTime) : isToday(s.endTime);
-  }).length;
-  const todayDiaperCount = diaperChanges.filter((c) => isToday(c.timestamp)).length;
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-      <Header title="Home" />
+      <Header title="Home" subtitle={babyAge?.text} />
 
-      <div className="px-3 py-3 space-y-3">
-        {/* Compact Baby Card */}
-        {selectedBaby && (
-          <div
-            className="rounded-2xl px-4 py-3 text-white shadow-lg flex items-center gap-3"
-            style={{
-              background: `linear-gradient(135deg, ${babyColor} 0%, ${babyColor}cc 100%)`,
-            }}
-          >
-            <div className="w-12 h-12 rounded-full bg-white/25 flex items-center justify-center ring-2 ring-white/30 flex-shrink-0">
-              {selectedBaby.photoUrl ? (
-                <img
-                  src={selectedBaby.photoUrl}
-                  alt={selectedBaby.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-              ) : (
-                <span className="text-2xl">👶</span>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold truncate">{selectedBaby.name}</h2>
-                <span className="text-white/60 text-sm">{greeting.emoji}</span>
-              </div>
-              {babyAge && (
-                <p className="text-white/80 text-xs">{babyAge.text}</p>
-              )}
-            </div>
-            <div className="text-right text-white/70 text-[10px] leading-tight">
-              <div>{new Date().toLocaleDateString('en-US', { weekday: 'short' })}</div>
-              <div>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-            </div>
-          </div>
-        )}
-
+      <div className="px-4 py-4 space-y-5">
         {/* Active Timers */}
         {activeTimers.length > 0 && (
-          <div className="space-y-2">
-            {activeTimers.map((timer) => (
-              <ActiveTimerCard
-                key={timer.id}
-                icon={timer.icon}
-                iconBg={timer.iconBg}
-                title={timer.title}
-                subtitle={timer.subtitle}
-                elapsedTime={formatElapsedTime(
-                  timer.startTime,
-                  timer.isPaused,
-                  timer.pausedAt,
-                  timer.totalPausedDuration
-                )}
-                isPaused={timer.isPaused}
-                onClick={() => navigate(timer.route)}
-              />
-            ))}
+          <div>
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <span className="text-base">⏱️</span>
+              <h3 className="text-sm font-bold text-gray-700">Active Timers</h3>
+            </div>
+            <div className="space-y-2">
+              {activeTimers.map((timer) => (
+                <ActiveTimerCard
+                  key={timer.id}
+                  icon={timer.icon}
+                  iconBg={timer.iconBg}
+                  title={timer.title}
+                  subtitle={timer.subtitle}
+                  elapsedTime={formatElapsedTime(
+                    timer.startTime,
+                    timer.isPaused,
+                    timer.pausedAt,
+                    timer.totalPausedDuration
+                  )}
+                  isPaused={timer.isPaused}
+                  onClick={() => navigate(timer.route)}
+                />
+              ))}
+            </div>
           </div>
         )}
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-6 gap-1.5">
+        <div>
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <span className="text-base">⚡</span>
+            <h3 className="text-sm font-bold text-gray-700">Quick Actions</h3>
+          </div>
+          <div className="grid grid-cols-6 gap-2">
             <QuickAction
               label={settings?.feedingTypePreference === 'formula' ? 'Bottle' : 'Feed'}
               icon={
@@ -696,98 +658,140 @@ export function DashboardView() {
               color="#8bc34a"
               onClick={() => navigate('/more/walks')}
             />
+          </div>
         </div>
 
-        {/* Today's To Do - compact horizontal */}
+        {/* Today's To Do */}
         {medicineTodos.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {medicineTodos.map((todo) => (
-              <TodoItem
-                key={todo.id}
-                icon={<Pill className="w-4 h-4 text-white" />}
-                iconBg="#9c27b0"
-                title={todo.medicine.name}
-                subtitle={
-                  todo.maxDoses
-                    ? `${todo.dosesGiven}/${todo.maxDoses}`
-                    : `${todo.dosesGiven}x`
-                }
-                done={todo.isComplete}
-                onClick={() => navigate('/more/medicine')}
-              />
-            ))}
+          <div>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <div className="flex items-center gap-2">
+                <span className="text-base">✅</span>
+                <h3 className="text-sm font-bold text-gray-700">Today's To Do</h3>
+              </div>
+              {incompleteMedicineTodos.length > 0 && (
+                <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full">
+                  {incompleteMedicineTodos.length} pending
+                </span>
+              )}
+            </div>
+            <div className="space-y-2">
+              {medicineTodos.map((todo) => (
+                <TodoItem
+                  key={todo.id}
+                  icon={<Pill className="w-5 h-5 text-white" />}
+                  iconBg="#9c27b0"
+                  title={todo.medicine.name}
+                  subtitle={
+                    todo.maxDoses
+                      ? `${todo.dosesGiven}/${todo.maxDoses} doses given`
+                      : `${todo.dosesGiven} doses given`
+                  }
+                  done={todo.isComplete}
+                  onClick={() => navigate('/more/medicine')}
+                />
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Status Row - horizontal */}
-        <div className="flex gap-2">
-          <StatusCard
-            title="Feed"
-            icon={
-              lastFeeding?.type === 'bottle' ? (
-                <Milk className="w-4 h-4 text-white" />
-              ) : (
-                <Baby className="w-4 h-4 text-white" />
-              )
-            }
-            iconBg="#e91e63"
-            timeSince={lastFeeding ? formatTimeSince(lastFeeding.timestamp) : null}
-            urgencyColor={lastFeeding ? getUrgencyColor(lastFeeding.timestamp, 120, 180) : undefined}
-            onClick={() => navigate('/feed')}
-          />
-          <StatusCard
-            title={sleepStatus?.isAsleep ? 'Sleep' : 'Awake'}
-            icon={
-              sleepStatus?.isAsleep ? (
-                <Moon className="w-4 h-4 text-white" />
-              ) : (
-                <Sun className="w-4 h-4 text-white" />
-              )
-            }
-            iconBg={sleepStatus?.isAsleep ? '#3f51b5' : '#ff9800'}
-            timeSince={sleepStatus ? formatTimeSince(sleepStatus.timestamp) : null}
-            urgencyColor={
-              sleepStatus && !sleepStatus.isAsleep
-                ? getUrgencyColor(sleepStatus.timestamp, 120, 180)
-                : undefined
-            }
-            onClick={() => navigate('/sleep')}
-          />
+        {/* Status Cards */}
+        <div>
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <span className="text-base">📊</span>
+            <h3 className="text-sm font-bold text-gray-700">Status</h3>
+          </div>
+          <div className="space-y-2">
+            {/* Last Feeding */}
+            <StatusCard
+              title="Last Feeding"
+              icon={
+                lastFeeding?.type === 'bottle' ? (
+                  <Milk className="w-5 h-5 text-white" />
+                ) : (
+                  <Baby className="w-5 h-5 text-white" />
+                )
+              }
+              iconBg="#e91e63"
+              timeSince={lastFeeding ? formatTimeSince(lastFeeding.timestamp) : null}
+              subtitle={lastFeeding?.details}
+              urgencyColor={lastFeeding ? getUrgencyColor(lastFeeding.timestamp, 120, 180) : undefined}
+              onClick={() => navigate('/feed')}
+            />
 
-          <StatusCard
-            title="Diaper"
-            icon={<Leaf className="w-4 h-4 text-white" />}
-            iconBg="#4caf50"
-            timeSince={lastDiaper ? formatTimeSince(lastDiaper.timestamp) : null}
-            urgencyColor={lastDiaper ? getUrgencyColor(lastDiaper.timestamp, 120, 180) : undefined}
-            onClick={() => navigate('/diaper')}
-          />
+            {/* Sleep Status */}
+            <StatusCard
+              title={sleepStatus?.isAsleep ? 'Sleeping' : 'Last Woke Up'}
+              icon={
+                sleepStatus?.isAsleep ? (
+                  <Moon className="w-5 h-5 text-white" />
+                ) : (
+                  <Sun className="w-5 h-5 text-white" />
+                )
+              }
+              iconBg={sleepStatus?.isAsleep ? '#3f51b5' : '#ff9800'}
+              timeSince={sleepStatus ? formatTimeSince(sleepStatus.timestamp) : null}
+              subtitle={sleepStatus?.details}
+              urgencyColor={
+                sleepStatus && !sleepStatus.isAsleep
+                  ? getUrgencyColor(sleepStatus.timestamp, 120, 180)
+                  : undefined
+              }
+              onClick={() => navigate('/sleep')}
+            />
+
+            {/* Last Diaper */}
+            <StatusCard
+              title="Last Diaper"
+              icon={<Leaf className="w-5 h-5 text-white" />}
+              iconBg="#4caf50"
+              timeSince={lastDiaper ? formatTimeSince(lastDiaper.timestamp) : null}
+              subtitle={lastDiaper?.details}
+              urgencyColor={lastDiaper ? getUrgencyColor(lastDiaper.timestamp, 120, 180) : undefined}
+              onClick={() => navigate('/diaper')}
+            />
+          </div>
         </div>
 
-        {/* Today's Summary - compact row */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => navigate('/feed')}
-            className="flex-1 bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl p-3 text-center border border-pink-100 hover:shadow-md transition-all active:scale-95"
-          >
-            <p className="text-2xl font-bold text-pink-600">{todayFeedingCount}</p>
-            <p className="text-[10px] text-pink-600/80 font-semibold">Feeds</p>
-          </button>
-          <button
-            onClick={() => navigate('/sleep')}
-            className="flex-1 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-3 text-center border border-indigo-100 hover:shadow-md transition-all active:scale-95"
-          >
-            <p className="text-2xl font-bold text-indigo-600">{todaySleepCount}</p>
-            <p className="text-[10px] text-indigo-600/80 font-semibold">Sleeps</p>
-          </button>
-          <button
-            onClick={() => navigate('/diaper')}
-            className="flex-1 bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-3 text-center border border-green-100 hover:shadow-md transition-all active:scale-95"
-          >
-            <p className="text-2xl font-bold text-green-600">{todayDiaperCount}</p>
-            <p className="text-[10px] text-green-600/80 font-semibold">Diapers</p>
-          </button>
+        {/* Today's Summary */}
+        <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-base">📈</span>
+            <h3 className="text-sm font-bold text-gray-700">Today's Summary</h3>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-2xl p-4 text-center shadow-sm">
+              <span className="text-2xl mb-1 block">🍼</span>
+              <p className="text-3xl font-bold text-pink-600">
+                {feedingSessions.filter((s) => !s.isActive && isToday(s.startTime)).length +
+                  bottleSessions.filter((s) => isToday(s.timestamp)).length}
+              </p>
+              <p className="text-xs text-pink-600/80 font-semibold mt-1">Feedings</p>
+            </div>
+            <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-4 text-center shadow-sm">
+              <span className="text-2xl mb-1 block">😴</span>
+              <p className="text-3xl font-bold text-indigo-600">
+                {sleepSessions.filter((s) => {
+                  if (s.isActive || !s.endTime) return false;
+                  return s.type === 'nap'
+                    ? isToday(s.startTime)
+                    : isToday(s.endTime);
+                }).length}
+              </p>
+              <p className="text-xs text-indigo-600/80 font-semibold mt-1">Sleeps</p>
+            </div>
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 text-center shadow-sm">
+              <span className="text-2xl mb-1 block">🧷</span>
+              <p className="text-3xl font-bold text-green-600">
+                {diaperChanges.filter((c) => isToday(c.timestamp)).length}
+              </p>
+              <p className="text-xs text-green-600/80 font-semibold mt-1">Diapers</p>
+            </div>
+          </div>
         </div>
+
+        {/* Bottom spacing */}
+        <div className="h-4" />
       </div>
 
       {/* Medicine Reminder Modal */}
