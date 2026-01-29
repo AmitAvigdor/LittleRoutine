@@ -12,6 +12,7 @@ import {
   subscribeToDiaperChanges,
   subscribeToMedicines,
   subscribeToMedicineLogs,
+  subscribeToMilkStash,
 } from '@/lib/firestore';
 import {
   FeedingSession,
@@ -19,10 +20,12 @@ import {
   BottleSession,
   SleepSession,
   DiaperChange,
+  MilkStash,
   BREAST_SIDE_CONFIG,
   DIAPER_TYPE_CONFIG,
   SLEEP_TYPE_CONFIG,
   calculateBabyAge,
+  getRoomTempExpirationMinutes,
 } from '@/types';
 import type { Medicine, MedicineLog } from '@/types';
 import { MedicationFrequency } from '@/types/enums';
@@ -39,8 +42,23 @@ import {
   Circle,
   CheckCircle2,
   Droplets,
+  Briefcase,
 } from 'lucide-react';
 import { clsx } from 'clsx';
+
+// Format remaining time for countdown timers (e.g., "3:45:00" for 3h 45m remaining)
+function formatRemainingTime(minutesRemaining: number): string {
+  if (minutesRemaining <= 0) return '0:00';
+
+  const hours = Math.floor(minutesRemaining / 60);
+  const minutes = Math.floor(minutesRemaining % 60);
+  const seconds = Math.floor((minutesRemaining * 60) % 60);
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
 
 // Format elapsed time for active timers (e.g., "12:34" or "1:23:45")
 function formatElapsedTime(startTime: string, isPaused?: boolean, pausedAt?: string | null, totalPausedDuration?: number): string {
@@ -186,16 +204,21 @@ interface ActiveTimerCardProps {
   subtitle: string;
   elapsedTime: string;
   isPaused?: boolean;
+  isCountdown?: boolean;
+  isExpiringSoon?: boolean;
   onClick: () => void;
 }
 
-function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused, onClick }: ActiveTimerCardProps) {
+function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused, isCountdown, isExpiringSoon, onClick }: ActiveTimerCardProps) {
   return (
     <button
       onClick={onClick}
       className={clsx(
         'flex items-center gap-4 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] w-full border',
-        isPaused ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-green-200'
+        isPaused ? 'bg-yellow-50 border-yellow-200' :
+        isCountdown && isExpiringSoon ? 'bg-red-50 border-red-200' :
+        isCountdown ? 'bg-orange-50 border-orange-200' :
+        'bg-white border-green-200'
       )}
     >
       <div
@@ -203,11 +226,17 @@ function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused,
         style={{ backgroundColor: iconBg }}
       >
         {icon}
-        {/* Pulsing indicator for running timer */}
-        {!isPaused && (
+        {/* Indicator based on state */}
+        {isCountdown && isExpiringSoon && (
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full animate-pulse ring-2 ring-white" />
+        )}
+        {isCountdown && !isExpiringSoon && (
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full ring-2 ring-white" />
+        )}
+        {!isCountdown && !isPaused && (
           <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-pulse ring-2 ring-white" />
         )}
-        {isPaused && (
+        {!isCountdown && isPaused && (
           <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full ring-2 ring-white" />
         )}
       </div>
@@ -216,8 +245,15 @@ function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused,
         <p className="text-sm text-gray-500">{subtitle}</p>
       </div>
       <div className="text-right flex-shrink-0">
-        <p className="text-2xl font-bold text-gray-900 font-mono">{elapsedTime}</p>
+        <p className={clsx(
+          'text-2xl font-bold font-mono',
+          isCountdown && isExpiringSoon ? 'text-red-600' :
+          isCountdown ? 'text-orange-600' :
+          'text-gray-900'
+        )}>{elapsedTime}</p>
         {isPaused && <p className="text-xs text-yellow-600 font-semibold">Paused</p>}
+        {isCountdown && !isExpiringSoon && <p className="text-xs text-orange-600 font-semibold">Time left</p>}
+        {isCountdown && isExpiringSoon && <p className="text-xs text-red-600 font-semibold">Expiring!</p>}
       </div>
     </button>
   );
@@ -279,6 +315,7 @@ export function DashboardView() {
   const [bottleSessions, setBottleSessions] = useState<BottleSession[]>([]);
   const [sleepSessions, setSleepSessions] = useState<SleepSession[]>([]);
   const [diaperChanges, setDiaperChanges] = useState<DiaperChange[]>([]);
+  const [milkStash, setMilkStash] = useState<MilkStash[]>([]);
 
   // Medicine states
   const [medicines, setMedicines] = useState<Medicine[]>([]);
@@ -299,6 +336,14 @@ export function DashboardView() {
 
     return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
   }, [selectedBaby]);
+
+  // Subscribe to milk stash (user-based, not baby-based)
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubscribe = subscribeToMilkStash(user.uid, setMilkStash);
+    return () => unsubscribe();
+  }, [user]);
 
   // Subscribe to logs for all active medicines
   useEffect(() => {
@@ -325,7 +370,8 @@ export function DashboardView() {
     const hasActiveTimers =
       feedingSessions.some(s => s.isActive) ||
       pumpSessions.some(s => s.isActive) ||
-      sleepSessions.some(s => s.isActive);
+      sleepSessions.some(s => s.isActive) ||
+      milkStash.some(s => s.isInUse);
 
     const intervalMs = hasActiveTimers ? 1000 : 60000; // 1 second or 1 minute
 
@@ -334,13 +380,13 @@ export function DashboardView() {
     }, intervalMs);
 
     return () => clearInterval(interval);
-  }, [feedingSessions, pumpSessions, sleepSessions]);
+  }, [feedingSessions, pumpSessions, sleepSessions, milkStash]);
 
   // Get all active timers
   const activeTimers = useMemo(() => {
     const timers: {
       id: string;
-      type: 'feeding' | 'pump' | 'sleep';
+      type: 'feeding' | 'pump' | 'sleep' | 'milk';
       title: string;
       subtitle: string;
       startTime: string;
@@ -350,6 +396,8 @@ export function DashboardView() {
       icon: React.ReactNode;
       iconBg: string;
       route: string;
+      isCountdown?: boolean;
+      minutesRemaining?: number;
     }[] = [];
 
     // Active breastfeeding
@@ -400,11 +448,28 @@ export function DashboardView() {
       });
     });
 
+    // Milk on the go (countdown timer)
+    milkStash.filter(s => s.isInUse && s.inUseStartDate).forEach(s => {
+      const minutesRemaining = getRoomTempExpirationMinutes(s.inUseStartDate!);
+      timers.push({
+        id: s.id,
+        type: 'milk',
+        title: 'Milk On The Go',
+        subtitle: minutesRemaining <= 0 ? 'Expired!' : `${s.volume} ${s.volumeUnit} remaining`,
+        startTime: s.inUseStartDate!,
+        icon: <Briefcase className="w-6 h-6 text-white" />,
+        iconBg: minutesRemaining <= 30 ? '#f44336' : '#ff9800', // Red if expiring soon, orange otherwise
+        route: '/more/milkstash',
+        isCountdown: true,
+        minutesRemaining,
+      });
+    });
+
     // Sort by start time (oldest first - they've been running longest)
     timers.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
     return timers;
-  }, [feedingSessions, pumpSessions, sleepSessions]);
+  }, [feedingSessions, pumpSessions, sleepSessions, milkStash]);
 
   // Get last feeding info (breastfeeding, bottle, or pump)
   const lastFeeding = useMemo(() => {
@@ -533,13 +598,18 @@ export function DashboardView() {
                   iconBg={timer.iconBg}
                   title={timer.title}
                   subtitle={timer.subtitle}
-                  elapsedTime={formatElapsedTime(
-                    timer.startTime,
-                    timer.isPaused,
-                    timer.pausedAt,
-                    timer.totalPausedDuration
-                  )}
+                  elapsedTime={timer.isCountdown
+                    ? formatRemainingTime(timer.minutesRemaining ?? 0)
+                    : formatElapsedTime(
+                        timer.startTime,
+                        timer.isPaused,
+                        timer.pausedAt,
+                        timer.totalPausedDuration
+                      )
+                  }
                   isPaused={timer.isPaused}
+                  isCountdown={timer.isCountdown}
+                  isExpiringSoon={timer.isCountdown && (timer.minutesRemaining ?? 0) <= 30}
                   onClick={() => navigate(timer.route)}
                 />
               ))}
