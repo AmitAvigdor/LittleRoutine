@@ -43,6 +43,7 @@ const STORAGE_KEYS = {
   DIAPER_LAST_ACTIVITY: 'notification_diaper_activity',
   MEDICINE_NOTIFIED_TODAY: 'notification_medicine_today',
   MEDICINE_NOTIFIED_DATE: 'notification_medicine_date',
+  MILK_EXPIRY_NOTIFIED: 'notification_milk_expiry_notified',
 };
 
 export function getLastFeedingNotification(): string | null {
@@ -110,4 +111,26 @@ export function clearFeedingNotificationTracking(): void {
 
 export function clearDiaperNotificationTracking(): void {
   localStorage.removeItem(STORAGE_KEYS.DIAPER_LAST_NOTIFIED);
+}
+
+export function getMilkExpiryNotified(): Set<string> {
+  const stored = localStorage.getItem(STORAGE_KEYS.MILK_EXPIRY_NOTIFIED);
+  if (!stored) return new Set();
+  try {
+    return new Set(JSON.parse(stored));
+  } catch {
+    return new Set();
+  }
+}
+
+export function markMilkExpiryNotified(milkStashId: string): void {
+  const notified = getMilkExpiryNotified();
+  notified.add(milkStashId);
+  localStorage.setItem(STORAGE_KEYS.MILK_EXPIRY_NOTIFIED, JSON.stringify([...notified]));
+}
+
+export function clearMilkExpiryNotified(milkStashId: string): void {
+  const notified = getMilkExpiryNotified();
+  notified.delete(milkStashId);
+  localStorage.setItem(STORAGE_KEYS.MILK_EXPIRY_NOTIFIED, JSON.stringify([...notified]));
 }

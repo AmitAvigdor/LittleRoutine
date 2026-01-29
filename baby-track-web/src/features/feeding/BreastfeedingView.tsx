@@ -9,7 +9,7 @@ import { BabyMoodSelector, MomMoodSelector, MoodIndicator } from '@/components/u
 import { EditSessionModal } from '@/components/ui/EditSessionModal';
 import { StaleTimerModal, STALE_TIMER_THRESHOLD } from '@/components/ui/StaleTimerModal';
 import { Baby, FeedingSession, BreastSide, BabyMood, MomMood, BREAST_SIDE_CONFIG, formatDuration } from '@/types';
-import { createFeedingSession, startFeedingSession, endFeedingSession, subscribeToFeedingSessions, deleteFeedingSession, pauseFeedingSession, resumeFeedingSession } from '@/lib/firestore';
+import { createFeedingSession, startFeedingSession, endFeedingSession, updateFeedingSession, subscribeToFeedingSessions, deleteFeedingSession, pauseFeedingSession, resumeFeedingSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
@@ -57,6 +57,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
   const [showEditBeforeSave, setShowEditBeforeSave] = useState(false);
   const [editStartTime, setEditStartTime] = useState('');
   const [editDuration, setEditDuration] = useState('');
+  const [editedStartTime, setEditedStartTime] = useState<string | null>(null); // Stores the edited start time ISO string
 
   // Stale timer modal state
   const [showStaleModal, setShowStaleModal] = useState(false);
@@ -267,6 +268,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
     setNotes('');
     setBabyMood(null);
     setMomMood(null);
+    setEditedStartTime(null);
     // Reset manual entry fields
     setManualDate(new Date().toISOString().split('T')[0]);
     setManualTime(format(new Date(), 'HH:mm'));
@@ -329,6 +331,17 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
       toast.error('Please enter a valid duration');
       return;
     }
+    // Validate and store the edited start time
+    const parsedStartTime = new Date(editStartTime);
+    if (isNaN(parsedStartTime.getTime())) {
+      toast.error('Please enter a valid start time');
+      return;
+    }
+    if (parsedStartTime > new Date()) {
+      toast.error('Start time cannot be in the future');
+      return;
+    }
+    setEditedStartTime(parsedStartTime.toISOString());
     setTimerSeconds(durationMinutes * 60);
     setShowEditBeforeSave(false);
   };
@@ -356,13 +369,28 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
 
       setSaving(true);
       try {
-        await endFeedingSession(
-          sessionIdToSave,
-          new Date().toISOString(),
-          notes || null,
-          babyMood,
-          momMood
-        );
+        if (editedStartTime) {
+          // User edited the session - use updateFeedingSession with the edited times
+          const startTime = new Date(editedStartTime);
+          const endTime = new Date(startTime.getTime() + timerSeconds * 1000);
+          await updateFeedingSession(sessionIdToSave, {
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+            breastSide: selectedSide,
+            notes: notes || null,
+            babyMood,
+            momMood,
+          });
+        } else {
+          // Normal save - use endFeedingSession
+          await endFeedingSession(
+            sessionIdToSave,
+            new Date().toISOString(),
+            notes || null,
+            babyMood,
+            momMood
+          );
+        }
         handleReset();
 
         toast.success(`${formatDuration(savedDuration)} ${BREAST_SIDE_CONFIG[savedSide].label} side logged`);

@@ -16,6 +16,8 @@ import {
   markMedicineNotified,
   clearFeedingNotificationTracking,
   clearDiaperNotificationTracking,
+  getMilkExpiryNotified,
+  markMilkExpiryNotified,
 } from '@/lib/notifications';
 import {
   subscribeToDiaperChanges,
@@ -23,18 +25,21 @@ import {
   subscribeToBottleSessions,
   subscribeToMedicines,
   subscribeToMedicineLogs,
+  subscribeToMilkStash,
 } from '@/lib/firestore';
-import type { FeedingSession, BottleSession, DiaperChange, Medicine, MedicineLog } from '@/types';
+import type { FeedingSession, BottleSession, DiaperChange, Medicine, MedicineLog, MilkStash } from '@/types';
+import { getRoomTempExpirationMinutes } from '@/types/feeding';
 
 const CHECK_INTERVAL_MS = 60 * 1000; // Check every 60 seconds
 
 export function useNotifications() {
-  const { settings, selectedBaby } = useAppStore();
+  const { settings, selectedBaby, userId } = useAppStore();
   const feedingSessionsRef = useRef<FeedingSession[]>([]);
   const bottleSessionsRef = useRef<BottleSession[]>([]);
   const diaperChangesRef = useRef<DiaperChange[]>([]);
   const medicinesRef = useRef<Medicine[]>([]);
   const medicineLogsRef = useRef<MedicineLog[]>([]);
+  const milkStashRef = useRef<MilkStash[]>([]);
 
   // Get most recent feeding time across all types
   const getMostRecentFeedingTime = useCallback((): string | null => {
@@ -251,6 +256,40 @@ export function useNotifications() {
     }
   }, [settings, selectedBaby]);
 
+  // Check milk expiry reminder (for milk "on the go" / at room temperature)
+  const checkMilkExpiryReminder = useCallback(() => {
+    if (getNotificationPermission() !== 'granted') return;
+    if (settings && shouldSuppressNotifications(settings)) return;
+
+    const notified = getMilkExpiryNotified();
+
+    // Check milk items that are "in use" (at room temperature)
+    for (const milk of milkStashRef.current) {
+      if (!milk.isInUse || !milk.inUseStartDate) continue;
+      if (notified.has(milk.id)) continue;
+
+      const minutesRemaining = getRoomTempExpirationMinutes(milk.inUseStartDate);
+
+      // Notify when 30 minutes or less remaining
+      if (minutesRemaining <= 30 && minutesRemaining > 0) {
+        showNotification('Milk expiring soon!', {
+          body: `Your milk on the go expires in ${minutesRemaining} minutes. Use it or store it!`,
+          tag: `milk-expiry-${milk.id}`,
+        });
+        markMilkExpiryNotified(milk.id);
+      }
+
+      // Notify when expired
+      if (minutesRemaining <= 0) {
+        showNotification('Milk has expired!', {
+          body: 'Your milk on the go has been at room temperature for over 4 hours and should be discarded.',
+          tag: `milk-expiry-${milk.id}`,
+        });
+        markMilkExpiryNotified(milk.id);
+      }
+    }
+  }, [settings]);
+
   // Subscribe to data
   useEffect(() => {
     if (!selectedBaby) return;
@@ -297,6 +336,17 @@ export function useNotifications() {
     };
   }, [selectedBaby]);
 
+  // Subscribe to milk stash (user-based, not baby-based)
+  useEffect(() => {
+    if (!userId) return;
+
+    const unsubscribe = subscribeToMilkStash(userId, (stash) => {
+      milkStashRef.current = stash;
+    });
+
+    return () => unsubscribe();
+  }, [userId]);
+
   // Set up interval to check reminders
   useEffect(() => {
     // Initial check after a short delay
@@ -304,6 +354,7 @@ export function useNotifications() {
       checkFeedingReminder();
       checkDiaperReminder();
       checkMedicineReminders();
+      checkMilkExpiryReminder();
     }, 5000);
 
     // Regular interval checks
@@ -311,11 +362,12 @@ export function useNotifications() {
       checkFeedingReminder();
       checkDiaperReminder();
       checkMedicineReminders();
+      checkMilkExpiryReminder();
     }, CHECK_INTERVAL_MS);
 
     return () => {
       clearTimeout(initialTimeout);
       clearInterval(interval);
     };
-  }, [checkFeedingReminder, checkDiaperReminder, checkMedicineReminders]);
+  }, [checkFeedingReminder, checkDiaperReminder, checkMedicineReminders, checkMilkExpiryReminder]);
 }

@@ -1343,6 +1343,8 @@ export async function updateSleepSession(
     ...updates,
     date: startTime.toISOString().split('T')[0],
     duration,
+    // Mark session as inactive if endTime is provided
+    ...(updates.endTime && { isActive: false }),
     updatedAt: new Date().toISOString(),
   });
 }
@@ -1373,6 +1375,8 @@ export async function updateFeedingSession(
     ...updates,
     date: startTime.toISOString().split('T')[0],
     duration,
+    // Mark session as inactive if endTime is provided
+    ...(updates.endTime && { isActive: false }),
     updatedAt: new Date().toISOString(),
   });
 }
@@ -1404,6 +1408,8 @@ export async function updatePumpSession(
     ...updates,
     date: startTime.toISOString().split('T')[0],
     duration,
+    // Mark session as inactive if endTime is provided
+    ...(updates.endTime && { isActive: false }),
     updatedAt: new Date().toISOString(),
   });
 }

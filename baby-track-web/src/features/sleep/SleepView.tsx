@@ -11,7 +11,7 @@ import { BabyMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
 import { EditSessionModal } from '@/components/ui/EditSessionModal';
 import { StaleTimerModal, STALE_TIMER_THRESHOLD } from '@/components/ui/StaleTimerModal';
 import { SleepSession, SleepType, BabyMood, SLEEP_TYPE_CONFIG, formatSleepDuration } from '@/types';
-import { createSleepSession, endSleepSession, createCompleteSleepSession, subscribeToSleepSessions, deleteSleepSession } from '@/lib/firestore';
+import { createSleepSession, endSleepSession, updateSleepSession, createCompleteSleepSession, subscribeToSleepSessions, deleteSleepSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
@@ -55,6 +55,7 @@ export function SleepView() {
   const [showEditBeforeSave, setShowEditBeforeSave] = useState(false);
   const [editStartTime, setEditStartTime] = useState('');
   const [editDuration, setEditDuration] = useState('');
+  const [editedStartTime, setEditedStartTime] = useState<string | null>(null); // Stores the edited start time ISO string
 
   // Stale timer modal state
   const [showStaleModal, setShowStaleModal] = useState(false);
@@ -217,12 +218,26 @@ export function SleepView() {
 
     setSaving(true);
     try {
-      await endSleepSession(
-        sessionIdToSave,
-        new Date().toISOString(),
-        notes || null,
-        babyMood
-      );
+      if (editedStartTime) {
+        // User edited the session - use updateSleepSession with the edited times
+        const startTime = new Date(editedStartTime);
+        const endTime = new Date(startTime.getTime() + timerSeconds * 1000);
+        await updateSleepSession(sessionIdToSave, {
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          type: sleepType,
+          notes: notes || null,
+          babyMood,
+        });
+      } else {
+        // Normal save - use endSleepSession
+        await endSleepSession(
+          sessionIdToSave,
+          new Date().toISOString(),
+          notes || null,
+          babyMood
+        );
+      }
 
       // Reset only on success
       setActiveSessionId(null);
@@ -231,6 +246,7 @@ export function SleepView() {
       setBabyMood(null);
       setShowForm(false);
       setShowDetails(false);
+      setEditedStartTime(null);
 
       toast.success(`${formatSleepDuration(savedDuration)} ${savedType} logged`);
     } catch (error) {
@@ -330,6 +346,17 @@ export function SleepView() {
       toast.error('Please enter a valid duration');
       return;
     }
+    // Validate and store the edited start time
+    const parsedStartTime = new Date(editStartTime);
+    if (isNaN(parsedStartTime.getTime())) {
+      toast.error('Please enter a valid start time');
+      return;
+    }
+    if (parsedStartTime > new Date()) {
+      toast.error('Start time cannot be in the future');
+      return;
+    }
+    setEditedStartTime(parsedStartTime.toISOString());
     setTimerSeconds(durationMinutes * 60);
     setShowEditBeforeSave(false);
   };
@@ -350,6 +377,7 @@ export function SleepView() {
       setBabyMood(null);
       setShowForm(false);
       setShowDetails(false);
+      setEditedStartTime(null);
       return;
     }
 
@@ -362,6 +390,7 @@ export function SleepView() {
       setBabyMood(null);
       setShowForm(false);
       setShowDetails(false);
+      setEditedStartTime(null);
       toast.info('Sleep session discarded');
     } catch (error) {
       console.error('Error discarding sleep session:', error);

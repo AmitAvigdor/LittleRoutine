@@ -11,13 +11,13 @@ import { EditSessionModal } from '@/components/ui/EditSessionModal';
 import { StaleTimerModal, STALE_TIMER_THRESHOLD } from '@/components/ui/StaleTimerModal';
 import { Baby, PumpSession, PumpSide, MomMood, VolumeUnit, PUMP_SIDE_CONFIG, formatDuration, convertVolume } from '@/types';
 import { MilkStorageLocation } from '@/types/enums';
-import { createPumpSession, startPumpSession, endPumpSession, subscribeToPumpSessions, deletePumpSession, createMilkStash, createBottleSession, pausePumpSession, resumePumpSession } from '@/lib/firestore';
+import { createPumpSession, startPumpSession, endPumpSession, updatePumpSession, subscribeToPumpSessions, deletePumpSession, createMilkStash, markMilkStashInUse, createBottleSession, pausePumpSession, resumePumpSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
-import { Clock, Droplet, Timer as TimerIcon, Edit3, Refrigerator, Snowflake, Baby as BabyIcon, X, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, Droplet, Timer as TimerIcon, Edit3, Refrigerator, Snowflake, Baby as BabyIcon, X, Trash2, ChevronDown, ChevronUp, Briefcase } from 'lucide-react';
 
-type MilkDestination = 'fridge' | 'freezer' | 'use' | null;
+type MilkDestination = 'fridge' | 'freezer' | 'use' | 'takeWithMe' | null;
 
 type EntryMode = 'timer' | 'manual';
 
@@ -65,6 +65,7 @@ export function PumpView({ baby }: PumpViewProps) {
   const [showEditBeforeSave, setShowEditBeforeSave] = useState(false);
   const [editStartTime, setEditStartTime] = useState('');
   const [editDuration, setEditDuration] = useState('');
+  const [editedStartTime, setEditedStartTime] = useState<string | null>(null); // Stores the edited start time ISO string
 
   // Edit modal state
   const [selectedSession, setSelectedSession] = useState<PumpSession | null>(null);
@@ -276,6 +277,7 @@ export function PumpView({ baby }: PumpViewProps) {
     setVolume('');
     setNotes('');
     setMomMood(null);
+    setEditedStartTime(null);
     // Reset manual entry fields
     setManualDate(new Date().toISOString().split('T')[0]);
     setManualTime(format(new Date(), 'HH:mm'));
@@ -338,6 +340,17 @@ export function PumpView({ baby }: PumpViewProps) {
       toast.error('Please enter a valid duration');
       return;
     }
+    // Validate and store the edited start time
+    const parsedStartTime = new Date(editStartTime);
+    if (isNaN(parsedStartTime.getTime())) {
+      toast.error('Please enter a valid start time');
+      return;
+    }
+    if (parsedStartTime > new Date()) {
+      toast.error('Start time cannot be in the future');
+      return;
+    }
+    setEditedStartTime(parsedStartTime.toISOString());
     setTimerSeconds(durationMinutes * 60);
     setShowEditBeforeSave(false);
   };
@@ -371,16 +384,32 @@ export function PumpView({ baby }: PumpViewProps) {
       try {
         // Get the active session to get the start time for milk destination
         const activeSession = sessions.find((s) => s.id === sessionIdToSave);
-        const pumpedDate = activeSession?.startTime || new Date().toISOString();
+        const pumpedDate = editedStartTime || activeSession?.startTime || new Date().toISOString();
 
-        await endPumpSession(
-          sessionIdToSave,
-          new Date().toISOString(),
-          volumeValue,
-          volumeUnit,
-          notes || null,
-          momMood
-        );
+        if (editedStartTime) {
+          // User edited the session - use updatePumpSession with the edited times
+          const startTime = new Date(editedStartTime);
+          const endTime = new Date(startTime.getTime() + timerSeconds * 1000);
+          await updatePumpSession(sessionIdToSave, {
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+            side: selectedSide,
+            volume: volumeValue,
+            volumeUnit,
+            notes: notes || null,
+            momMood,
+          });
+        } else {
+          // Normal save - use endPumpSession
+          await endPumpSession(
+            sessionIdToSave,
+            new Date().toISOString(),
+            volumeValue,
+            volumeUnit,
+            notes || null,
+            momMood
+          );
+        }
 
         // If there's volume, show milk destination dialog
         if (volumeValue > 0) {
@@ -490,6 +519,17 @@ export function PumpView({ baby }: PumpViewProps) {
           pumpedDate: savedSessionData.pumpedDate,
           notes: null,
         });
+      } else if (destination === 'takeWithMe') {
+        // Create milk stash entry and immediately mark as "in use" (starts 4-hour room temp countdown)
+        const stashId = await createMilkStash(user.uid, {
+          volume: savedSessionData.volume,
+          volumeUnit: savedSessionData.volumeUnit,
+          location: 'fridge', // Store as fridge location but mark in use
+          pumpedDate: savedSessionData.pumpedDate,
+          notes: 'On the go',
+        });
+        await markMilkStashInUse(stashId, true);
+        toast.success('4-hour countdown started! Check Milk Stash for timer.');
       } else if (destination === 'use') {
         // Create bottle feeding session with the pumped milk
         await createBottleSession(baby.id, user.uid, {
@@ -848,6 +888,19 @@ export function PumpView({ baby }: PumpViewProps) {
                 <div className="text-left">
                   <p className="font-medium">Use Now</p>
                   <p className="text-xs text-gray-500">Log as bottle feeding</p>
+                </div>
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-3"
+                onClick={() => handleMilkDestination('takeWithMe')}
+              >
+                <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                  <Briefcase className="w-5 h-5 text-orange-600" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium">Take With Me</p>
+                  <p className="text-xs text-gray-500">Start 4-hour countdown</p>
                 </div>
               </Button>
               <Button
