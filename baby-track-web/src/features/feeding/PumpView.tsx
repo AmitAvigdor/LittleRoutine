@@ -65,6 +65,7 @@ export function PumpView({ baby }: PumpViewProps) {
   const [showEditBeforeSave, setShowEditBeforeSave] = useState(false);
   const [editStartTime, setEditStartTime] = useState('');
   const [editDuration, setEditDuration] = useState('');
+  const [originalDurationSeconds, setOriginalDurationSeconds] = useState(0); // Preserve exact seconds
   const [editedStartTime, setEditedStartTime] = useState<string | null>(null); // Stores the edited start time ISO string
 
   // Edit modal state
@@ -144,19 +145,18 @@ export function PumpView({ baby }: PumpViewProps) {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [sessions, showForm, calculateElapsedTime]);
 
-  // Check for stale timer (5+ hours)
+  // Check for stale timer (5+ hours) - uses calculateElapsedTime to account for pause duration
   useEffect(() => {
     if (staleModalDismissedRef.current || showForm || showStaleModal) return;
 
     const activeSession = sessions.find((s) => s.isActive);
     if (activeSession) {
-      const startTime = new Date(activeSession.startTime);
-      const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+      const elapsed = calculateElapsedTime(activeSession);
       if (elapsed >= STALE_TIMER_THRESHOLD) {
         setShowStaleModal(true);
       }
     }
-  }, [sessions, showForm, showStaleModal]);
+  }, [sessions, showForm, showStaleModal, calculateElapsedTime]);
 
   // Also check when app becomes visible
   useEffect(() => {
@@ -164,8 +164,7 @@ export function PumpView({ baby }: PumpViewProps) {
       if (document.visibilityState === 'visible' && !staleModalDismissedRef.current && !showForm) {
         const activeSession = sessions.find((s) => s.isActive);
         if (activeSession) {
-          const startTime = new Date(activeSession.startTime);
-          const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+          const elapsed = calculateElapsedTime(activeSession);
           if (elapsed >= STALE_TIMER_THRESHOLD) {
             setShowStaleModal(true);
           }
@@ -175,7 +174,7 @@ export function PumpView({ baby }: PumpViewProps) {
 
     document.addEventListener('visibilitychange', checkStaleOnVisibility);
     return () => document.removeEventListener('visibilitychange', checkStaleOnVisibility);
-  }, [sessions, showForm]);
+  }, [sessions, showForm, calculateElapsedTime]);
 
   const handleStaleTimerContinue = () => {
     staleModalDismissedRef.current = true;
@@ -329,6 +328,7 @@ export function PumpView({ baby }: PumpViewProps) {
       const startDate = new Date(Date.now() - timerSeconds * 1000);
       setEditStartTime(format(startDate, "yyyy-MM-dd'T'HH:mm"));
     }
+    setOriginalDurationSeconds(timerSeconds); // Preserve exact seconds
     setEditDuration(Math.floor(timerSeconds / 60).toString());
     setShowEditBeforeSave(true);
   };
@@ -351,7 +351,13 @@ export function PumpView({ baby }: PumpViewProps) {
       return;
     }
     setEditedStartTime(parsedStartTime.toISOString());
-    setTimerSeconds(durationMinutes * 60);
+    // Only update timerSeconds if duration was actually changed
+    // Compare with original rounded minutes to detect user edits
+    const originalMinutes = Math.floor(originalDurationSeconds / 60);
+    if (durationMinutes !== originalMinutes) {
+      setTimerSeconds(durationMinutes * 60);
+    }
+    // If duration wasn't changed, keep the original seconds for precision
     setShowEditBeforeSave(false);
   };
 

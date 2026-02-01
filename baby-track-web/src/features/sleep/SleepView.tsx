@@ -55,6 +55,7 @@ export function SleepView() {
   const [showEditBeforeSave, setShowEditBeforeSave] = useState(false);
   const [editStartTime, setEditStartTime] = useState('');
   const [editDuration, setEditDuration] = useState('');
+  const [originalDurationSeconds, setOriginalDurationSeconds] = useState(0); // Preserve exact seconds
   const [editedStartTime, setEditedStartTime] = useState<string | null>(null); // Stores the edited start time ISO string
 
   // Stale timer modal state
@@ -335,6 +336,7 @@ export function SleepView() {
       const startDate = new Date(Date.now() - timerSeconds * 1000);
       setEditStartTime(format(startDate, "yyyy-MM-dd'T'HH:mm"));
     }
+    setOriginalDurationSeconds(timerSeconds); // Preserve exact seconds
     setEditDuration(Math.floor(timerSeconds / 60).toString());
     setShowEditBeforeSave(true);
   };
@@ -357,7 +359,13 @@ export function SleepView() {
       return;
     }
     setEditedStartTime(parsedStartTime.toISOString());
-    setTimerSeconds(durationMinutes * 60);
+    // Only update timerSeconds if duration was actually changed
+    // Compare with original rounded minutes to detect user edits
+    const originalMinutes = Math.floor(originalDurationSeconds / 60);
+    if (durationMinutes !== originalMinutes) {
+      setTimerSeconds(durationMinutes * 60);
+    }
+    // If duration wasn't changed, keep the original seconds for precision
     setShowEditBeforeSave(false);
   };
 

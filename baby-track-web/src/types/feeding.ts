@@ -149,7 +149,7 @@ export function calculateMilkExpiration(pumpedDate: string, location: MilkStorag
 export function getRoomTempExpirationMinutes(inUseStartDate: string): number {
   const start = new Date(inUseStartDate);
   const now = new Date();
-  const elapsedMinutes = Math.floor((now.getTime() - start.getTime()) / (1000 * 60));
+  const elapsedMinutes = (now.getTime() - start.getTime()) / (1000 * 60);
   return Math.max(0, 240 - elapsedMinutes); // 4 hours = 240 minutes
 }
 

@@ -22,6 +22,15 @@ import { useAppStore } from '@/stores/appStore';
 function markPendingWrite() {
   useAppStore.getState().setPendingWrites(true);
 }
+
+// Helper to get local date string (YYYY-MM-DD) from a Date object
+// This ensures dates are stored in local timezone, not UTC
+function getLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 import type {
   Baby, CreateBabyInput, UpdateBabyInput,
   FeedingSession, CreateFeedingSessionInput,
@@ -384,7 +393,7 @@ export async function startFeedingSession(
     breastSide: input.breastSide,
     startTime: input.startTime,
     endTime: null,
-    date: startTime.toISOString().split('T')[0],
+    date: getLocalDateString(startTime),
     duration: 0,
     isActive: true,
     // Pause state
@@ -448,7 +457,8 @@ export async function endFeedingSession(
   const session = convertTimestamps(docSnap.data());
   const startTime = new Date(session.startTime);
   const end = new Date(endTime);
-  const duration = Math.max(0, Math.floor((end.getTime() - startTime.getTime()) / 1000));
+  const totalPausedDuration = session.totalPausedDuration || 0;
+  const duration = Math.max(0, Math.floor((end.getTime() - startTime.getTime()) / 1000) - totalPausedDuration);
 
   await updateDoc(doc(db, 'feedingSessions', sessionId), {
     endTime,
@@ -476,7 +486,7 @@ export async function createFeedingSession(
     ...input,
     babyId,
     userId,
-    date: startTime.toISOString().split('T')[0],
+    date: getLocalDateString(startTime),
     duration,
     isActive: false,
     createdAt: now,
@@ -521,7 +531,7 @@ export async function startPumpSession(
     side: input.side,
     startTime: input.startTime,
     endTime: null,
-    date: startTime.toISOString().split('T')[0],
+    date: getLocalDateString(startTime),
     duration: 0,
     volume: 0,
     volumeUnit: input.volumeUnit,
@@ -585,7 +595,8 @@ export async function endPumpSession(
   const session = convertTimestamps(docSnap.data());
   const startTime = new Date(session.startTime);
   const end = new Date(endTime);
-  const duration = Math.max(0, Math.floor((end.getTime() - startTime.getTime()) / 1000));
+  const totalPausedDuration = session.totalPausedDuration || 0;
+  const duration = Math.max(0, Math.floor((end.getTime() - startTime.getTime()) / 1000) - totalPausedDuration);
 
   await updateDoc(doc(db, 'pumpSessions', sessionId), {
     endTime,
@@ -614,7 +625,7 @@ export async function createPumpSession(
     ...input,
     babyId,
     userId,
-    date: startTime.toISOString().split('T')[0],
+    date: getLocalDateString(startTime),
     duration,
     isActive: false,
     createdAt: now,
@@ -650,7 +661,7 @@ export async function createBottleSession(
     ...input,
     babyId,
     userId,
-    date: timestamp.toISOString().split('T')[0],
+    date: getLocalDateString(timestamp),
     createdAt: now,
     updatedAt: now,
   });
@@ -673,13 +684,14 @@ export function subscribeToBottleSessions(
 
 // ============ MILK STASH ============
 export async function createMilkStash(userId: string, input: CreateMilkStashInput): Promise<string> {
+  markPendingWrite();
   const now = new Date().toISOString();
   const expirationDate = calculateMilkExpiration(input.pumpedDate, input.location);
 
   const docRef = await addDoc(collection(db, 'milkStash'), {
     ...input,
     userId,
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalDateString(new Date()),
     expirationDate,
     isUsed: false,
     usedDate: null,
@@ -753,7 +765,7 @@ export async function createSleepSession(
     ...input,
     babyId,
     userId,
-    date: startTime.toISOString().split('T')[0],
+    date: getLocalDateString(startTime),
     duration: 0,
     endTime: null,
     isActive: true,
@@ -786,7 +798,7 @@ export async function createCompleteSleepSession(
     startTime: input.startTime,
     endTime: input.endTime,
     type: input.type,
-    date: startTime.toISOString().split('T')[0],
+    date: getLocalDateString(startTime),
     duration,
     isActive: false,
     notes: input.notes || null,
@@ -851,7 +863,7 @@ export async function createDiaperChange(
     ...input,
     babyId,
     userId,
-    date: timestamp.toISOString().split('T')[0],
+    date: getLocalDateString(timestamp),
     createdAt: now,
     updatedAt: now,
   });
@@ -1341,7 +1353,7 @@ export async function updateSleepSession(
 
   await updateDoc(doc(db, 'sleepSessions', sessionId), {
     ...updates,
-    date: startTime.toISOString().split('T')[0],
+    date: getLocalDateString(startTime),
     duration,
     // Mark session as inactive if endTime is provided
     ...(updates.endTime && { isActive: false }),
@@ -1373,7 +1385,7 @@ export async function updateFeedingSession(
 
   await updateDoc(doc(db, 'feedingSessions', sessionId), {
     ...updates,
-    date: startTime.toISOString().split('T')[0],
+    date: getLocalDateString(startTime),
     duration,
     // Mark session as inactive if endTime is provided
     ...(updates.endTime && { isActive: false }),
@@ -1406,7 +1418,7 @@ export async function updatePumpSession(
 
   await updateDoc(doc(db, 'pumpSessions', sessionId), {
     ...updates,
-    date: startTime.toISOString().split('T')[0],
+    date: getLocalDateString(startTime),
     duration,
     // Mark session as inactive if endTime is provided
     ...(updates.endTime && { isActive: false }),
@@ -1427,7 +1439,7 @@ export async function updateBottleSession(
   }
 ): Promise<void> {
   const timestamp = updates.timestamp ? new Date(updates.timestamp) : undefined;
-  const dateUpdate = timestamp ? { date: timestamp.toISOString().split('T')[0] } : {};
+  const dateUpdate = timestamp ? { date: getLocalDateString(timestamp) } : {};
 
   await updateDoc(doc(db, 'bottleSessions', sessionId), {
     ...updates,

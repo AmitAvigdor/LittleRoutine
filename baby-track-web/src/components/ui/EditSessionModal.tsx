@@ -109,8 +109,9 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
       const s = session as SleepSession;
       setSleepType(s.type);
       setBabyMood(s.babyMood);
-      setSleepDate(s.startTime.split('T')[0]);
-      setSleepStartTime(format(parseISO(s.startTime), 'HH:mm'));
+      const startDate = parseISO(s.startTime);
+      setSleepDate(format(startDate, 'yyyy-MM-dd'));
+      setSleepStartTime(format(startDate, 'HH:mm'));
       if (s.endTime) {
         setSleepEndTime(format(parseISO(s.endTime), 'HH:mm'));
       }
@@ -119,8 +120,9 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
       setBreastSide(s.breastSide);
       setBabyMood(s.babyMood);
       setMomMood(s.momMood);
-      setFeedingDate(s.startTime.split('T')[0]);
-      setFeedingStartTime(format(parseISO(s.startTime), 'HH:mm'));
+      const startDate = parseISO(s.startTime);
+      setFeedingDate(format(startDate, 'yyyy-MM-dd'));
+      setFeedingStartTime(format(startDate, 'HH:mm'));
       if (s.endTime) {
         setFeedingEndTime(format(parseISO(s.endTime), 'HH:mm'));
       }
@@ -128,8 +130,9 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
       const s = session as PumpSession;
       setPumpSide(s.side);
       setMomMood(s.momMood);
-      setPumpDate(s.startTime.split('T')[0]);
-      setPumpStartTime(format(parseISO(s.startTime), 'HH:mm'));
+      const startDate = parseISO(s.startTime);
+      setPumpDate(format(startDate, 'yyyy-MM-dd'));
+      setPumpStartTime(format(startDate, 'HH:mm'));
       if (s.endTime) {
         setPumpEndTime(format(parseISO(s.endTime), 'HH:mm'));
       }
@@ -138,8 +141,9 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
     } else if (sessionType === 'bottle') {
       const s = session as BottleSession;
       setBabyMood(s.babyMood);
-      setBottleDate(s.timestamp.split('T')[0]);
-      setBottleTime(format(parseISO(s.timestamp), 'HH:mm'));
+      const timestamp = parseISO(s.timestamp);
+      setBottleDate(format(timestamp, 'yyyy-MM-dd'));
+      setBottleTime(format(timestamp, 'HH:mm'));
       setBottleVolume(s.volume.toString());
       setBottleVolumeUnit(s.volumeUnit);
       setContentType(s.contentType);
@@ -147,16 +151,18 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
       const s = session as PlaySession;
       setPlayType(s.type);
       setBabyMood(s.babyMood);
-      setPlayDate(s.startTime.split('T')[0]);
-      setPlayStartTime(format(parseISO(s.startTime), 'HH:mm'));
+      const startDate = parseISO(s.startTime);
+      setPlayDate(format(startDate, 'yyyy-MM-dd'));
+      setPlayStartTime(format(startDate, 'HH:mm'));
       if (s.endTime) {
         setPlayEndTime(format(parseISO(s.endTime), 'HH:mm'));
       }
     } else if (sessionType === 'walk') {
       const s = session as WalkSession;
       setBabyMood(s.babyMood);
-      setWalkDate(s.startTime.split('T')[0]);
-      setWalkStartTime(format(parseISO(s.startTime), 'HH:mm'));
+      const startDate = parseISO(s.startTime);
+      setWalkDate(format(startDate, 'yyyy-MM-dd'));
+      setWalkStartTime(format(startDate, 'HH:mm'));
       if (s.endTime) {
         setWalkEndTime(format(parseISO(s.endTime), 'HH:mm'));
       }

@@ -397,7 +397,6 @@ export function DashboardView() {
       iconBg: string;
       route: string;
       isCountdown?: boolean;
-      minutesRemaining?: number;
     }[] = [];
 
     // Active breastfeeding
@@ -450,18 +449,16 @@ export function DashboardView() {
 
     // Milk on the go (countdown timer)
     milkStash.filter(s => s.isInUse && s.inUseStartDate).forEach(s => {
-      const minutesRemaining = getRoomTempExpirationMinutes(s.inUseStartDate!);
       timers.push({
         id: s.id,
         type: 'milk',
         title: 'Milk On The Go',
-        subtitle: minutesRemaining <= 0 ? 'Expired!' : `${s.volume} ${s.volumeUnit} remaining`,
+        subtitle: `${s.volume} ${s.volumeUnit}`,
         startTime: s.inUseStartDate!,
         icon: <Briefcase className="w-6 h-6 text-white" />,
-        iconBg: minutesRemaining <= 30 ? '#f44336' : '#ff9800', // Red if expiring soon, orange otherwise
+        iconBg: '#ff9800',
         route: '/more/milkstash',
         isCountdown: true,
-        minutesRemaining,
       });
     });
 
@@ -591,28 +588,37 @@ export function DashboardView() {
               <h3 className="text-sm font-bold text-gray-700">Active Timers</h3>
             </div>
             <div className="space-y-2">
-              {activeTimers.map((timer) => (
-                <ActiveTimerCard
-                  key={timer.id}
-                  icon={timer.icon}
-                  iconBg={timer.iconBg}
-                  title={timer.title}
-                  subtitle={timer.subtitle}
-                  elapsedTime={timer.isCountdown
-                    ? formatRemainingTime(timer.minutesRemaining ?? 0)
-                    : formatElapsedTime(
-                        timer.startTime,
-                        timer.isPaused,
-                        timer.pausedAt,
-                        timer.totalPausedDuration
-                      )
-                  }
-                  isPaused={timer.isPaused}
-                  isCountdown={timer.isCountdown}
-                  isExpiringSoon={timer.isCountdown && (timer.minutesRemaining ?? 0) <= 30}
-                  onClick={() => navigate(timer.route)}
-                />
-              ))}
+              {activeTimers.map((timer) => {
+                // Calculate minutes remaining fresh on each render for countdown timers
+                const minutesRemaining = timer.isCountdown
+                  ? getRoomTempExpirationMinutes(timer.startTime)
+                  : 0;
+                return (
+                  <ActiveTimerCard
+                    key={timer.id}
+                    icon={timer.icon}
+                    iconBg={timer.isCountdown && minutesRemaining <= 30 ? '#f44336' : timer.iconBg}
+                    title={timer.title}
+                    subtitle={timer.isCountdown
+                      ? (minutesRemaining <= 0 ? 'Expired!' : `${timer.subtitle} remaining`)
+                      : timer.subtitle
+                    }
+                    elapsedTime={timer.isCountdown
+                      ? formatRemainingTime(minutesRemaining)
+                      : formatElapsedTime(
+                          timer.startTime,
+                          timer.isPaused,
+                          timer.pausedAt,
+                          timer.totalPausedDuration
+                        )
+                    }
+                    isPaused={timer.isPaused}
+                    isCountdown={timer.isCountdown}
+                    isExpiringSoon={timer.isCountdown && minutesRemaining <= 30}
+                    onClick={() => navigate(timer.route)}
+                  />
+                );
+              })}
             </div>
           </div>
         )}
