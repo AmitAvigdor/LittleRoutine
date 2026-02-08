@@ -266,17 +266,6 @@ export function DiaperView() {
     }
   };
 
-  const handleUndoLast = async () => {
-    if (changes.length === 0) return;
-    const last = changes[0];
-    try {
-      await deleteDiaperChange(last.id);
-      toast.info('Last diaper change removed');
-    } catch (error) {
-      console.error('Error undoing last diaper change:', error);
-      toast.error('Failed to undo. Please try again.');
-    }
-  };
 
   // Long press handlers for mobile
   const handleTouchStart = useCallback((type: DiaperType) => {
@@ -344,20 +333,9 @@ export function DiaperView() {
       <Header title="Diaper" />
 
       <div className="px-4 pt-3">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Last change</p>
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-gray-900">{lastChangeLabel}</p>
-            {changes.length > 0 && (
-              <button
-                type="button"
-                onClick={handleUndoLast}
-                className="text-xs font-semibold text-gray-600 hover:text-gray-900"
-              >
-                Undo
-              </button>
-            )}
-          </div>
+        <div className="bg-gradient-to-r from-emerald-50 to-lime-50 rounded-2xl border border-emerald-100 shadow-sm px-4 py-3">
+          <p className="text-xs text-emerald-500 uppercase tracking-wide">Last change</p>
+          <p className="text-sm font-semibold text-gray-900">{lastChangeLabel}</p>
         </div>
       </div>
 

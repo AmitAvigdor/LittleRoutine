@@ -35,8 +35,6 @@ import {
   Leaf,
   Milk,
   Sun,
-  Gamepad2,
-  Footprints,
   Pill,
   Circle,
   CheckCircle2,
@@ -122,32 +120,6 @@ function getMaxDosesPerDay(frequency: MedicationFrequency): number | null {
     default:
       return null;
   }
-}
-
-interface QuickActionProps {
-  label: string;
-  icon: React.ReactNode;
-  color: string;
-  onClick: () => void;
-}
-
-function QuickAction({ label, icon, color, onClick }: QuickActionProps) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-white shadow-sm border border-gray-100 hover:shadow-lg transition-all hover:scale-105 active:scale-95"
-    >
-      <div
-        className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm"
-        style={{
-          background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
-        }}
-      >
-        <span className="text-white">{icon}</span>
-      </div>
-      <span className="text-[11px] font-semibold text-gray-700">{label}</span>
-    </button>
-  );
 }
 
 interface ActiveTimerCardProps {
@@ -289,7 +261,7 @@ function SnapshotCard({ title, value, sub, icon, color, onClick }: SnapshotCardP
 export function DashboardView() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { selectedBaby, babies, settings } = useAppStore();
+  const { selectedBaby, babies } = useAppStore();
   const [, setTick] = useState(0);
 
   // Data states
@@ -519,6 +491,15 @@ export function DashboardView() {
     };
   }, [sleepSessions]);
 
+  const isFeedingActive = useMemo(
+    () => feedingSessions.some((s) => s.isActive),
+    [feedingSessions]
+  );
+  const isSleepActive = useMemo(
+    () => sleepSessions.some((s) => s.isActive),
+    [sleepSessions]
+  );
+
   // Get medicine todo items
   const medicineTodos = useMemo(() => {
     const activeMeds = medicines.filter(m => m.isActive && m.frequency !== 'asNeeded');
@@ -554,92 +535,6 @@ export function DashboardView() {
       <Header title="Home" subtitle={babyAge?.text} />
 
       <div className="px-4 py-4 space-y-5">
-        {/* At a Glance */}
-        <div>
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <span className="text-base">✨</span>
-            <h3 className="text-sm font-bold text-gray-700">At a glance</h3>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <SnapshotCard
-              title="Last feeding"
-              value={lastFeeding ? formatTimeSince(lastFeeding.timestamp) : 'No data'}
-              sub={lastFeeding?.details}
-              icon={lastFeeding?.type === 'bottle' ? <Milk className="w-4 h-4" /> : <Baby className="w-4 h-4" />}
-              color="#e91e63"
-              onClick={() => navigate('/feed')}
-            />
-            <SnapshotCard
-              title={sleepStatus?.isAsleep ? 'Sleeping' : 'Last woke'}
-              value={sleepStatus ? formatTimeSince(sleepStatus.timestamp) : 'No data'}
-              sub={sleepStatus?.details}
-              icon={sleepStatus?.isAsleep ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-              color={sleepStatus?.isAsleep ? '#3f51b5' : '#ff9800'}
-              onClick={() => navigate('/sleep')}
-            />
-            <SnapshotCard
-              title="Last diaper"
-              value={lastDiaper ? formatTimeSince(lastDiaper.timestamp) : 'No data'}
-              sub={lastDiaper?.details}
-              icon={<Leaf className="w-4 h-4" />}
-              color="#4caf50"
-              onClick={() => navigate('/diaper')}
-            />
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div>
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <span className="text-base">⚡</span>
-            <h3 className="text-sm font-bold text-gray-700">Quick Actions</h3>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <QuickAction
-              label={settings?.feedingTypePreference === 'formula' ? 'Bottle' : 'Feed'}
-              icon={
-                settings?.feedingTypePreference === 'formula' ? (
-                  <Milk className="w-5 h-5" />
-                ) : (
-                  <Baby className="w-5 h-5" />
-                )
-              }
-              color="#e91e63"
-              onClick={() => navigate('/feed')}
-            />
-            <QuickAction
-              label="Sleep"
-              icon={<Moon className="w-5 h-5" />}
-              color="#3f51b5"
-              onClick={() => navigate('/sleep')}
-            />
-            <QuickAction
-              label="Diaper"
-              icon={<Leaf className="w-5 h-5" />}
-              color="#4caf50"
-              onClick={() => navigate('/diaper')}
-            />
-            <QuickAction
-              label="Pump"
-              icon={<Droplets className="w-5 h-5" />}
-              color="#9c27b0"
-              onClick={() => navigate('/more/pump')}
-            />
-            <QuickAction
-              label="Play"
-              icon={<Gamepad2 className="w-5 h-5" />}
-              color="#ff9800"
-              onClick={() => navigate('/more/play')}
-            />
-            <QuickAction
-              label="Walk"
-              icon={<Footprints className="w-5 h-5" />}
-              color="#8bc34a"
-              onClick={() => navigate('/more/walks')}
-            />
-          </div>
-        </div>
-
         {/* Active Timers */}
         {activeTimers.length > 0 && (
           <div>
@@ -681,6 +576,40 @@ export function DashboardView() {
             </div>
           </div>
         )}
+
+        {/* At a Glance */}
+        <div>
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <span className="text-base">✨</span>
+            <h3 className="text-sm font-bold text-gray-700">At a glance</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <SnapshotCard
+              title="Last feeding"
+              value={isFeedingActive ? 'In progress' : (lastFeeding ? formatTimeSince(lastFeeding.timestamp) : 'No data')}
+              sub={lastFeeding?.details}
+              icon={lastFeeding?.type === 'bottle' ? <Milk className="w-4 h-4" /> : <Baby className="w-4 h-4" />}
+              color="#e91e63"
+              onClick={() => navigate('/feed')}
+            />
+            <SnapshotCard
+              title={sleepStatus?.isAsleep ? 'Sleeping' : 'Last woke'}
+              value={isSleepActive ? 'In progress' : (sleepStatus ? formatTimeSince(sleepStatus.timestamp) : 'No data')}
+              sub={sleepStatus?.details}
+              icon={sleepStatus?.isAsleep ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              color={sleepStatus?.isAsleep ? '#3f51b5' : '#ff9800'}
+              onClick={() => navigate('/sleep')}
+            />
+            <SnapshotCard
+              title="Last diaper"
+              value={lastDiaper ? formatTimeSince(lastDiaper.timestamp) : 'No data'}
+              sub={lastDiaper?.details}
+              icon={<Leaf className="w-4 h-4" />}
+              color="#4caf50"
+              onClick={() => navigate('/diaper')}
+            />
+          </div>
+        </div>
 
         {/* Today's To Do */}
         {medicineTodos.length > 0 && (

@@ -576,7 +576,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
 
       {/* Timer Mode */}
       {entryMode === 'timer' && (
-        <Card className="border border-gray-100">
+        <Card className="border border-pink-100 bg-gradient-to-br from-pink-50 to-white">
           <div className="py-6 px-3">
             <Timer
               initialSeconds={timerSeconds}

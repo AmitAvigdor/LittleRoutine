@@ -79,16 +79,6 @@ export function SleepView() {
     return remaining > 0 ? `${hours}h ${remaining}m ago` : `${hours}h ago`;
   }, [lastCompletedSleep]);
 
-  const handleUndoLastSleep = async () => {
-    if (!lastCompletedSleep) return;
-    try {
-      await deleteSleepSession(lastCompletedSleep.id);
-      toast.info('Last sleep entry removed');
-    } catch (error) {
-      console.error('Error undoing last sleep entry:', error);
-      toast.error('Failed to undo. Please try again.');
-    }
-  };
 
   // Pre-save edit state
   const [showEditBeforeSave, setShowEditBeforeSave] = useState(false);
@@ -471,18 +461,7 @@ export function SleepView() {
       <div className="px-4 pt-3">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
           <p className="text-xs text-gray-400 uppercase tracking-wide">Last sleep</p>
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-gray-900">{lastSleepLabel}</p>
-            {lastCompletedSleep && (
-              <button
-                type="button"
-                onClick={handleUndoLastSleep}
-                className="text-xs font-semibold text-gray-600 hover:text-gray-900"
-              >
-                Undo
-              </button>
-            )}
-          </div>
+          <p className="text-sm font-semibold text-gray-900">{lastSleepLabel}</p>
         </div>
       </div>
 
@@ -512,7 +491,7 @@ export function SleepView() {
 
         {/* Timer Mode */}
         {entryMode === 'timer' && (
-          <Card>
+          <Card className="border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white">
             <div className="py-6 px-3">
               {!isTimerRunning && !showForm ? (
                 <div className="text-center">
