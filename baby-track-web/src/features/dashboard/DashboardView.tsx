@@ -139,8 +139,12 @@ function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused,
     <button
       onClick={onClick}
       className={clsx(
-        'flex items-center gap-4 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] w-full border',
-        'bg-white border-gray-200'
+        'flex items-center gap-4 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] w-full border-l-4',
+        'bg-white border border-gray-200',
+        isPaused ? 'border-l-amber-400' :
+        isCountdown && isExpiringSoon ? 'border-l-red-400' :
+        isCountdown ? 'border-l-orange-300' :
+        'border-l-emerald-400'
       )}
     >
       <div
@@ -149,8 +153,17 @@ function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused,
       >
         {icon}
         {/* Indicator based on state */}
-        {(isCountdown || isPaused) && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-gray-400 rounded-full ring-2 ring-white" />
+        {isCountdown && isExpiringSoon && (
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-400 rounded-full ring-2 ring-white" />
+        )}
+        {isCountdown && !isExpiringSoon && (
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-orange-300 rounded-full ring-2 ring-white" />
+        )}
+        {!isCountdown && !isPaused && (
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full ring-2 ring-white" />
+        )}
+        {!isCountdown && isPaused && (
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full ring-2 ring-white" />
         )}
       </div>
       <div className="flex-1 min-w-0 text-left">
@@ -159,9 +172,9 @@ function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused,
       </div>
       <div className="text-right flex-shrink-0">
         <p className="text-2xl font-bold font-mono text-gray-900">{elapsedTime}</p>
-        {isPaused && <p className="text-xs text-gray-500 font-semibold">Paused</p>}
-        {isCountdown && !isExpiringSoon && <p className="text-xs text-gray-500 font-semibold">Time left</p>}
-        {isCountdown && isExpiringSoon && <p className="text-xs text-gray-500 font-semibold">Expiring soon</p>}
+        {isPaused && <p className="text-xs text-amber-700 font-semibold">Paused</p>}
+        {isCountdown && !isExpiringSoon && <p className="text-xs text-orange-700 font-semibold">Time left</p>}
+        {isCountdown && isExpiringSoon && <p className="text-xs text-red-700 font-semibold">Expiring soon</p>}
       </div>
     </button>
   );
@@ -226,15 +239,27 @@ function toneForInterval(lastTimestamp: string | null, intervalHours: number): S
   return 'green';
 }
 
-function toneClasses(tone: StatusTone): { container: string; label: string } {
+function toneClasses(tone: StatusTone): { container: string; label: string; dot: string } {
   switch (tone) {
     case 'red':
-      return { container: 'bg-red-50 border-red-200', label: 'text-red-700' };
+      return {
+        container: 'bg-white border border-gray-100 border-l-4 border-l-red-300',
+        label: 'text-gray-600',
+        dot: 'bg-red-400',
+      };
     case 'yellow':
-      return { container: 'bg-amber-50 border-amber-200', label: 'text-amber-700' };
+      return {
+        container: 'bg-white border border-gray-100 border-l-4 border-l-amber-300',
+        label: 'text-gray-600',
+        dot: 'bg-amber-400',
+      };
     case 'green':
     default:
-      return { container: 'bg-emerald-50 border-emerald-200', label: 'text-emerald-700' };
+      return {
+        container: 'bg-white border border-gray-100 border-l-4 border-l-emerald-300',
+        label: 'text-gray-600',
+        dot: 'bg-emerald-400',
+      };
   }
 }
 
@@ -534,7 +559,7 @@ export function DashboardView() {
   }, [feedingTone, sleepTone, diaperTone]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#f8fafc] via-[#fdf7fb] to-[#f1f5f9]">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50">
       <Header title="Home" subtitle={babyAge?.text} statusTone={mostUrgentTone} />
 
       <div className="px-4 py-4 space-y-5">
@@ -599,7 +624,10 @@ export function DashboardView() {
                   {lastFeeding?.type === 'bottle' ? <Milk className="w-5 h-5" /> : <Baby className="w-5 h-5" />}
                 </div>
                 <div className="text-left">
-                  <p className={clsx('text-xs uppercase tracking-wide font-semibold', toneClasses(feedingTone).label)}>Feeding</p>
+                  <p className={clsx('text-xs uppercase tracking-wide font-semibold flex items-center gap-1.5', toneClasses(feedingTone).label)}>
+                    <span className={clsx('w-2 h-2 rounded-full', toneClasses(feedingTone).dot)} />
+                    Feeding
+                  </p>
                   <p className="text-sm font-semibold text-gray-900">
                     {isFeedingActive ? 'In progress' : (lastFeeding ? formatTimeSince(lastFeeding.timestamp) : 'No data')}
                   </p>
@@ -620,7 +648,10 @@ export function DashboardView() {
                   {sleepStatus?.isAsleep ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                 </div>
                 <div className="text-left">
-                  <p className={clsx('text-xs uppercase tracking-wide font-semibold', toneClasses(sleepTone).label)}>Sleep</p>
+                  <p className={clsx('text-xs uppercase tracking-wide font-semibold flex items-center gap-1.5', toneClasses(sleepTone).label)}>
+                    <span className={clsx('w-2 h-2 rounded-full', toneClasses(sleepTone).dot)} />
+                    Sleep
+                  </p>
                   <p className="text-sm font-semibold text-gray-900">
                     {isSleepActive ? 'In progress' : (sleepStatus ? formatTimeSince(sleepStatus.timestamp) : 'No data')}
                   </p>
@@ -641,7 +672,10 @@ export function DashboardView() {
                   <Leaf className="w-5 h-5" />
                 </div>
                 <div className="text-left">
-                  <p className={clsx('text-xs uppercase tracking-wide font-semibold', toneClasses(diaperTone).label)}>Diaper</p>
+                  <p className={clsx('text-xs uppercase tracking-wide font-semibold flex items-center gap-1.5', toneClasses(diaperTone).label)}>
+                    <span className={clsx('w-2 h-2 rounded-full', toneClasses(diaperTone).dot)} />
+                    Diaper
+                  </p>
                   <p className="text-sm font-semibold text-gray-900">
                     {lastDiaper ? formatTimeSince(lastDiaper.timestamp) : 'No data'}
                   </p>

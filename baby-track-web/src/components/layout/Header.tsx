@@ -31,20 +31,13 @@ export function Header({
   const isTone = statusTone === 'green' || statusTone === 'yellow' || statusTone === 'red';
   const toneClass =
     statusTone === 'red'
-      ? 'bg-red-200 text-red-900'
+      ? 'bg-white border-b-2 border-red-300'
       : statusTone === 'yellow'
-      ? 'bg-amber-200 text-amber-900'
+      ? 'bg-white border-b-2 border-amber-300'
       : statusTone === 'green'
-      ? 'bg-emerald-200 text-emerald-900'
+      ? 'bg-white border-b-2 border-emerald-300'
       : '';
-  const toneTextClass =
-    statusTone === 'red'
-      ? 'text-red-900'
-      : statusTone === 'yellow'
-      ? 'text-amber-900'
-      : statusTone === 'green'
-      ? 'text-emerald-900'
-      : 'text-gray-900';
+  const toneTextClass = 'text-gray-900';
 
   const handleSelectBaby = (babyId: string) => {
     setSelectedBabyId(babyId);
