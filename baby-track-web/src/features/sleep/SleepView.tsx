@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { format, isToday, parseISO } from 'date-fns';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { format, isToday, parseISO, subMinutes, differenceInMinutes } from 'date-fns';
 import { clsx } from 'clsx';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -7,6 +7,7 @@ import { Timer } from '@/components/ui/Timer';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
+import { QuickTimeChips } from '@/components/ui/QuickTimeChips';
 import { BabyMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
 import { EditSessionModal } from '@/components/ui/EditSessionModal';
 import { StaleTimerModal, STALE_TIMER_THRESHOLD } from '@/components/ui/StaleTimerModal';
@@ -50,6 +51,29 @@ export function SleepView() {
 
   // Expandable details state
   const [showDetails, setShowDetails] = useState(false);
+
+  const applyManualTimeOffset = (minutesAgo: number) => {
+    const target = subMinutes(new Date(), minutesAgo);
+    setManualDate(format(target, 'yyyy-MM-dd'));
+    setManualTime(format(target, 'HH:mm'));
+  };
+
+  const lastSleepLabel = useMemo(() => {
+    const completed = sessions.filter((s) => !s.isActive && s.endTime);
+    if (completed.length === 0) return 'No sleep yet';
+    const mostRecent = completed.reduce((latest, session) => {
+      const latestTime = latest.endTime || latest.startTime;
+      const sessionTime = session.endTime || session.startTime;
+      return new Date(sessionTime) > new Date(latestTime) ? session : latest;
+    }, completed[0]);
+    const timestamp = mostRecent.endTime || mostRecent.startTime;
+    const minutes = differenceInMinutes(new Date(), parseISO(timestamp));
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    const remaining = minutes % 60;
+    return remaining > 0 ? `${hours}h ${remaining}m ago` : `${hours}h ago`;
+  }, [sessions]);
 
   // Pre-save edit state
   const [showEditBeforeSave, setShowEditBeforeSave] = useState(false);
@@ -429,6 +453,13 @@ export function SleepView() {
     <div>
       <Header title="Sleep" />
 
+      <div className="px-4 pt-3">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
+          <p className="text-xs text-gray-400 uppercase tracking-wide">Last sleep</p>
+          <p className="text-sm font-semibold text-gray-900">{lastSleepLabel}</p>
+        </div>
+      </div>
+
       <div className="px-4 py-4 space-y-4">
         {/* Entry Mode Toggle */}
         {!isTimerRunning && !showForm && (
@@ -569,6 +600,7 @@ export function SleepView() {
                   onChange={(e) => setManualTime(e.target.value)}
                 />
               </div>
+              <QuickTimeChips onSelect={applyManualTimeOffset} />
 
               <Input
                 type="number"

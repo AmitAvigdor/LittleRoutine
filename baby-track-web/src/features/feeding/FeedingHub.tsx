@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { format, parseISO } from 'date-fns';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { format, parseISO, differenceInMinutes } from 'date-fns';
 import { Milk, Baby, Clock } from 'lucide-react';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { SegmentedControl } from '@/components/ui/Select';
@@ -35,6 +35,7 @@ export function FeedingHub() {
   };
 
   const [activeTab, setActiveTab] = useState<FeedingTab>(getInitialTab);
+  const location = useLocation();
 
   // Update tab when settings change (e.g., when settings load)
   useEffect(() => {
@@ -44,6 +45,14 @@ export function FeedingHub() {
       setActiveTab('breast');
     }
   }, [settings?.feedingTypePreference]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab === 'bottle' || tab === 'breast') {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
   const navigate = useNavigate();
 
   // Subscribe to both feeding types
@@ -96,6 +105,17 @@ export function FeedingHub() {
     return combined.slice(0, 10);
   }, [feedingSessions, bottleSessions]);
 
+  const lastFeedingLabel = useMemo(() => {
+    if (recentFeedings.length === 0) return 'No feedings yet';
+    const last = recentFeedings[0].timestamp;
+    const minutes = differenceInMinutes(new Date(), parseISO(last));
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    const remaining = minutes % 60;
+    return remaining > 0 ? `${hours}h ${remaining}m ago` : `${hours}h ago`;
+  }, [recentFeedings]);
+
   if (babies.length === 0) {
     return <NoBabiesHeader />;
   }
@@ -114,6 +134,13 @@ export function FeedingHub() {
           </button>
         }
       />
+
+      <div className="px-4 pt-3">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
+          <p className="text-xs text-gray-400 uppercase tracking-wide">Last feeding</p>
+          <p className="text-sm font-semibold text-gray-900">{lastFeedingLabel}</p>
+        </div>
+      </div>
 
       <div className="px-4 py-4">
         {/* Tab Selector */}

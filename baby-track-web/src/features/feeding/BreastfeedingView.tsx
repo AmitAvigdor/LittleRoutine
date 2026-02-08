@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { format, isToday, parseISO } from 'date-fns';
+import { format, isToday, parseISO, subMinutes } from 'date-fns';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Timer } from '@/components/ui/Timer';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
+import { QuickTimeChips } from '@/components/ui/QuickTimeChips';
 import { BabyMoodSelector, MomMoodSelector } from '@/components/ui/MoodSelector';
 import { StaleTimerModal, STALE_TIMER_THRESHOLD } from '@/components/ui/StaleTimerModal';
 import { Baby, FeedingSession, BreastSide, BabyMood, MomMood, BREAST_SIDE_CONFIG, formatDuration } from '@/types';
@@ -48,6 +49,12 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
 
   // Expandable details state
   const [showDetails, setShowDetails] = useState(false);
+
+  const applyManualTimeOffset = (minutesAgo: number) => {
+    const target = subMinutes(new Date(), minutesAgo);
+    setManualDate(format(target, 'yyyy-MM-dd'));
+    setManualTime(format(target, 'HH:mm'));
+  };
 
   // Pre-save edit state
   const [showEditBeforeSave, setShowEditBeforeSave] = useState(false);
@@ -603,6 +610,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
               value={manualTime}
               onChange={(e) => setManualTime(e.target.value)}
             />
+            <QuickTimeChips onSelect={applyManualTimeOffset} />
 
             <Input
               type="number"

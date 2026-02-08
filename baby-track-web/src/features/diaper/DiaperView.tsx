@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { format, isToday, parseISO } from 'date-fns';
+import { format, isToday, parseISO, subMinutes, differenceInMinutes } from 'date-fns';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
+import { QuickTimeChips } from '@/components/ui/QuickTimeChips';
 import { BabyMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
 import { DiaperChange, DiaperType, BabyMood, DIAPER_TYPE_CONFIG } from '@/types';
 import { createDiaperChange, subscribeToDiaperChanges, deleteDiaperChange, updateDiaperChange } from '@/lib/firestore';
@@ -50,6 +51,11 @@ export function DiaperView() {
 
   // Expandable details state
   const [showDetails, setShowDetails] = useState(false);
+  const applyManualTimeOffset = (minutesAgo: number) => {
+    const target = subMinutes(new Date(), minutesAgo);
+    setManualDate(format(target, 'yyyy-MM-dd'));
+    setManualTime(format(target, 'HH:mm'));
+  };
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -306,6 +312,17 @@ export function DiaperView() {
     full: todayChanges.filter((c) => (c.type as string) !== 'wet').length,
   };
 
+  const lastChangeLabel = (() => {
+    if (changes.length === 0) return 'No changes yet';
+    const timestamp = changes[0].timestamp;
+    const minutes = differenceInMinutes(new Date(), parseISO(timestamp));
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    const remaining = minutes % 60;
+    return remaining > 0 ? `${hours}h ${remaining}m ago` : `${hours}h ago`;
+  })();
+
   // Check if we're in edit mode or detail form
   const isEditing = editingChange !== null;
   const isInDetailForm = showForm && selectedType !== null;
@@ -313,6 +330,13 @@ export function DiaperView() {
   return (
     <div>
       <Header title="Diaper" />
+
+      <div className="px-4 pt-3">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
+          <p className="text-xs text-gray-400 uppercase tracking-wide">Last change</p>
+          <p className="text-sm font-semibold text-gray-900">{lastChangeLabel}</p>
+        </div>
+      </div>
 
       <div className="px-4 py-4 space-y-4">
         {/* Entry Mode Toggle - hide when in form or editing */}
@@ -445,6 +469,7 @@ export function DiaperView() {
                   onChange={(e) => setManualTime(e.target.value)}
                 />
               </div>
+              <QuickTimeChips onSelect={applyManualTimeOffset} />
 
               <Button
                 onClick={handleManualSave}
@@ -600,6 +625,7 @@ export function DiaperView() {
                   onChange={(e) => setManualTime(e.target.value)}
                 />
               </div>
+              <QuickTimeChips onSelect={applyManualTimeOffset} />
 
               <div className="flex gap-2">
                 <Button
