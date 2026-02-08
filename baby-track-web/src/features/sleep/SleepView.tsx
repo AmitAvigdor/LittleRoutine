@@ -499,89 +499,31 @@ export function SleepView() {
         )}
 
         {/* Type Selector */}
-        <div className="flex justify-center gap-4">
-          {(['nap', 'night'] as SleepType[]).map((type) => {
-            const config = SLEEP_TYPE_CONFIG[type];
-            const isSelected = sleepType === type;
-            const Icon = type === 'nap' ? Sun : Moon;
-
-            return (
-              <button
-                key={type}
-                onClick={() => !isTimerRunning && setSleepType(type)}
-                disabled={isTimerRunning}
-                className={clsx(
-                  'relative flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-300',
-                  isSelected
-                    ? 'text-white shadow-lg scale-105'
-                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200',
-                  isTimerRunning && !isSelected && 'opacity-40 cursor-not-allowed'
-                )}
-                style={isSelected ? {
-                  background: `linear-gradient(135deg, ${config.color} 0%, ${config.color}dd 100%)`,
-                  boxShadow: `0 8px 20px -8px ${config.color}80`
-                } : undefined}
-              >
-                <Icon className={clsx('w-5 h-5', isSelected ? 'text-white' : 'text-gray-400')} />
-                <span>{config.label}</span>
-              </button>
-            );
-          })}
+        <div className="flex justify-center">
+          <SegmentedControl
+            options={[
+              { value: 'nap', label: 'Nap', icon: <Sun className="w-4 h-4" /> },
+              { value: 'night', label: 'Night', icon: <Moon className="w-4 h-4" /> },
+            ]}
+            value={sleepType}
+            onChange={(value) => setSleepType(value as SleepType)}
+          />
         </div>
 
         {/* Timer Mode */}
         {entryMode === 'timer' && (
-          <div
-            className="relative rounded-3xl overflow-hidden"
-            style={{
-              background: `linear-gradient(180deg, ${SLEEP_TYPE_CONFIG[sleepType].color}10 0%, ${SLEEP_TYPE_CONFIG[sleepType].color}03 100%)`,
-            }}
-          >
-            {/* Decorative elements */}
-            <div
-              className="absolute -top-16 -right-16 w-32 h-32 rounded-full opacity-15"
-              style={{ backgroundColor: SLEEP_TYPE_CONFIG[sleepType].color }}
-            />
-            <div
-              className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full opacity-10"
-              style={{ backgroundColor: SLEEP_TYPE_CONFIG[sleepType].color }}
-            />
-            {sleepType === 'night' && (
-              <>
-                <div className="absolute top-6 right-8 w-2 h-2 rounded-full bg-indigo-300/40" />
-                <div className="absolute top-12 right-16 w-1.5 h-1.5 rounded-full bg-indigo-300/30" />
-                <div className="absolute top-8 right-24 w-1 h-1 rounded-full bg-indigo-300/20" />
-              </>
-            )}
-
-            <div className="relative py-10 px-4">
+          <Card>
+            <div className="py-6 px-3">
               {!isTimerRunning && !showForm ? (
                 <div className="text-center">
-                  <div
-                    className="w-28 h-28 rounded-full mx-auto flex items-center justify-center mb-4 shadow-lg"
-                    style={{
-                      background: `linear-gradient(135deg, ${SLEEP_TYPE_CONFIG[sleepType].color}20 0%, ${SLEEP_TYPE_CONFIG[sleepType].color}10 100%)`,
-                      boxShadow: `0 10px 30px -10px ${SLEEP_TYPE_CONFIG[sleepType].color}40`
-                    }}
-                  >
-                    {sleepType === 'nap' ? (
-                      <Sun className="w-14 h-14" style={{ color: SLEEP_TYPE_CONFIG[sleepType].color }} />
-                    ) : (
-                      <Moon className="w-14 h-14" style={{ color: SLEEP_TYPE_CONFIG[sleepType].color }} />
-                    )}
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     Start {sleepType === 'nap' ? 'Nap' : 'Night Sleep'}
                   </h3>
-                  <p className="text-sm text-gray-500 mb-6">
-                    Tap the button to begin tracking
-                  </p>
                   <Button
                     onClick={handleStart}
-                    className="px-8 py-3 text-base shadow-lg hover:shadow-xl transition-shadow"
+                    className="px-8 py-3 text-base"
                     style={{
                       background: `linear-gradient(135deg, ${SLEEP_TYPE_CONFIG[sleepType].color} 0%, ${SLEEP_TYPE_CONFIG[sleepType].color}dd 100%)`,
-                      boxShadow: `0 8px 20px -8px ${SLEEP_TYPE_CONFIG[sleepType].color}80`
                     }}
                     disabled={starting}
                   >
@@ -600,7 +542,7 @@ export function SleepView() {
                 />
               )}
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Manual Entry Mode */}

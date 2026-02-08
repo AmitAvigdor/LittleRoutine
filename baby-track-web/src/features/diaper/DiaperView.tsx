@@ -378,7 +378,6 @@ export function DiaperView() {
           <Card>
             <div className="text-center mb-4">
               <h3 className="font-semibold text-gray-900">Quick Log</h3>
-              <p className="text-sm text-gray-500">Tap to log, hold for details</p>
             </div>
 
             {justSaved && (
@@ -427,9 +426,6 @@ export function DiaperView() {
               })}
             </div>
 
-            <p className="text-xs text-center text-gray-400 mt-3">
-              Long press for detailed entry
-            </p>
           </Card>
         )}
 
@@ -437,7 +433,7 @@ export function DiaperView() {
         {entryMode === 'manual' && !isInDetailForm && !isEditing && (
           <Card>
             <div className="text-center mb-4">
-              <h3 className="font-semibold text-gray-900">Log Past Diaper Change</h3>
+              <h3 className="font-semibold text-gray-900">Log Past Diaper</h3>
             </div>
 
             <div className="space-y-4">

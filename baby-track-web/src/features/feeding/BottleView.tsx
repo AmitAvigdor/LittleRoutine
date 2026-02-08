@@ -12,7 +12,7 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
-import { Plus, Zap, Edit3 } from 'lucide-react';
+import { Plus, Zap, Edit3, ChevronDown, ChevronUp } from 'lucide-react';
 
 type EntryMode = 'quick' | 'manual';
 
@@ -50,6 +50,7 @@ export function BottleView({ baby }: BottleViewProps) {
   const [babyMood, setBabyMood] = useState<BabyMood | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   // Entry mode state
   const [entryMode, setEntryMode] = useState<EntryMode>('quick');
@@ -268,19 +269,32 @@ export function BottleView({ baby }: BottleViewProps) {
               </div>
             </div>
 
-            <BabyMoodSelector
-              label="Baby's mood"
-              value={babyMood}
-              onChange={setBabyMood}
-            />
+            <button
+              onClick={() => setShowDetails(!showDetails)}
+              className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
+              type="button"
+            >
+              <span>Add details (optional)</span>
+              {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
 
-            <Textarea
-              label="Notes (optional)"
-              placeholder="Any notes about this feeding..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-            />
+            {showDetails && (
+              <div className="space-y-4 pt-2 border-t border-gray-100">
+                <BabyMoodSelector
+                  label="Baby's mood"
+                  value={babyMood}
+                  onChange={setBabyMood}
+                />
+
+                <Textarea
+                  label="Notes (optional)"
+                  placeholder="Any notes about this feeding..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                />
+              </div>
+            )}
 
             <Button onClick={handleSave} className="w-full" disabled={!volume || saving}>
               {saving ? 'Saving...' : 'Save Feeding'}

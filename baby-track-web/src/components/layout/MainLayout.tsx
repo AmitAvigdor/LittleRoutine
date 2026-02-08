@@ -195,18 +195,18 @@ export function MainLayout() {
       </main>
       {showQuickAdd && (
         <button
-        type="button"
-        onClick={() => setQuickAddOpen(true)}
-        className={clsx(
-          'fixed bottom-24 right-4 z-40 w-14 h-14 rounded-full text-white',
-          'shadow-lg shadow-black/20 transition-transform active:scale-95',
-          'flex items-center justify-center'
-        )}
-        style={{ background: 'linear-gradient(135deg, #ef8fb1 0%, #a78bfa 100%)' }}
-        aria-label="Quick add"
-      >
-        <Plus className="w-7 h-7" />
-      </button>
+          type="button"
+          onClick={() => setQuickAddOpen(true)}
+          className={clsx(
+            'fixed bottom-24 right-4 z-40 w-16 h-16 rounded-full text-white',
+            'shadow-lg shadow-black/20 transition-transform active:scale-95',
+            'flex items-center justify-center border-4 border-white/70'
+          )}
+          style={{ background: 'linear-gradient(135deg, #ef8fb1 0%, #a78bfa 100%)' }}
+          aria-label="Quick add"
+        >
+          <Plus className="w-8 h-8" />
+        </button>
       )}
       <BottomNav />
       <QuickAdd open={quickAddOpen} onClose={() => setQuickAddOpen(false)} actions={quickActions} />

@@ -48,6 +48,9 @@ const features = [
   { icon: Star, label: 'Milestones', path: '/more/milestones', color: '#ffc107', emoji: '⭐' },
 ];
 
+const favoritePaths = new Set(favorites.map((item) => item.path));
+const featureList = features.filter((item) => !favoritePaths.has(item.path));
+
 export function MoreView() {
   const navigate = useNavigate();
   const { selectedBaby, babies } = useAppStore();
@@ -168,7 +171,7 @@ export function MoreView() {
             </div>
           </div>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-            {features.map(({ icon: Icon, label, path, color }) => (
+            {featureList.map(({ icon: Icon, label, path, color }) => (
               <button
                 key={path}
                 onClick={() => navigate(path)}

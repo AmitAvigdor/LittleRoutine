@@ -576,23 +576,8 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
 
       {/* Timer Mode */}
       {entryMode === 'timer' && (
-        <div
-          className="relative rounded-3xl overflow-hidden"
-          style={{
-            background: `linear-gradient(180deg, ${BREAST_SIDE_CONFIG[selectedSide].color}08 0%, ${BREAST_SIDE_CONFIG[selectedSide].color}03 100%)`,
-          }}
-        >
-          {/* Decorative circles */}
-          <div
-            className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-10"
-            style={{ backgroundColor: BREAST_SIDE_CONFIG[selectedSide].color }}
-          />
-          <div
-            className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full opacity-5"
-            style={{ backgroundColor: BREAST_SIDE_CONFIG[selectedSide].color }}
-          />
-
-          <div className="relative py-10 px-4">
+        <Card className="border border-gray-100">
+          <div className="py-6 px-3">
             <Timer
               initialSeconds={timerSeconds}
               isRunning={isTimerRunning}
@@ -606,7 +591,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
               color={BREAST_SIDE_CONFIG[selectedSide].color}
             />
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Manual Entry Mode */}
