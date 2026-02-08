@@ -140,10 +140,7 @@ function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused,
       onClick={onClick}
       className={clsx(
         'flex items-center gap-4 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] w-full border',
-        isPaused ? 'bg-yellow-50 border-yellow-200' :
-        isCountdown && isExpiringSoon ? 'bg-red-50 border-red-200' :
-        isCountdown ? 'bg-orange-50 border-orange-200' :
-        'bg-white border-green-200'
+        'bg-white border-gray-200'
       )}
     >
       <div
@@ -152,17 +149,8 @@ function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused,
       >
         {icon}
         {/* Indicator based on state */}
-        {isCountdown && isExpiringSoon && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full animate-pulse ring-2 ring-white" />
-        )}
-        {isCountdown && !isExpiringSoon && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full ring-2 ring-white" />
-        )}
-        {!isCountdown && !isPaused && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-pulse ring-2 ring-white" />
-        )}
-        {!isCountdown && isPaused && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full ring-2 ring-white" />
+        {(isCountdown || isPaused) && (
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-gray-400 rounded-full ring-2 ring-white" />
         )}
       </div>
       <div className="flex-1 min-w-0 text-left">
@@ -170,15 +158,10 @@ function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused,
         <p className="text-sm text-gray-500">{subtitle}</p>
       </div>
       <div className="text-right flex-shrink-0">
-        <p className={clsx(
-          'text-2xl font-bold font-mono',
-          isCountdown && isExpiringSoon ? 'text-red-600' :
-          isCountdown ? 'text-orange-600' :
-          'text-gray-900'
-        )}>{elapsedTime}</p>
-        {isPaused && <p className="text-xs text-yellow-600 font-semibold">Paused</p>}
-        {isCountdown && !isExpiringSoon && <p className="text-xs text-orange-600 font-semibold">Time left</p>}
-        {isCountdown && isExpiringSoon && <p className="text-xs text-red-600 font-semibold">Expiring!</p>}
+        <p className="text-2xl font-bold font-mono text-gray-900">{elapsedTime}</p>
+        {isPaused && <p className="text-xs text-gray-500 font-semibold">Paused</p>}
+        {isCountdown && !isExpiringSoon && <p className="text-xs text-gray-500 font-semibold">Time left</p>}
+        {isCountdown && isExpiringSoon && <p className="text-xs text-gray-500 font-semibold">Expiring soon</p>}
       </div>
     </button>
   );
@@ -200,7 +183,7 @@ function TodoItem({ icon, iconBg, title, subtitle, done, onClick }: TodoItemProp
       className={clsx(
         'flex items-center gap-4 w-full p-4 rounded-2xl transition-all border',
         done
-          ? 'bg-green-50/50 border-green-100'
+          ? 'bg-gray-50 border-gray-200'
           : 'bg-white shadow-sm hover:shadow-md border-gray-100'
       )}
     >
@@ -220,7 +203,7 @@ function TodoItem({ icon, iconBg, title, subtitle, done, onClick }: TodoItemProp
         <p className={clsx('text-xs truncate mt-0.5', done ? 'text-gray-400' : 'text-gray-500')}>{subtitle}</p>
       </div>
       {done ? (
-        <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0" />
+        <CheckCircle2 className="w-6 h-6 text-gray-400 flex-shrink-0" />
       ) : (
         <Circle className="w-6 h-6 text-gray-300 flex-shrink-0" />
       )}
@@ -228,40 +211,11 @@ function TodoItem({ icon, iconBg, title, subtitle, done, onClick }: TodoItemProp
   );
 }
 
-interface SnapshotCardProps {
-  title: string;
-  value: string;
-  sub?: string;
-  icon: React.ReactNode;
-  color: string;
-  onClick?: () => void;
-}
-
-function SnapshotCard({ title, value, sub, icon, color, onClick }: SnapshotCardProps) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-3 p-3 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all"
-    >
-      <div
-        className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm"
-        style={{ background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)` }}
-      >
-        {icon}
-      </div>
-      <div className="min-w-0 text-left">
-        <p className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold">{title}</p>
-        <p className="text-sm font-bold text-gray-900 truncate">{value}</p>
-        {sub && <p className="text-xs text-gray-500 truncate">{sub}</p>}
-      </div>
-    </button>
-  );
-}
 
 export function DashboardView() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { selectedBaby, babies, statusTone } = useAppStore();
+  const { selectedBaby, babies } = useAppStore();
   const [, setTick] = useState(0);
 
   // Data states
@@ -366,7 +320,7 @@ export function DashboardView() {
         pausedAt: s.pausedAt,
         totalPausedDuration: s.totalPausedDuration,
         icon: <Baby className="w-6 h-6 text-white" />,
-        iconBg: '#e91e63',
+        iconBg: '#374151',
         route: '/feed',
       });
     });
@@ -383,7 +337,7 @@ export function DashboardView() {
         pausedAt: s.pausedAt,
         totalPausedDuration: s.totalPausedDuration,
         icon: <Droplets className="w-6 h-6 text-white" />,
-        iconBg: '#9c27b0',
+        iconBg: '#374151',
         route: '/more/pump',
       });
     });
@@ -397,7 +351,7 @@ export function DashboardView() {
         subtitle: SLEEP_TYPE_CONFIG[s.type].label,
         startTime: s.startTime,
         icon: <Moon className="w-6 h-6 text-white" />,
-        iconBg: '#3f51b5',
+        iconBg: '#374151',
         route: '/sleep',
       });
     });
@@ -411,7 +365,7 @@ export function DashboardView() {
         subtitle: `${s.volume} ${s.volumeUnit}`,
         startTime: s.inUseStartDate!,
         icon: <Briefcase className="w-6 h-6 text-white" />,
-        iconBg: '#ff9800',
+        iconBg: '#374151',
         route: '/more/milk-stash',
         isCountdown: true,
       });
@@ -531,7 +485,7 @@ export function DashboardView() {
   const incompleteMedicineTodos = medicineTodos.filter(t => !t.isComplete);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gray-50">
       <Header title="Home" subtitle={babyAge?.text} />
 
       <div className="px-4 py-4 space-y-5">
@@ -551,7 +505,7 @@ export function DashboardView() {
                   <ActiveTimerCard
                     key={timer.id}
                     icon={timer.icon}
-                    iconBg={timer.isCountdown && minutesRemaining <= 30 ? '#f44336' : timer.iconBg}
+                    iconBg={timer.iconBg}
                     title={timer.title}
                     subtitle={timer.isCountdown
                       ? (minutesRemaining <= 0 ? 'Expired!' : `${timer.subtitle} remaining`)
@@ -583,24 +537,17 @@ export function DashboardView() {
             <span className="text-base">✨</span>
             <h3 className="text-sm font-bold text-gray-700">At a glance</h3>
           </div>
-          <div
-            className={clsx(
-              'rounded-3xl border shadow-sm p-4',
-              statusTone === 'red' && 'bg-rose-50 border-rose-200',
-              statusTone === 'yellow' && 'bg-amber-50 border-amber-200',
-              statusTone === 'green' && 'bg-emerald-50 border-emerald-200'
-            )}
-          >
+          <div className="rounded-3xl border shadow-sm p-4 bg-white border-gray-100">
             <div className="grid grid-cols-1 gap-3">
               <button
                 onClick={() => navigate('/feed')}
-                className="flex items-center gap-3 p-3 rounded-2xl bg-pink-50/60 border border-pink-100"
+                className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-gray-100 shadow-sm"
               >
-                <div className="w-10 h-10 rounded-xl bg-pink-500 text-white flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-gray-800 text-white flex items-center justify-center">
                   {lastFeeding?.type === 'bottle' ? <Milk className="w-5 h-5" /> : <Baby className="w-5 h-5" />}
                 </div>
                 <div className="text-left">
-                  <p className="text-xs uppercase tracking-wide text-pink-500 font-semibold">Feeding</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Feeding</p>
                   <p className="text-sm font-semibold text-gray-900">
                     {isFeedingActive ? 'In progress' : (lastFeeding ? formatTimeSince(lastFeeding.timestamp) : 'No data')}
                   </p>
@@ -612,13 +559,13 @@ export function DashboardView() {
 
               <button
                 onClick={() => navigate('/sleep')}
-                className="flex items-center gap-3 p-3 rounded-2xl bg-indigo-50/60 border border-indigo-100"
+                className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-gray-100 shadow-sm"
               >
-                <div className="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-gray-800 text-white flex items-center justify-center">
                   {sleepStatus?.isAsleep ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                 </div>
                 <div className="text-left">
-                  <p className="text-xs uppercase tracking-wide text-indigo-500 font-semibold">Sleep</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Sleep</p>
                   <p className="text-sm font-semibold text-gray-900">
                     {isSleepActive ? 'In progress' : (sleepStatus ? formatTimeSince(sleepStatus.timestamp) : 'No data')}
                   </p>
@@ -630,13 +577,13 @@ export function DashboardView() {
 
               <button
                 onClick={() => navigate('/diaper')}
-                className="flex items-center gap-3 p-3 rounded-2xl bg-emerald-50/60 border border-emerald-100"
+                className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-gray-100 shadow-sm"
               >
-                <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-gray-800 text-white flex items-center justify-center">
                   <Leaf className="w-5 h-5" />
                 </div>
                 <div className="text-left">
-                  <p className="text-xs uppercase tracking-wide text-emerald-600 font-semibold">Diaper</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Diaper</p>
                   <p className="text-sm font-semibold text-gray-900">
                     {lastDiaper ? formatTimeSince(lastDiaper.timestamp) : 'No data'}
                   </p>
@@ -658,7 +605,7 @@ export function DashboardView() {
                 <h3 className="text-sm font-bold text-gray-700">Today's To Do</h3>
               </div>
               {incompleteMedicineTodos.length > 0 && (
-                <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full">
+                <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full">
                   {incompleteMedicineTodos.length} pending
                 </span>
               )}
@@ -669,7 +616,7 @@ export function DashboardView() {
                   key={todo.id}
                   className={clsx(
                     'flex items-center gap-3 p-3 rounded-2xl border',
-                    todo.isComplete ? 'bg-emerald-50 border-emerald-100' : 'bg-white border-gray-100 shadow-sm'
+                    todo.isComplete ? 'bg-gray-50 border-gray-200' : 'bg-white border-gray-100 shadow-sm'
                   )}
                   onClick={() => navigate('/more/medicine')}
                   role="button"
@@ -677,13 +624,13 @@ export function DashboardView() {
                   <div
                     className={clsx(
                       'w-10 h-10 rounded-xl flex items-center justify-center text-white',
-                      todo.isComplete ? 'bg-emerald-500' : 'bg-violet-500'
+                      todo.isComplete ? 'bg-gray-700' : 'bg-gray-800'
                     )}
                   >
                     <Pill className="w-5 h-5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={clsx('text-sm font-semibold', todo.isComplete ? 'text-emerald-700 line-through' : 'text-gray-900')}>
+                    <p className={clsx('text-sm font-semibold', todo.isComplete ? 'text-gray-500 line-through' : 'text-gray-900')}>
                       {todo.medicine.name}
                     </p>
                     <p className="text-xs text-gray-500">
@@ -693,7 +640,7 @@ export function DashboardView() {
                     </p>
                   </div>
                   {todo.isComplete ? (
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                    <CheckCircle2 className="w-5 h-5 text-gray-400" />
                   ) : (
                     <Circle className="w-5 h-5 text-gray-300" />
                   )}
@@ -712,17 +659,17 @@ export function DashboardView() {
             <h3 className="text-sm font-bold text-gray-700">Today's Summary</h3>
           </div>
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-gradient-to-br from-pink-100 via-pink-50 to-white rounded-2xl p-4 text-center shadow-sm border border-pink-100">
+            <div className="bg-gray-50 rounded-2xl p-4 text-center shadow-sm border border-gray-200">
               <span className="text-2xl mb-1 block">🍼</span>
-              <p className="text-3xl font-bold text-pink-600">
+              <p className="text-3xl font-bold text-gray-900">
                 {feedingSessions.filter((s) => !s.isActive && isToday(s.startTime)).length +
                   bottleSessions.filter((s) => isToday(s.timestamp)).length}
               </p>
-              <p className="text-xs text-pink-600/80 font-semibold mt-1">Feedings</p>
+              <p className="text-xs text-gray-500 font-semibold mt-1">Feedings</p>
             </div>
-            <div className="bg-gradient-to-br from-indigo-100 via-indigo-50 to-white rounded-2xl p-4 text-center shadow-sm border border-indigo-100">
+            <div className="bg-gray-50 rounded-2xl p-4 text-center shadow-sm border border-gray-200">
               <span className="text-2xl mb-1 block">😴</span>
-              <p className="text-3xl font-bold text-indigo-600">
+              <p className="text-3xl font-bold text-gray-900">
                 {sleepSessions.filter((s) => {
                   if (s.isActive || !s.endTime) return false;
                   return s.type === 'nap'
@@ -730,14 +677,14 @@ export function DashboardView() {
                     : isToday(s.endTime);
                 }).length}
               </p>
-              <p className="text-xs text-indigo-600/80 font-semibold mt-1">Sleeps</p>
+              <p className="text-xs text-gray-500 font-semibold mt-1">Sleeps</p>
             </div>
-            <div className="bg-gradient-to-br from-emerald-100 via-emerald-50 to-white rounded-2xl p-4 text-center shadow-sm border border-emerald-100">
+            <div className="bg-gray-50 rounded-2xl p-4 text-center shadow-sm border border-gray-200">
               <span className="text-2xl mb-1 block">🧷</span>
-              <p className="text-3xl font-bold text-emerald-600">
+              <p className="text-3xl font-bold text-gray-900">
                 {diaperChanges.filter((c) => isToday(c.timestamp)).length}
               </p>
-              <p className="text-xs text-emerald-600/80 font-semibold mt-1">Diapers</p>
+              <p className="text-xs text-gray-500 font-semibold mt-1">Diapers</p>
             </div>
           </div>
         </div>

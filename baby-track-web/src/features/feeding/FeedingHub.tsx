@@ -122,7 +122,7 @@ export function FeedingHub() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FFF3E8]">
+    <div className="min-h-screen bg-gray-50">
       <Header
         title="Feed"
         rightAction={
@@ -137,8 +137,8 @@ export function FeedingHub() {
       />
 
       <div className="px-4 pt-3">
-        <div className="bg-gradient-to-r from-pink-50 to-violet-50 rounded-2xl border border-pink-100 shadow-sm px-4 py-3">
-          <p className="text-xs text-pink-400 uppercase tracking-wide">Last feeding</p>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
+          <p className="text-xs text-gray-400 uppercase tracking-wide">Last feeding</p>
           <p className="text-sm font-semibold text-gray-900">{lastFeedingLabel}</p>
         </div>
       </div>

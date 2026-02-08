@@ -455,7 +455,7 @@ export function SleepView() {
   const todayNightTime = todayNight.reduce((sum, s) => sum + s.duration, 0);
 
   return (
-    <div className="min-h-screen bg-[#F4F1FF]">
+    <div className="min-h-screen bg-white">
       <Header title="Sleep" />
 
       <div className="px-4 pt-3">
@@ -491,7 +491,7 @@ export function SleepView() {
 
         {/* Timer Mode */}
         {entryMode === 'timer' && (
-          <Card className="border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white">
+          <Card className="border border-gray-100 bg-white">
             <div className="py-6 px-3">
               {!isTimerRunning && !showForm ? (
                 <div className="text-center">
