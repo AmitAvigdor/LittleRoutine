@@ -16,7 +16,7 @@ import {
   writeBatch,
   limit as firestoreLimit,
 } from 'firebase/firestore';
-import type { QuerySnapshot, DocumentData } from 'firebase/firestore';
+import type { QuerySnapshot, DocumentData, QueryConstraint } from 'firebase/firestore';
 import { db } from './firebase';
 import { useAppStore } from '@/stores/appStore';
 
@@ -95,7 +95,7 @@ function subscribeToCollectionSimple<T>(
   queryLimit: number = DEFAULT_QUERY_LIMIT
 ): () => void {
   const collectionRef = collection(db, collectionPath);
-  const orderedConstraints = [
+  const orderedConstraints: QueryConstraint[] = [
     where(whereField, '==', whereValue),
     orderBy(sortField, sortDirection),
   ];
@@ -780,7 +780,7 @@ export function subscribeToMilkStash(
     where('userId', '==', userId),
     where('isUsed', '==', false),
   ];
-  const orderedConstraints = [
+  const orderedConstraints: QueryConstraint[] = [
     ...baseConstraints,
     orderBy('expirationDate', 'asc'),
   ];

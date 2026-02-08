@@ -24,12 +24,12 @@ describe('nutrition helpers', () => {
   it('filters foods with reactions', () => {
     const foods = [
       makeFood({ reaction: 'none' }),
-      makeFood({ reaction: 'rash' }),
+      makeFood({ reaction: 'mild' }),
       makeFood({ reaction: null }),
     ];
     const result = getFoodsWithReactions(foods);
     expect(result).toHaveLength(1);
-    expect(result[0].reaction).toBe('rash');
+    expect(result[0].reaction).toBe('mild');
   });
 
   it('filters first introduction foods', () => {

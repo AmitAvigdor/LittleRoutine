@@ -19,7 +19,12 @@ import {
 class TestNotification {
   static permission: NotificationPermission = 'default';
   static requestPermission = vi.fn().mockResolvedValue('granted');
-  constructor(public title: string, public options?: NotificationOptions) {}
+  title: string;
+  options?: NotificationOptions;
+  constructor(title: string, options?: NotificationOptions) {
+    this.title = title;
+    this.options = options;
+  }
 }
 
 describe('notifications', () => {
