@@ -16,7 +16,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      includeAssets: ['apple-touch-icon.png', 'favicon.svg'],
       manifest: {
         name: 'LittleRoutine - Baby Tracker',
         short_name: 'LittleRoutine',

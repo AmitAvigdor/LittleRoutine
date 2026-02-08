@@ -10,11 +10,13 @@ import {
   where,
   onSnapshot,
   Timestamp,
+  orderBy,
   arrayUnion,
   or,
   writeBatch,
   limit as firestoreLimit,
 } from 'firebase/firestore';
+import type { QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { db } from './firebase';
 import { useAppStore } from '@/stores/appStore';
 
@@ -56,23 +58,33 @@ import type {
 } from '@/types';
 import { DEFAULT_SETTINGS, calculateMilkExpiration } from '@/types';
 
-// Helper to convert Firestore timestamps
-function convertTimestamps<T extends object>(data: T): T {
-  const result = { ...data } as Record<string, unknown>;
-  for (const key in result) {
-    const value = result[key];
-    if (value instanceof Timestamp) {
-      result[key] = value.toDate().toISOString();
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && value.constructor === Object;
+}
+
+// Helper to convert Firestore timestamps (deep)
+function convertTimestamps<T>(data: T): T {
+  const convertValue = (value: unknown): unknown => {
+    if (value instanceof Timestamp) return value.toDate().toISOString();
+    if (value instanceof Date) return value;
+    if (Array.isArray(value)) return value.map(convertValue);
+    if (isPlainObject(value)) {
+      const result: Record<string, unknown> = {};
+      for (const key in value) {
+        result[key] = convertValue(value[key]);
+      }
+      return result;
     }
-  }
-  return result as T;
+    return value;
+  };
+
+  return convertValue(data) as T;
 }
 
 // Default limit for queries to prevent loading too much data
 const DEFAULT_QUERY_LIMIT = 100;
 
-// Generic subscribe function - uses only where clauses, sorts client-side
-// Now supports optional limit parameter for pagination
+// Generic subscribe function - uses server-side sort + optional limit
 function subscribeToCollectionSimple<T>(
   collectionPath: string,
   whereField: string,
@@ -82,15 +94,30 @@ function subscribeToCollectionSimple<T>(
   callback: (items: T[]) => void,
   queryLimit: number = DEFAULT_QUERY_LIMIT
 ): () => void {
-  // Note: We fetch more than the limit to allow client-side sorting to work correctly
-  // The actual limit is applied after sorting
-  const q = query(collection(db, collectionPath), where(whereField, '==', whereValue));
-  return onSnapshot(q, (snapshot) => {
+  const collectionRef = collection(db, collectionPath);
+  const orderedConstraints = [
+    where(whereField, '==', whereValue),
+    orderBy(sortField, sortDirection),
+  ];
+  if (queryLimit > 0) {
+    orderedConstraints.push(firestoreLimit(queryLimit));
+  }
+  const orderedQuery = query(collectionRef, ...orderedConstraints);
+  const fallbackQuery = query(collectionRef, where(whereField, '==', whereValue));
+
+  const handleSnapshot = (snapshot: QuerySnapshot<DocumentData>) => {
     const items = snapshot.docs.map((docSnap) => ({
       id: docSnap.id,
       ...convertTimestamps(docSnap.data()),
     })) as T[];
-    // Sort client-side
+    callback(items);
+  };
+
+  const handleFallbackSnapshot = (snapshot: QuerySnapshot<DocumentData>) => {
+    const items = snapshot.docs.map((docSnap) => ({
+      id: docSnap.id,
+      ...convertTimestamps(docSnap.data()),
+    })) as T[];
     items.sort((a, b) => {
       const aVal = (a as Record<string, unknown>)[sortField] as string;
       const bVal = (b as Record<string, unknown>)[sortField] as string;
@@ -99,13 +126,29 @@ function subscribeToCollectionSimple<T>(
       }
       return new Date(aVal).getTime() - new Date(bVal).getTime();
     });
-    // Apply limit after sorting to get the most relevant items
     const limitedItems = queryLimit > 0 ? items.slice(0, queryLimit) : items;
     callback(limitedItems);
-  }, (error) => {
+  };
+
+  let unsubscribe: () => void = () => {};
+
+  const subscribeWithOrder = () => onSnapshot(orderedQuery, handleSnapshot, (error) => {
+    const message = String(error?.message || '');
+    if (error?.code === 'failed-precondition' || message.toLowerCase().includes('index')) {
+      console.warn(`Missing index for ${collectionPath}. Falling back to client-side sorting.`, error);
+      unsubscribe();
+      unsubscribe = onSnapshot(fallbackQuery, handleFallbackSnapshot, (fallbackError) => {
+        console.error(`Error subscribing (fallback) to ${collectionPath}:`, fallbackError);
+        callback([]);
+      });
+      return;
+    }
     console.error(`Error subscribing to ${collectionPath}:`, error);
     callback([]);
   });
+
+  unsubscribe = subscribeWithOrder();
+  return () => unsubscribe();
 }
 
 // ============ BABIES ============
@@ -729,26 +772,61 @@ export async function updateMilkStashVolume(stashId: string, newVolume: number):
 
 export function subscribeToMilkStash(
   userId: string,
-  callback: (stash: MilkStash[]) => void
+  callback: (stash: MilkStash[]) => void,
+  queryLimit: number = DEFAULT_QUERY_LIMIT
 ): () => void {
-  // Custom query with two where clauses, sort client-side
-  const q = query(
-    collection(db, 'milkStash'),
+  const collectionRef = collection(db, 'milkStash');
+  const baseConstraints = [
     where('userId', '==', userId),
-    where('isUsed', '==', false)
-  );
-  return onSnapshot(q, (snapshot) => {
+    where('isUsed', '==', false),
+  ];
+  const orderedConstraints = [
+    ...baseConstraints,
+    orderBy('expirationDate', 'asc'),
+  ];
+  if (queryLimit > 0) {
+    orderedConstraints.push(firestoreLimit(queryLimit));
+  }
+  const orderedQuery = query(collectionRef, ...orderedConstraints);
+  const fallbackQuery = query(collectionRef, ...baseConstraints);
+
+  const handleSnapshot = (snapshot: QuerySnapshot<DocumentData>) => {
     const items = snapshot.docs.map((docSnap) => ({
       id: docSnap.id,
       ...convertTimestamps(docSnap.data()),
     })) as MilkStash[];
-    // Sort by expiration date ascending
-    items.sort((a, b) => new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime());
     callback(items);
-  }, (error) => {
+  };
+
+  const handleFallbackSnapshot = (snapshot: QuerySnapshot<DocumentData>) => {
+    const items = snapshot.docs.map((docSnap) => ({
+      id: docSnap.id,
+      ...convertTimestamps(docSnap.data()),
+    })) as MilkStash[];
+    items.sort((a, b) => new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime());
+    const limitedItems = queryLimit > 0 ? items.slice(0, queryLimit) : items;
+    callback(limitedItems);
+  };
+
+  let unsubscribe: () => void = () => {};
+
+  const subscribeWithOrder = () => onSnapshot(orderedQuery, handleSnapshot, (error) => {
+    const message = String(error?.message || '');
+    if (error?.code === 'failed-precondition' || message.toLowerCase().includes('index')) {
+      console.warn('Missing index for milkStash. Falling back to client-side sorting.', error);
+      unsubscribe();
+      unsubscribe = onSnapshot(fallbackQuery, handleFallbackSnapshot, (fallbackError) => {
+        console.error('Error subscribing (fallback) to milkStash:', fallbackError);
+        callback([]);
+      });
+      return;
+    }
     console.error('Error subscribing to milkStash:', error);
     callback([]);
   });
+
+  unsubscribe = subscribeWithOrder();
+  return () => unsubscribe();
 }
 
 // ============ SLEEP SESSIONS ============
