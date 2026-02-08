@@ -198,7 +198,7 @@ export function MainLayout() {
           type="button"
           onClick={() => setQuickAddOpen(true)}
           className={clsx(
-            'fixed bottom-24 right-4 z-40 w-16 h-16 rounded-full text-white',
+            'fixed bottom-32 right-4 z-40 w-16 h-16 rounded-full text-white',
             'shadow-lg shadow-black/20 transition-transform active:scale-95',
             'flex items-center justify-center border-4 border-white/70'
           )}

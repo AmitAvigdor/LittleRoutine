@@ -583,31 +583,62 @@ export function DashboardView() {
             <span className="text-base">✨</span>
             <h3 className="text-sm font-bold text-gray-700">At a glance</h3>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <SnapshotCard
-              title="Last feeding"
-              value={isFeedingActive ? 'In progress' : (lastFeeding ? formatTimeSince(lastFeeding.timestamp) : 'No data')}
-              sub={lastFeeding?.details}
-              icon={lastFeeding?.type === 'bottle' ? <Milk className="w-4 h-4" /> : <Baby className="w-4 h-4" />}
-              color="#e91e63"
-              onClick={() => navigate('/feed')}
-            />
-            <SnapshotCard
-              title={sleepStatus?.isAsleep ? 'Sleeping' : 'Last woke'}
-              value={isSleepActive ? 'In progress' : (sleepStatus ? formatTimeSince(sleepStatus.timestamp) : 'No data')}
-              sub={sleepStatus?.details}
-              icon={sleepStatus?.isAsleep ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-              color={sleepStatus?.isAsleep ? '#3f51b5' : '#ff9800'}
-              onClick={() => navigate('/sleep')}
-            />
-            <SnapshotCard
-              title="Last diaper"
-              value={lastDiaper ? formatTimeSince(lastDiaper.timestamp) : 'No data'}
-              sub={lastDiaper?.details}
-              icon={<Leaf className="w-4 h-4" />}
-              color="#4caf50"
-              onClick={() => navigate('/diaper')}
-            />
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4">
+            <div className="grid grid-cols-1 gap-3">
+              <button
+                onClick={() => navigate('/feed')}
+                className="flex items-center gap-3 p-3 rounded-2xl bg-pink-50/60 border border-pink-100"
+              >
+                <div className="w-10 h-10 rounded-xl bg-pink-500 text-white flex items-center justify-center">
+                  {lastFeeding?.type === 'bottle' ? <Milk className="w-5 h-5" /> : <Baby className="w-5 h-5" />}
+                </div>
+                <div className="text-left">
+                  <p className="text-xs uppercase tracking-wide text-pink-500 font-semibold">Feeding</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {isFeedingActive ? 'In progress' : (lastFeeding ? formatTimeSince(lastFeeding.timestamp) : 'No data')}
+                  </p>
+                  {lastFeeding?.details && (
+                    <p className="text-xs text-gray-500">{lastFeeding.details}</p>
+                  )}
+                </div>
+              </button>
+
+              <button
+                onClick={() => navigate('/sleep')}
+                className="flex items-center gap-3 p-3 rounded-2xl bg-indigo-50/60 border border-indigo-100"
+              >
+                <div className="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center">
+                  {sleepStatus?.isAsleep ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                </div>
+                <div className="text-left">
+                  <p className="text-xs uppercase tracking-wide text-indigo-500 font-semibold">Sleep</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {isSleepActive ? 'In progress' : (sleepStatus ? formatTimeSince(sleepStatus.timestamp) : 'No data')}
+                  </p>
+                  {sleepStatus?.details && (
+                    <p className="text-xs text-gray-500">{sleepStatus.details}</p>
+                  )}
+                </div>
+              </button>
+
+              <button
+                onClick={() => navigate('/diaper')}
+                className="flex items-center gap-3 p-3 rounded-2xl bg-emerald-50/60 border border-emerald-100"
+              >
+                <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center">
+                  <Leaf className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <p className="text-xs uppercase tracking-wide text-emerald-600 font-semibold">Diaper</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {lastDiaper ? formatTimeSince(lastDiaper.timestamp) : 'No data'}
+                  </p>
+                  {lastDiaper?.details && (
+                    <p className="text-xs text-gray-500">{lastDiaper.details}</p>
+                  )}
+                </div>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -620,26 +651,46 @@ export function DashboardView() {
                 <h3 className="text-sm font-bold text-gray-700">Today's To Do</h3>
               </div>
               {incompleteMedicineTodos.length > 0 && (
-                <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full">
+                <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full">
                   {incompleteMedicineTodos.length} pending
                 </span>
               )}
             </div>
             <div className="space-y-2">
               {medicineTodos.map((todo) => (
-                <TodoItem
+                <div
                   key={todo.id}
-                  icon={<Pill className="w-5 h-5 text-white" />}
-                  iconBg="#9c27b0"
-                  title={todo.medicine.name}
-                  subtitle={
-                    todo.maxDoses
-                      ? `${todo.dosesGiven}/${todo.maxDoses} doses given`
-                      : `${todo.dosesGiven} doses given`
-                  }
-                  done={todo.isComplete}
+                  className={clsx(
+                    'flex items-center gap-3 p-3 rounded-2xl border',
+                    todo.isComplete ? 'bg-emerald-50 border-emerald-100' : 'bg-white border-gray-100 shadow-sm'
+                  )}
                   onClick={() => navigate('/more/medicine')}
-                />
+                  role="button"
+                >
+                  <div
+                    className={clsx(
+                      'w-10 h-10 rounded-xl flex items-center justify-center text-white',
+                      todo.isComplete ? 'bg-emerald-500' : 'bg-violet-500'
+                    )}
+                  >
+                    <Pill className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={clsx('text-sm font-semibold', todo.isComplete ? 'text-emerald-700 line-through' : 'text-gray-900')}>
+                      {todo.medicine.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {todo.maxDoses
+                        ? `${todo.dosesGiven}/${todo.maxDoses} doses given`
+                        : `${todo.dosesGiven} doses given`}
+                    </p>
+                  </div>
+                  {todo.isComplete ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                  ) : (
+                    <Circle className="w-5 h-5 text-gray-300" />
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -654,7 +705,7 @@ export function DashboardView() {
             <h3 className="text-sm font-bold text-gray-700">Today's Summary</h3>
           </div>
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-2xl p-4 text-center shadow-sm">
+            <div className="bg-gradient-to-br from-pink-100 via-pink-50 to-white rounded-2xl p-4 text-center shadow-sm border border-pink-100">
               <span className="text-2xl mb-1 block">🍼</span>
               <p className="text-3xl font-bold text-pink-600">
                 {feedingSessions.filter((s) => !s.isActive && isToday(s.startTime)).length +
@@ -662,7 +713,7 @@ export function DashboardView() {
               </p>
               <p className="text-xs text-pink-600/80 font-semibold mt-1">Feedings</p>
             </div>
-            <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-4 text-center shadow-sm">
+            <div className="bg-gradient-to-br from-indigo-100 via-indigo-50 to-white rounded-2xl p-4 text-center shadow-sm border border-indigo-100">
               <span className="text-2xl mb-1 block">😴</span>
               <p className="text-3xl font-bold text-indigo-600">
                 {sleepSessions.filter((s) => {
@@ -674,12 +725,12 @@ export function DashboardView() {
               </p>
               <p className="text-xs text-indigo-600/80 font-semibold mt-1">Sleeps</p>
             </div>
-            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 text-center shadow-sm">
+            <div className="bg-gradient-to-br from-emerald-100 via-emerald-50 to-white rounded-2xl p-4 text-center shadow-sm border border-emerald-100">
               <span className="text-2xl mb-1 block">🧷</span>
-              <p className="text-3xl font-bold text-green-600">
+              <p className="text-3xl font-bold text-emerald-600">
                 {diaperChanges.filter((c) => isToday(c.timestamp)).length}
               </p>
-              <p className="text-xs text-green-600/80 font-semibold mt-1">Diapers</p>
+              <p className="text-xs text-emerald-600/80 font-semibold mt-1">Diapers</p>
             </div>
           </div>
         </div>
