@@ -333,7 +333,7 @@ export function DiaperView() {
       <Header title="Diaper" />
 
       <div className="px-4 pt-3">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
+        <div className="bg-white rounded-2xl border border-gray-100 border-l-4 border-l-emerald-300 shadow-sm px-4 py-3">
           <p className="text-xs text-gray-400 uppercase tracking-wide">Last change</p>
           <p className="text-sm font-semibold text-gray-900">{lastChangeLabel}</p>
         </div>

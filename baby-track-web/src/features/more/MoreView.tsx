@@ -69,22 +69,21 @@ export function MoreView() {
     : null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
       <Header title="More" showBabySwitcher={false} />
 
       <div className="px-4 py-4 space-y-5">
         {/* Current Baby Card */}
         {selectedBaby && (
           <Card
-            className="relative overflow-hidden"
+            className="relative overflow-hidden bg-white border border-gray-100 border-l-4"
             style={{
-              background: `linear-gradient(135deg, ${babyColor}15 0%, ${babyColor}05 100%)`,
-              borderColor: `${babyColor}30`,
+              borderLeftColor: babyColor,
             }}
           >
             <div className="flex items-center gap-4">
               <div
-                className="w-18 h-18 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg ring-4 ring-white/50"
+                className="w-18 h-18 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-sm ring-4 ring-white"
                 style={{ backgroundColor: babyColor }}
               >
                 {selectedBaby.photoUrl ? (
@@ -105,7 +104,7 @@ export function MoreView() {
               </div>
               <button
                 onClick={() => navigate(`/more/babies/${selectedBaby.id}/edit`)}
-                className="p-3 rounded-xl hover:bg-white/50 transition-colors"
+                className="p-3 rounded-xl hover:bg-gray-50 transition-colors"
               >
                 <Edit className="w-5 h-5 text-gray-500" />
               </button>
@@ -114,14 +113,14 @@ export function MoreView() {
             <div className="grid grid-cols-2 gap-2 mt-4">
               <button
                 onClick={() => navigate('/more/babies')}
-                className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/70 text-sm font-semibold text-gray-700 hover:text-gray-900"
+                className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gray-50 text-sm font-semibold text-gray-700 hover:text-gray-900"
               >
                 <Users className="w-4 h-4" />
                 Manage Babies
               </button>
               <button
                 onClick={() => navigate('/more/babies')}
-                className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/70 text-sm font-semibold text-gray-700 hover:text-gray-900"
+                className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gray-50 text-sm font-semibold text-gray-700 hover:text-gray-900"
               >
                 <SwitchCamera className="w-4 h-4" />
                 Switch Baby
@@ -144,13 +143,13 @@ export function MoreView() {
               <button
                 key={path}
                 onClick={() => navigate(path)}
-                className="flex items-center gap-3 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all"
+                className="flex items-center gap-3 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors"
               >
                 <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center shadow-sm"
-                  style={{ background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)` }}
+                  className="w-12 h-12 rounded-xl flex items-center justify-center"
+                  style={{ backgroundColor: `${color}1A` }}
                 >
-                  <Icon className="w-6 h-6 text-white" />
+                  <Icon className="w-6 h-6" style={{ color }} />
                 </div>
                 <div className="text-left">
                   <p className="text-sm font-semibold text-gray-900">{label}</p>
@@ -175,15 +174,13 @@ export function MoreView() {
               <button
                 key={path}
                 onClick={() => navigate(path)}
-                className="flex flex-col items-center p-3 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95"
+                className="flex flex-col items-center p-3 bg-white rounded-2xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors active:scale-95"
               >
                 <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-2 shadow-sm"
-                  style={{
-                    background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
-                  }}
+                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-2"
+                  style={{ backgroundColor: `${color}1A` }}
                 >
-                  <Icon className="w-6 h-6 text-white" />
+                  <Icon className="w-6 h-6" style={{ color }} />
                 </div>
                 <span className="text-[11px] text-center text-gray-700 font-semibold leading-tight">
                   {label}
@@ -204,7 +201,7 @@ export function MoreView() {
               onClick={() => navigate('/more/settings')}
               className="w-full flex items-center gap-4 px-4 py-4 hover:bg-gray-50 transition-colors"
             >
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-sm">
+              <div className="w-11 h-11 rounded-xl bg-gray-100 flex items-center justify-center">
                 <Settings className="w-5 h-5 text-gray-600" />
               </div>
               <span className="flex-1 text-left font-semibold text-gray-900">Settings</span>
@@ -217,8 +214,8 @@ export function MoreView() {
               onClick={() => navigate('/more/export')}
               className="w-full flex items-center gap-4 px-4 py-4 hover:bg-gray-50 transition-colors"
             >
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center shadow-sm">
-                <FileText className="w-5 h-5 text-blue-600" />
+              <div className="w-11 h-11 rounded-xl bg-gray-100 flex items-center justify-center">
+                <FileText className="w-5 h-5 text-gray-600" />
               </div>
               <span className="flex-1 text-left font-semibold text-gray-900">Export Data</span>
               <ChevronRight className="w-5 h-5 text-gray-400" />
@@ -230,7 +227,7 @@ export function MoreView() {
               onClick={logout}
               className="w-full flex items-center gap-4 px-4 py-4 hover:bg-red-50 transition-colors"
             >
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center shadow-sm">
+              <div className="w-11 h-11 rounded-xl bg-red-50 flex items-center justify-center">
                 <LogOut className="w-5 h-5 text-red-500" />
               </div>
               <span className="flex-1 text-left font-semibold text-red-600">Sign Out</span>
