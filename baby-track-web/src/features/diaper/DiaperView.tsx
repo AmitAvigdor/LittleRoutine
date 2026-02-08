@@ -302,7 +302,8 @@ export function DiaperView() {
   const stats = {
     total: todayChanges.length,
     wet: todayChanges.filter((c) => c.type === 'wet').length,
-    full: todayChanges.filter((c) => c.type === 'full' || c.type === 'dirty' || c.type === 'both').length,
+    // Count 'full' and legacy types ('dirty', 'both') as full
+    full: todayChanges.filter((c) => (c.type as string) !== 'wet').length,
   };
 
   // Check if we're in edit mode or detail form

@@ -165,8 +165,8 @@ export function StatsView() {
     const nightCount = filteredSleep.filter((s) => s.type === 'night').length;
     const diaperCount = filteredDiaper.length;
     const wetCount = filteredDiaper.filter((c) => c.type === 'wet').length;
-    // Count 'full', 'dirty', and 'both' as full diapers (legacy support)
-    const fullCount = filteredDiaper.filter((c) => c.type === 'full' || c.type === 'dirty' || c.type === 'both').length;
+    // Count 'full' and legacy types ('dirty', 'both') as full diapers
+    const fullCount = filteredDiaper.filter((c) => (c.type as string) !== 'wet').length;
     const playTime = filteredPlay.reduce((sum, s) => sum + s.duration, 0);
     const playCount = filteredPlay.length;
     const walkTime = filteredWalks.reduce((sum, s) => sum + s.duration, 0);

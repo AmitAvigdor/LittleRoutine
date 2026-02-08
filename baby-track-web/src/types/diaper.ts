@@ -23,8 +23,7 @@ export interface CreateDiaperChangeInput {
 export function getDiaperStats(changes: DiaperChange[], startDate: Date, endDate: Date): {
   total: number;
   wet: number;
-  dirty: number;
-  both: number;
+  full: number;
 } {
   const filtered = changes.filter(c => {
     const date = new Date(c.timestamp);
@@ -34,7 +33,7 @@ export function getDiaperStats(changes: DiaperChange[], startDate: Date, endDate
   return {
     total: filtered.length,
     wet: filtered.filter(c => c.type === 'wet').length,
-    dirty: filtered.filter(c => c.type === 'dirty').length,
-    both: filtered.filter(c => c.type === 'both').length,
+    // Count 'full' and legacy types ('dirty', 'both') as full
+    full: filtered.filter(c => (c.type as string) !== 'wet').length,
   };
 }
