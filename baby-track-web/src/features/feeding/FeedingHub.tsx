@@ -122,7 +122,7 @@ export function FeedingHub() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#FFF1E6]">
       <Header
         title="Feed"
         rightAction={

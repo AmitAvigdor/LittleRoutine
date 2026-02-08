@@ -455,7 +455,7 @@ export function SleepView() {
   const todayNightTime = todayNight.reduce((sum, s) => sum + s.duration, 0);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F1F0FF]">
       <Header title="Sleep" />
 
       <div className="px-4 pt-3">

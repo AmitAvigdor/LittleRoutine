@@ -212,10 +212,36 @@ function TodoItem({ icon, iconBg, title, subtitle, done, onClick }: TodoItemProp
 }
 
 
+type StatusTone = 'green' | 'yellow' | 'red';
+
+function rankTone(tone: StatusTone): number {
+  return tone === 'red' ? 3 : tone === 'yellow' ? 2 : 1;
+}
+
+function toneForInterval(lastTimestamp: string | null, intervalHours: number): StatusTone {
+  if (!lastTimestamp) return 'yellow';
+  const hoursSince = (Date.now() - new Date(lastTimestamp).getTime()) / (1000 * 60 * 60);
+  if (hoursSince >= intervalHours) return 'red';
+  if (hoursSince >= intervalHours * 0.75) return 'yellow';
+  return 'green';
+}
+
+function toneClasses(tone: StatusTone): { container: string; label: string } {
+  switch (tone) {
+    case 'red':
+      return { container: 'bg-red-50 border-red-200', label: 'text-red-700' };
+    case 'yellow':
+      return { container: 'bg-amber-50 border-amber-200', label: 'text-amber-700' };
+    case 'green':
+    default:
+      return { container: 'bg-emerald-50 border-emerald-200', label: 'text-emerald-700' };
+  }
+}
+
 export function DashboardView() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { selectedBaby, babies } = useAppStore();
+  const { selectedBaby, babies, settings } = useAppStore();
   const [, setTick] = useState(0);
 
   // Data states
@@ -484,9 +510,32 @@ export function DashboardView() {
   // Count incomplete medicine todos
   const incompleteMedicineTodos = medicineTodos.filter(t => !t.isComplete);
 
+  const feedingTone = useMemo<StatusTone>(() => {
+    const feedingInterval = settings?.feedingReminderInterval ?? 3;
+    const feedingTimestamp = lastFeeding?.timestamp ?? null;
+    return isFeedingActive ? 'green' : toneForInterval(feedingTimestamp, feedingInterval);
+  }, [settings, lastFeeding, isFeedingActive]);
+
+  const sleepTone = useMemo<StatusTone>(() => {
+    const sleepInterval = 4;
+    const sleepTimestamp = sleepStatus?.timestamp ?? null;
+    return isSleepActive ? 'green' : toneForInterval(sleepTimestamp, sleepInterval);
+  }, [sleepStatus, isSleepActive]);
+
+  const diaperTone = useMemo<StatusTone>(() => {
+    const diaperInterval = settings?.diaperReminderInterval ?? 2;
+    const diaperTimestamp = lastDiaper?.timestamp ?? null;
+    return toneForInterval(diaperTimestamp, diaperInterval);
+  }, [settings, lastDiaper]);
+
+  const mostUrgentTone = useMemo<StatusTone>(() => {
+    const tones: StatusTone[] = [feedingTone, sleepTone, diaperTone];
+    return tones.sort((a, b) => rankTone(b) - rankTone(a))[0];
+  }, [feedingTone, sleepTone, diaperTone]);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header title="Home" subtitle={babyAge?.text} />
+    <div className="min-h-screen bg-gradient-to-b from-[#f8fafc] via-[#fdf7fb] to-[#f1f5f9]">
+      <Header title="Home" subtitle={babyAge?.text} statusTone={mostUrgentTone} />
 
       <div className="px-4 py-4 space-y-5">
         {/* Active Timers */}
@@ -537,17 +586,20 @@ export function DashboardView() {
             <span className="text-base">✨</span>
             <h3 className="text-sm font-bold text-gray-700">At a glance</h3>
           </div>
-          <div className="rounded-3xl border shadow-sm p-4 bg-white border-gray-100">
+          <div className="rounded-3xl border shadow-sm p-4 bg-white/80 border-gray-100 backdrop-blur">
             <div className="grid grid-cols-1 gap-3">
               <button
                 onClick={() => navigate('/feed')}
-                className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-gray-100 shadow-sm"
+                className={clsx(
+                  'flex items-center gap-3 p-3 rounded-2xl border shadow-sm',
+                  toneClasses(feedingTone).container
+                )}
               >
-                <div className="w-10 h-10 rounded-xl bg-gray-800 text-white flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-gray-900 text-white flex items-center justify-center">
                   {lastFeeding?.type === 'bottle' ? <Milk className="w-5 h-5" /> : <Baby className="w-5 h-5" />}
                 </div>
                 <div className="text-left">
-                  <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Feeding</p>
+                  <p className={clsx('text-xs uppercase tracking-wide font-semibold', toneClasses(feedingTone).label)}>Feeding</p>
                   <p className="text-sm font-semibold text-gray-900">
                     {isFeedingActive ? 'In progress' : (lastFeeding ? formatTimeSince(lastFeeding.timestamp) : 'No data')}
                   </p>
@@ -559,13 +611,16 @@ export function DashboardView() {
 
               <button
                 onClick={() => navigate('/sleep')}
-                className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-gray-100 shadow-sm"
+                className={clsx(
+                  'flex items-center gap-3 p-3 rounded-2xl border shadow-sm',
+                  toneClasses(sleepTone).container
+                )}
               >
-                <div className="w-10 h-10 rounded-xl bg-gray-800 text-white flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-gray-900 text-white flex items-center justify-center">
                   {sleepStatus?.isAsleep ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                 </div>
                 <div className="text-left">
-                  <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Sleep</p>
+                  <p className={clsx('text-xs uppercase tracking-wide font-semibold', toneClasses(sleepTone).label)}>Sleep</p>
                   <p className="text-sm font-semibold text-gray-900">
                     {isSleepActive ? 'In progress' : (sleepStatus ? formatTimeSince(sleepStatus.timestamp) : 'No data')}
                   </p>
@@ -577,13 +632,16 @@ export function DashboardView() {
 
               <button
                 onClick={() => navigate('/diaper')}
-                className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-gray-100 shadow-sm"
+                className={clsx(
+                  'flex items-center gap-3 p-3 rounded-2xl border shadow-sm',
+                  toneClasses(diaperTone).container
+                )}
               >
-                <div className="w-10 h-10 rounded-xl bg-gray-800 text-white flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-gray-900 text-white flex items-center justify-center">
                   <Leaf className="w-5 h-5" />
                 </div>
                 <div className="text-left">
-                  <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Diaper</p>
+                  <p className={clsx('text-xs uppercase tracking-wide font-semibold', toneClasses(diaperTone).label)}>Diaper</p>
                   <p className="text-sm font-semibold text-gray-900">
                     {lastDiaper ? formatTimeSince(lastDiaper.timestamp) : 'No data'}
                   </p>
@@ -616,7 +674,7 @@ export function DashboardView() {
                   key={todo.id}
                   className={clsx(
                     'flex items-center gap-3 p-3 rounded-2xl border',
-                    todo.isComplete ? 'bg-gray-50 border-gray-200' : 'bg-white border-gray-100 shadow-sm'
+                    todo.isComplete ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'
                   )}
                   onClick={() => navigate('/more/medicine')}
                   role="button"
@@ -624,13 +682,13 @@ export function DashboardView() {
                   <div
                     className={clsx(
                       'w-10 h-10 rounded-xl flex items-center justify-center text-white',
-                      todo.isComplete ? 'bg-gray-700' : 'bg-gray-800'
+                      todo.isComplete ? 'bg-emerald-600' : 'bg-red-500'
                     )}
                   >
                     <Pill className="w-5 h-5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={clsx('text-sm font-semibold', todo.isComplete ? 'text-gray-500 line-through' : 'text-gray-900')}>
+                    <p className={clsx('text-sm font-semibold', todo.isComplete ? 'text-emerald-800 line-through' : 'text-red-800')}>
                       {todo.medicine.name}
                     </p>
                     <p className="text-xs text-gray-500">
@@ -640,9 +698,9 @@ export function DashboardView() {
                     </p>
                   </div>
                   {todo.isComplete ? (
-                    <CheckCircle2 className="w-5 h-5 text-gray-400" />
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                   ) : (
-                    <Circle className="w-5 h-5 text-gray-300" />
+                    <Circle className="w-5 h-5 text-red-400" />
                   )}
                 </div>
               ))}

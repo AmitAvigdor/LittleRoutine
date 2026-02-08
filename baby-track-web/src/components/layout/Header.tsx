@@ -14,6 +14,7 @@ interface HeaderProps {
   rightAction?: React.ReactNode;
   gradient?: boolean;
   subtitle?: string;
+  statusTone?: 'green' | 'yellow' | 'red';
 }
 
 export function Header({
@@ -22,10 +23,28 @@ export function Header({
   rightAction,
   gradient = false,
   subtitle,
+  statusTone,
 }: HeaderProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const { selectedBaby, babies, setSelectedBabyId } = useAppStore();
   const navigate = useNavigate();
+  const isTone = statusTone === 'green' || statusTone === 'yellow' || statusTone === 'red';
+  const toneClass =
+    statusTone === 'red'
+      ? 'bg-red-200 text-red-900'
+      : statusTone === 'yellow'
+      ? 'bg-amber-200 text-amber-900'
+      : statusTone === 'green'
+      ? 'bg-emerald-200 text-emerald-900'
+      : '';
+  const toneTextClass =
+    statusTone === 'red'
+      ? 'text-red-900'
+      : statusTone === 'yellow'
+      ? 'text-amber-900'
+      : statusTone === 'green'
+      ? 'text-emerald-900'
+      : 'text-gray-900';
 
   const handleSelectBaby = (babyId: string) => {
     setSelectedBabyId(babyId);
@@ -40,7 +59,7 @@ export function Header({
     <header
       className={clsx(
         'sticky top-0 z-40 safe-top',
-        gradient ? 'gradient-primary text-white' : 'bg-white border-b border-gray-100'
+        isTone ? toneClass : gradient ? 'gradient-primary text-white' : 'bg-white border-b border-gray-100'
       )}
     >
       <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
@@ -49,7 +68,7 @@ export function Header({
           <h1
             className={clsx(
               'text-xl font-bold',
-              gradient ? 'text-white' : 'text-gray-900'
+              gradient ? 'text-white' : isTone ? toneTextClass : 'text-gray-900'
             )}
           >
             {title}
@@ -64,6 +83,8 @@ export function Header({
                   'transition-all duration-200',
                   gradient
                     ? 'bg-white/20 text-white hover:bg-white/30'
+                    : isTone
+                    ? 'bg-white/70 text-gray-800 hover:bg-white/90'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 )}
               >
