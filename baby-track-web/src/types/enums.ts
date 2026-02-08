@@ -67,12 +67,11 @@ export const SLEEP_TYPE_CONFIG: Record<SleepType, { label: string; color: string
 };
 
 // Diaper Type
-export type DiaperType = 'wet' | 'dirty' | 'both';
+export type DiaperType = 'wet' | 'full';
 
 export const DIAPER_TYPE_CONFIG: Record<DiaperType, { label: string; color: string; icon: string }> = {
   wet: { label: 'Wet', color: '#2196f3', icon: 'droplet' },
-  dirty: { label: 'Dirty', color: '#795548', icon: 'circle' },
-  both: { label: 'Both', color: '#ff9800', icon: 'layers' },
+  full: { label: 'Full', color: '#795548', icon: 'circle' },
 };
 
 // Milk Storage Location

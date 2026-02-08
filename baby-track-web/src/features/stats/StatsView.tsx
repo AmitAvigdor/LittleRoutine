@@ -165,7 +165,8 @@ export function StatsView() {
     const nightCount = filteredSleep.filter((s) => s.type === 'night').length;
     const diaperCount = filteredDiaper.length;
     const wetCount = filteredDiaper.filter((c) => c.type === 'wet').length;
-    const dirtyCount = filteredDiaper.filter((c) => c.type === 'dirty').length;
+    // Count 'full', 'dirty', and 'both' as full diapers (legacy support)
+    const fullCount = filteredDiaper.filter((c) => c.type === 'full' || c.type === 'dirty' || c.type === 'both').length;
     const playTime = filteredPlay.reduce((sum, s) => sum + s.duration, 0);
     const playCount = filteredPlay.length;
     const walkTime = filteredWalks.reduce((sum, s) => sum + s.duration, 0);
@@ -183,7 +184,7 @@ export function StatsView() {
       nightCount,
       diaperCount,
       wetCount,
-      dirtyCount,
+      fullCount,
       playTime,
       playCount,
       walkTime,
@@ -245,8 +246,7 @@ export function StatsView() {
   // Diaper pie chart data
   const diaperPieData = [
     { name: 'Wet', value: stats.wetCount, color: '#2196f3' },
-    { name: 'Dirty', value: stats.dirtyCount, color: '#795548' },
-    { name: 'Both', value: stats.diaperCount - stats.wetCount - stats.dirtyCount, color: '#ff9800' },
+    { name: 'Full', value: stats.fullCount, color: '#795548' },
   ].filter((d) => d.value > 0);
 
   // History data - combine all sessions into a unified timeline
@@ -326,13 +326,16 @@ export function StatsView() {
     // Add diaper changes
     if (historyFilter === 'all' || historyFilter === 'diaper') {
       diaperChanges.forEach((c) => {
+        // Handle legacy types (dirty, both) as "full"
+        const displayType = c.type === 'wet' ? 'wet' : 'full';
+        const config = DIAPER_TYPE_CONFIG[displayType];
         items.push({
           id: `diaper-${c.id}`,
           type: 'diaper',
           timestamp: c.timestamp,
-          details: `Diaper - ${DIAPER_TYPE_CONFIG[c.type].label}`,
+          details: `Diaper - ${config.label}`,
           subDetails: c.notes || undefined,
-          color: DIAPER_TYPE_CONFIG[c.type].color,
+          color: config.color,
           icon: 'leaf',
         });
       });

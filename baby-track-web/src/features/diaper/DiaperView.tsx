@@ -12,7 +12,7 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
-import { Droplet, Circle, Layers, Clock, Check, Edit3, Trash2, Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import { Droplet, Circle, Clock, Check, Edit3, Trash2, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 
 type EntryMode = 'quick' | 'manual';
 
@@ -23,8 +23,7 @@ const entryModeOptions = [
 
 const DIAPER_ICONS: Record<DiaperType, React.ReactNode> = {
   wet: <Droplet className="w-8 h-8" />,
-  dirty: <Circle className="w-8 h-8" />,
-  both: <Layers className="w-8 h-8" />,
+  full: <Circle className="w-8 h-8" />,
 };
 
 export function DiaperView() {
@@ -176,7 +175,9 @@ export function DiaperView() {
 
   const handleEditClick = (change: DiaperChange) => {
     setEditingChange(change);
-    setSelectedType(change.type);
+    // Convert legacy types (dirty, both) to 'full'
+    const editType = change.type === 'wet' ? 'wet' : 'full';
+    setSelectedType(editType);
     setNotes(change.notes || '');
     setBabyMood(change.babyMood);
     setManualDate(change.timestamp.split('T')[0]);
@@ -301,8 +302,7 @@ export function DiaperView() {
   const stats = {
     total: todayChanges.length,
     wet: todayChanges.filter((c) => c.type === 'wet').length,
-    dirty: todayChanges.filter((c) => c.type === 'dirty').length,
-    both: todayChanges.filter((c) => c.type === 'both').length,
+    full: todayChanges.filter((c) => c.type === 'full' || c.type === 'dirty' || c.type === 'both').length,
   };
 
   // Check if we're in edit mode or detail form
@@ -340,8 +340,8 @@ export function DiaperView() {
               </div>
             )}
 
-            <div className="grid grid-cols-3 gap-3">
-              {(['wet', 'dirty', 'both'] as DiaperType[]).map((type) => {
+            <div className="grid grid-cols-2 gap-3">
+              {(['wet', 'full'] as DiaperType[]).map((type) => {
                 const config = DIAPER_TYPE_CONFIG[type];
                 return (
                   <button
@@ -396,8 +396,8 @@ export function DiaperView() {
               {/* Diaper Type Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {(['wet', 'dirty', 'both'] as DiaperType[]).map((type) => {
+                <div className="grid grid-cols-2 gap-3">
+                  {(['wet', 'full'] as DiaperType[]).map((type) => {
                     const config = DIAPER_TYPE_CONFIG[type];
                     const isSelected = selectedType === type;
                     return (
@@ -416,8 +416,7 @@ export function DiaperView() {
                       >
                         <div style={{ color: config.color }}>
                           {type === 'wet' && <Droplet className="w-6 h-6" />}
-                          {type === 'dirty' && <Circle className="w-6 h-6" />}
-                          {type === 'both' && <Layers className="w-6 h-6" />}
+                          {type === 'full' && <Circle className="w-6 h-6" />}
                         </div>
                         <span
                           className="mt-1 text-sm font-medium"
@@ -552,8 +551,8 @@ export function DiaperView() {
               {/* Diaper Type Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {(['wet', 'dirty', 'both'] as DiaperType[]).map((type) => {
+                <div className="grid grid-cols-2 gap-3">
+                  {(['wet', 'full'] as DiaperType[]).map((type) => {
                     const config = DIAPER_TYPE_CONFIG[type];
                     const isSelected = selectedType === type;
                     return (
@@ -572,8 +571,7 @@ export function DiaperView() {
                       >
                         <div style={{ color: config.color }}>
                           {type === 'wet' && <Droplet className="w-6 h-6" />}
-                          {type === 'dirty' && <Circle className="w-6 h-6" />}
-                          {type === 'both' && <Layers className="w-6 h-6" />}
+                          {type === 'full' && <Circle className="w-6 h-6" />}
                         </div>
                         <span
                           className="mt-1 text-sm font-medium"
@@ -651,7 +649,7 @@ export function DiaperView() {
 
         {/* Today's Stats */}
         {!isInDetailForm && !isEditing && (
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <Card className="text-center p-3">
               <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
               <p className="text-xs text-gray-500">Total</p>
@@ -668,20 +666,11 @@ export function DiaperView() {
             <Card className="text-center p-3">
               <p
                 className="text-2xl font-bold"
-                style={{ color: DIAPER_TYPE_CONFIG.dirty.color }}
+                style={{ color: DIAPER_TYPE_CONFIG.full.color }}
               >
-                {stats.dirty}
+                {stats.full}
               </p>
-              <p className="text-xs text-gray-500">Dirty</p>
-            </Card>
-            <Card className="text-center p-3">
-              <p
-                className="text-2xl font-bold"
-                style={{ color: DIAPER_TYPE_CONFIG.both.color }}
-              >
-                {stats.both}
-              </p>
-              <p className="text-xs text-gray-500">Both</p>
+              <p className="text-xs text-gray-500">Full</p>
             </Card>
           </div>
         )}
@@ -694,32 +683,36 @@ export function DiaperView() {
               <p className="text-xs text-gray-500">Tap to edit</p>
             </div>
             <div className="divide-y divide-gray-50">
-              {changes.slice(0, 10).map((change) => (
-                <button
-                  key={change.id}
-                  onClick={() => handleEditClick(change)}
-                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
-                >
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white"
-                    style={{ backgroundColor: DIAPER_TYPE_CONFIG[change.type].color }}
+              {changes.slice(0, 10).map((change) => {
+                // Handle legacy types (dirty, both) as "full"
+                const displayType = change.type === 'wet' ? 'wet' : 'full';
+                const config = DIAPER_TYPE_CONFIG[displayType];
+                return (
+                  <button
+                    key={change.id}
+                    onClick={() => handleEditClick(change)}
+                    className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
                   >
-                    {change.type === 'wet' && <Droplet className="w-5 h-5" />}
-                    {change.type === 'dirty' && <Circle className="w-5 h-5" />}
-                    {change.type === 'both' && <Layers className="w-5 h-5" />}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">
-                      {DIAPER_TYPE_CONFIG[change.type].label}
-                    </p>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <Clock className="w-3 h-3" />
-                      <span>{format(parseISO(change.timestamp), 'MMM d, h:mm a')}</span>
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-white"
+                      style={{ backgroundColor: config.color }}
+                    >
+                      {displayType === 'wet' && <Droplet className="w-5 h-5" />}
+                      {displayType === 'full' && <Circle className="w-5 h-5" />}
                     </div>
-                  </div>
-                  <MoodIndicator babyMood={change.babyMood} size="sm" />
-                </button>
-              ))}
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">
+                        {config.label}
+                      </p>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Clock className="w-3 h-3" />
+                        <span>{format(parseISO(change.timestamp), 'MMM d, h:mm a')}</span>
+                      </div>
+                    </div>
+                    <MoodIndicator babyMood={change.babyMood} size="sm" />
+                  </button>
+                );
+              })}
             </div>
           </Card>
         )}

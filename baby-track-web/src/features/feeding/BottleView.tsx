@@ -4,15 +4,14 @@ import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
-import { BabyMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
-import { EditSessionModal } from '@/components/ui/EditSessionModal';
+import { BabyMoodSelector } from '@/components/ui/MoodSelector';
 import { Baby, BottleSession, BottleContentType, BabyMood, VolumeUnit, BOTTLE_CONTENT_CONFIG, convertVolume } from '@/types';
-import { createBottleSession, subscribeToBottleSessions, deleteBottleSession } from '@/lib/firestore';
+import { createBottleSession, subscribeToBottleSessions } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
-import { Clock, Milk, Plus, Zap, Edit3 } from 'lucide-react';
+import { Plus, Zap, Edit3 } from 'lucide-react';
 
 type EntryMode = 'quick' | 'manual';
 
@@ -55,9 +54,6 @@ export function BottleView({ baby }: BottleViewProps) {
   const [entryMode, setEntryMode] = useState<EntryMode>('quick');
   const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
   const [manualTime, setManualTime] = useState(format(new Date(), 'HH:mm'));
-
-  // Edit modal state
-  const [selectedSession, setSelectedSession] = useState<BottleSession | null>(null);
 
   // Subscribe to sessions
   useEffect(() => {
@@ -345,50 +341,6 @@ export function BottleView({ baby }: BottleViewProps) {
         </Card>
       </div>
 
-      {/* Session History */}
-      {sessions.length > 0 && (
-        <Card padding="none">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <h3 className="font-semibold text-gray-900">Recent Feedings</h3>
-          </div>
-          <div className="divide-y divide-gray-50">
-            {sessions.slice(0, 5).map((session) => (
-              <button
-                key={session.id}
-                onClick={() => setSelectedSession(session)}
-                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
-              >
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white"
-                  style={{ backgroundColor: BOTTLE_CONTENT_CONFIG[session.contentType].color }}
-                >
-                  <Milk className="w-5 h-5" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900">
-                    {session.volume} {session.volumeUnit} • {BOTTLE_CONTENT_CONFIG[session.contentType].label}
-                  </p>
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <Clock className="w-3 h-3" />
-                    <span>{format(parseISO(session.timestamp), 'MMM d, h:mm a')}</span>
-                  </div>
-                </div>
-                <MoodIndicator babyMood={session.babyMood} size="sm" />
-              </button>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {/* Edit Session Modal */}
-      {selectedSession && (
-        <EditSessionModal
-          isOpen={!!selectedSession}
-          onClose={() => setSelectedSession(null)}
-          sessionType="bottle"
-          session={selectedSession}
-        />
-      )}
     </div>
   );
 }

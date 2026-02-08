@@ -457,7 +457,7 @@ export function DashboardView() {
         startTime: s.inUseStartDate!,
         icon: <Briefcase className="w-6 h-6 text-white" />,
         iconBg: '#ff9800',
-        route: '/more/milkstash',
+        route: '/more/milk-stash',
         isCountdown: true,
       });
     });
@@ -468,7 +468,7 @@ export function DashboardView() {
     return timers;
   }, [feedingSessions, pumpSessions, sleepSessions, milkStash]);
 
-  // Get last feeding info (breastfeeding, bottle, or pump)
+  // Get last feeding info (breastfeeding or bottle - pump is not feeding, it's milk collection)
   const lastFeeding = useMemo(() => {
     const allFeedings: { timestamp: string; type: string; details: string }[] = [];
 
@@ -492,30 +492,21 @@ export function DashboardView() {
       });
     });
 
-    // Add pump sessions (not active)
-    pumpSessions
-      .filter((s) => !s.isActive)
-      .forEach((s) => {
-        allFeedings.push({
-          timestamp: s.startTime,
-          type: 'pump',
-          details: `Pumped - ${s.volume} ${s.volumeUnit}`,
-        });
-      });
-
     // Sort by timestamp descending and get the most recent
     allFeedings.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     return allFeedings[0] || null;
-  }, [feedingSessions, bottleSessions, pumpSessions]);
+  }, [feedingSessions, bottleSessions]);
 
   // Get last diaper change
   const lastDiaper = useMemo(() => {
     if (diaperChanges.length === 0) return null;
     const latest = diaperChanges[0]; // Already sorted by timestamp desc
+    // Handle legacy types (dirty, both) as "full"
+    const displayType = latest.type === 'wet' ? 'wet' : 'full';
     return {
       timestamp: latest.timestamp,
-      type: latest.type,
-      details: DIAPER_TYPE_CONFIG[latest.type].label,
+      type: displayType,
+      details: DIAPER_TYPE_CONFIG[displayType].label,
     };
   }, [diaperChanges]);
 

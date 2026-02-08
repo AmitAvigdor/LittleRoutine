@@ -5,8 +5,7 @@ import { Timer } from '@/components/ui/Timer';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
-import { BabyMoodSelector, MomMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
-import { EditSessionModal } from '@/components/ui/EditSessionModal';
+import { BabyMoodSelector, MomMoodSelector } from '@/components/ui/MoodSelector';
 import { StaleTimerModal, STALE_TIMER_THRESHOLD } from '@/components/ui/StaleTimerModal';
 import { Baby, FeedingSession, BreastSide, BabyMood, MomMood, BREAST_SIDE_CONFIG, formatDuration } from '@/types';
 import { createFeedingSession, startFeedingSession, endFeedingSession, updateFeedingSession, subscribeToFeedingSessions, deleteFeedingSession, pauseFeedingSession, resumeFeedingSession } from '@/lib/firestore';
@@ -46,9 +45,6 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
   const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
   const [manualTime, setManualTime] = useState(format(new Date(), 'HH:mm'));
   const [manualDuration, setManualDuration] = useState('');
-
-  // Edit modal state
-  const [selectedSession, setSelectedSession] = useState<FeedingSession | null>(null);
 
   // Expandable details state
   const [showDetails, setShowDetails] = useState(false);
@@ -747,55 +743,6 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
           <p className="text-sm text-gray-500 mt-1">Total time</p>
         </div>
       </div>
-
-      {/* Session History */}
-      {completedSessions.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-            <h3 className="font-semibold text-gray-900">Recent Sessions</h3>
-          </div>
-          <div className="divide-y divide-gray-50">
-            {completedSessions.slice(0, 5).map((session) => (
-              <button
-                key={session.id}
-                onClick={() => setSelectedSession(session)}
-                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50/80 active:bg-gray-100 transition-colors text-left"
-              >
-                <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm"
-                  style={{
-                    background: `linear-gradient(135deg, ${BREAST_SIDE_CONFIG[session.breastSide].color} 0%, ${BREAST_SIDE_CONFIG[session.breastSide].color}cc 100%)`
-                  }}
-                >
-                  {session.breastSide === 'left' ? 'L' : 'R'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900">
-                    {BREAST_SIDE_CONFIG[session.breastSide].label} side
-                  </p>
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <Clock className="w-3 h-3 flex-shrink-0" />
-                    <span className="font-medium">{formatDuration(session.duration)}</span>
-                    <span>•</span>
-                    <span className="truncate">{format(parseISO(session.startTime), 'MMM d, h:mm a')}</span>
-                  </div>
-                </div>
-                <MoodIndicator babyMood={session.babyMood} momMood={session.momMood} size="sm" />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Edit Session Modal */}
-      {selectedSession && (
-        <EditSessionModal
-          isOpen={!!selectedSession}
-          onClose={() => setSelectedSession(null)}
-          sessionType="breastfeeding"
-          session={selectedSession}
-        />
-      )}
 
       {/* Stale Timer Modal */}
       <StaleTimerModal
