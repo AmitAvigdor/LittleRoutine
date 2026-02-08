@@ -146,11 +146,11 @@ interface StatusCardProps {
 function StatusCard({ title, icon, iconBg, timeSince, subtitle, urgencyColor, onClick }: StatusCardProps) {
   return (
     <button
-      className="w-full flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] border border-gray-100"
+      className="w-full flex items-center gap-3 p-3 bg-white rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] border border-gray-100"
       onClick={onClick}
     >
       <div
-        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
+        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
         style={{ backgroundColor: iconBg }}
       >
         {icon}
@@ -214,7 +214,7 @@ function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused,
     <button
       onClick={onClick}
       className={clsx(
-        'flex items-center gap-4 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] w-full border',
+        'flex items-center gap-3 p-3 rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] w-full border',
         isPaused ? 'bg-yellow-50 border-yellow-200' :
         isCountdown && isExpiringSoon ? 'bg-red-50 border-red-200' :
         isCountdown ? 'bg-orange-50 border-orange-200' :
@@ -222,7 +222,7 @@ function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused,
       )}
     >
       <div
-        className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 relative shadow-sm"
+        className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 relative shadow-sm"
         style={{ backgroundColor: iconBg }}
       >
         {icon}
@@ -246,7 +246,7 @@ function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused,
       </div>
       <div className="text-right flex-shrink-0">
         <p className={clsx(
-          'text-2xl font-bold font-mono',
+          'text-xl font-bold font-mono',
           isCountdown && isExpiringSoon ? 'text-red-600' :
           isCountdown ? 'text-orange-600' :
           'text-gray-900'
@@ -299,6 +299,36 @@ function TodoItem({ icon, iconBg, title, subtitle, done, onClick }: TodoItemProp
       ) : (
         <Circle className="w-6 h-6 text-gray-300 flex-shrink-0" />
       )}
+    </button>
+  );
+}
+
+interface MiniStatusProps {
+  title: string;
+  icon: React.ReactNode;
+  iconBg: string;
+  timeSince: string | null;
+  onClick: () => void;
+}
+
+function MiniStatus({ title, icon, iconBg, timeSince, onClick }: MiniStatusProps) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-3 p-3 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all"
+    >
+      <div
+        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
+        style={{ backgroundColor: iconBg }}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0 text-left">
+        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{title}</p>
+        <p className="text-sm font-semibold text-gray-900 truncate">
+          {timeSince ?? 'No data'}
+        </p>
+      </div>
     </button>
   );
 }
@@ -571,56 +601,14 @@ export function DashboardView() {
       <Header title="Home" subtitle={babyAge?.text} />
 
       <div className="px-4 py-4 space-y-5">
-        {/* Active Timers */}
-        {activeTimers.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-3 px-1">
-              <span className="text-base">⏱️</span>
-              <h3 className="text-sm font-bold text-gray-700">Active Timers</h3>
-            </div>
-            <div className="space-y-2">
-              {activeTimers.map((timer) => {
-                // Calculate minutes remaining fresh on each render for countdown timers
-                const minutesRemaining = timer.isCountdown
-                  ? getRoomTempExpirationMinutes(timer.startTime)
-                  : 0;
-                return (
-                  <ActiveTimerCard
-                    key={timer.id}
-                    icon={timer.icon}
-                    iconBg={timer.isCountdown && minutesRemaining <= 30 ? '#f44336' : timer.iconBg}
-                    title={timer.title}
-                    subtitle={timer.isCountdown
-                      ? (minutesRemaining <= 0 ? 'Expired!' : `${timer.subtitle} remaining`)
-                      : timer.subtitle
-                    }
-                    elapsedTime={timer.isCountdown
-                      ? formatRemainingTime(minutesRemaining)
-                      : formatElapsedTime(
-                          timer.startTime,
-                          timer.isPaused,
-                          timer.pausedAt,
-                          timer.totalPausedDuration
-                        )
-                    }
-                    isPaused={timer.isPaused}
-                    isCountdown={timer.isCountdown}
-                    isExpiringSoon={timer.isCountdown && minutesRemaining <= 30}
-                    onClick={() => navigate(timer.route)}
-                  />
-                );
-              })}
-            </div>
+        {/* Right Now */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-base">✨</span>
+            <h3 className="text-sm font-bold text-gray-700">Right Now</h3>
           </div>
-        )}
 
-        {/* Quick Actions */}
-        <div>
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <span className="text-base">⚡</span>
-            <h3 className="text-sm font-bold text-gray-700">Quick Actions</h3>
-          </div>
-          <div className="grid grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <QuickAction
               label={settings?.feedingTypePreference === 'formula' ? 'Bottle' : 'Feed'}
               icon={
@@ -632,12 +620,6 @@ export function DashboardView() {
               }
               color="#e91e63"
               onClick={() => navigate('/feed')}
-            />
-            <QuickAction
-              label="Pump"
-              icon={<Droplets className="w-5 h-5" />}
-              color="#9c27b0"
-              onClick={() => navigate('/more/pump')}
             />
             <QuickAction
               label="Sleep"
@@ -652,6 +634,51 @@ export function DashboardView() {
               onClick={() => navigate('/diaper')}
             />
             <QuickAction
+              label="Pump"
+              icon={<Droplets className="w-5 h-5" />}
+              color="#9c27b0"
+              onClick={() => navigate('/more/pump')}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <MiniStatus
+              title="Last Feeding"
+              icon={
+                lastFeeding?.type === 'bottle' ? (
+                  <Milk className="w-4 h-4 text-white" />
+                ) : (
+                  <Baby className="w-4 h-4 text-white" />
+                )
+              }
+              iconBg="#e91e63"
+              timeSince={lastFeeding ? formatTimeSince(lastFeeding.timestamp) : null}
+              onClick={() => navigate('/feed')}
+            />
+            <MiniStatus
+              title={sleepStatus?.isAsleep ? 'Sleeping' : 'Last Woke'}
+              icon={
+                sleepStatus?.isAsleep ? (
+                  <Moon className="w-4 h-4 text-white" />
+                ) : (
+                  <Sun className="w-4 h-4 text-white" />
+                )
+              }
+              iconBg={sleepStatus?.isAsleep ? '#3f51b5' : '#ff9800'}
+              timeSince={sleepStatus ? formatTimeSince(sleepStatus.timestamp) : null}
+              onClick={() => navigate('/sleep')}
+            />
+            <MiniStatus
+              title="Last Diaper"
+              icon={<Leaf className="w-4 h-4 text-white" />}
+              iconBg="#4caf50"
+              timeSince={lastDiaper ? formatTimeSince(lastDiaper.timestamp) : null}
+              onClick={() => navigate('/diaper')}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <QuickAction
               label="Play"
               icon={<Gamepad2 className="w-5 h-5" />}
               color="#ff9800"
@@ -664,6 +691,47 @@ export function DashboardView() {
               onClick={() => navigate('/more/walks')}
             />
           </div>
+
+          {activeTimers.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2 px-1">
+                <span className="text-base">⏱️</span>
+                <h3 className="text-sm font-bold text-gray-700">Active Timers</h3>
+              </div>
+              <div className="space-y-2">
+                {activeTimers.map((timer) => {
+                  const minutesRemaining = timer.isCountdown
+                    ? getRoomTempExpirationMinutes(timer.startTime)
+                    : 0;
+                  return (
+                    <ActiveTimerCard
+                      key={timer.id}
+                      icon={timer.icon}
+                      iconBg={timer.isCountdown && minutesRemaining <= 30 ? '#f44336' : timer.iconBg}
+                      title={timer.title}
+                      subtitle={timer.isCountdown
+                        ? (minutesRemaining <= 0 ? 'Expired!' : `${timer.subtitle} remaining`)
+                        : timer.subtitle
+                      }
+                      elapsedTime={timer.isCountdown
+                        ? formatRemainingTime(minutesRemaining)
+                        : formatElapsedTime(
+                            timer.startTime,
+                            timer.isPaused,
+                            timer.pausedAt,
+                            timer.totalPausedDuration
+                          )
+                      }
+                      isPaused={timer.isPaused}
+                      isCountdown={timer.isCountdown}
+                      isExpiringSoon={timer.isCountdown && minutesRemaining <= 30}
+                      onClick={() => navigate(timer.route)}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Today's To Do */}
@@ -699,64 +767,6 @@ export function DashboardView() {
             </div>
           </div>
         )}
-
-        {/* Status Cards */}
-        <div>
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <span className="text-base">📊</span>
-            <h3 className="text-sm font-bold text-gray-700">Status</h3>
-          </div>
-          <div className="space-y-2">
-            {/* Last Feeding */}
-            <StatusCard
-              title="Last Feeding"
-              icon={
-                lastFeeding?.type === 'bottle' ? (
-                  <Milk className="w-5 h-5 text-white" />
-                ) : (
-                  <Baby className="w-5 h-5 text-white" />
-                )
-              }
-              iconBg="#e91e63"
-              timeSince={lastFeeding ? formatTimeSince(lastFeeding.timestamp) : null}
-              subtitle={lastFeeding?.details}
-              urgencyColor={lastFeeding ? getUrgencyColor(lastFeeding.timestamp, 120, 180) : undefined}
-              onClick={() => navigate('/feed')}
-            />
-
-            {/* Sleep Status */}
-            <StatusCard
-              title={sleepStatus?.isAsleep ? 'Sleeping' : 'Last Woke Up'}
-              icon={
-                sleepStatus?.isAsleep ? (
-                  <Moon className="w-5 h-5 text-white" />
-                ) : (
-                  <Sun className="w-5 h-5 text-white" />
-                )
-              }
-              iconBg={sleepStatus?.isAsleep ? '#3f51b5' : '#ff9800'}
-              timeSince={sleepStatus ? formatTimeSince(sleepStatus.timestamp) : null}
-              subtitle={sleepStatus?.details}
-              urgencyColor={
-                sleepStatus && !sleepStatus.isAsleep
-                  ? getUrgencyColor(sleepStatus.timestamp, 120, 180)
-                  : undefined
-              }
-              onClick={() => navigate('/sleep')}
-            />
-
-            {/* Last Diaper */}
-            <StatusCard
-              title="Last Diaper"
-              icon={<Leaf className="w-5 h-5 text-white" />}
-              iconBg="#4caf50"
-              timeSince={lastDiaper ? formatTimeSince(lastDiaper.timestamp) : null}
-              subtitle={lastDiaper?.details}
-              urgencyColor={lastDiaper ? getUrgencyColor(lastDiaper.timestamp, 120, 180) : undefined}
-              onClick={() => navigate('/diaper')}
-            />
-          </div>
-        </div>
 
         {/* Today's Summary */}
         <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">

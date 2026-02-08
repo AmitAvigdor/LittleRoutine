@@ -8,12 +8,13 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { clsx } from 'clsx';
 import { QuickAdd } from '@/components/ui/QuickAdd';
 import { toast } from '@/stores/toastStore';
-import { useNavigate } from 'react-router-dom';
-import { Moon, Droplet, BottleWine, BedDouble, Milk, Circle } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Moon, Droplet, BottleWine, BedDouble, Milk, Circle, Plus } from 'lucide-react';
 
 export function MainLayout() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     setBabies,
     setSettings,
@@ -178,6 +179,10 @@ export function MainLayout() {
     );
   }
 
+  const showQuickAdd = ['/home', '/feed', '/sleep', '/diaper'].some((path) =>
+    location.pathname.startsWith(path)
+  );
+
   return (
     <div
       className={clsx(
@@ -188,18 +193,21 @@ export function MainLayout() {
       <main className="max-w-lg mx-auto">
         <Outlet />
       </main>
-      <button
+      {showQuickAdd && (
+        <button
         type="button"
         onClick={() => setQuickAddOpen(true)}
         className={clsx(
           'fixed bottom-24 right-4 z-40 w-14 h-14 rounded-full text-white',
-          'shadow-lg shadow-black/20 transition-transform active:scale-95'
+          'shadow-lg shadow-black/20 transition-transform active:scale-95',
+          'flex items-center justify-center'
         )}
         style={{ background: 'linear-gradient(135deg, #ef8fb1 0%, #a78bfa 100%)' }}
         aria-label="Quick add"
       >
-        <span className="text-2xl font-bold leading-none">+</span>
+        <Plus className="w-7 h-7" />
       </button>
+      )}
       <BottomNav />
       <QuickAdd open={quickAddOpen} onClose={() => setQuickAddOpen(false)} actions={quickActions} />
     </div>

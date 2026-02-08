@@ -58,22 +58,37 @@ export function SleepView() {
     setManualTime(format(target, 'HH:mm'));
   };
 
-  const lastSleepLabel = useMemo(() => {
+  const lastCompletedSleep = useMemo(() => {
     const completed = sessions.filter((s) => !s.isActive && s.endTime);
-    if (completed.length === 0) return 'No sleep yet';
-    const mostRecent = completed.reduce((latest, session) => {
+    if (completed.length === 0) return null;
+    return completed.reduce((latest, session) => {
       const latestTime = latest.endTime || latest.startTime;
       const sessionTime = session.endTime || session.startTime;
       return new Date(sessionTime) > new Date(latestTime) ? session : latest;
     }, completed[0]);
-    const timestamp = mostRecent.endTime || mostRecent.startTime;
+  }, [sessions]);
+
+  const lastSleepLabel = useMemo(() => {
+    if (!lastCompletedSleep) return 'No sleep yet';
+    const timestamp = lastCompletedSleep.endTime || lastCompletedSleep.startTime;
     const minutes = differenceInMinutes(new Date(), parseISO(timestamp));
     if (minutes < 1) return 'Just now';
     if (minutes < 60) return `${minutes}m ago`;
     const hours = Math.floor(minutes / 60);
     const remaining = minutes % 60;
     return remaining > 0 ? `${hours}h ${remaining}m ago` : `${hours}h ago`;
-  }, [sessions]);
+  }, [lastCompletedSleep]);
+
+  const handleUndoLastSleep = async () => {
+    if (!lastCompletedSleep) return;
+    try {
+      await deleteSleepSession(lastCompletedSleep.id);
+      toast.info('Last sleep entry removed');
+    } catch (error) {
+      console.error('Error undoing last sleep entry:', error);
+      toast.error('Failed to undo. Please try again.');
+    }
+  };
 
   // Pre-save edit state
   const [showEditBeforeSave, setShowEditBeforeSave] = useState(false);
@@ -456,7 +471,18 @@ export function SleepView() {
       <div className="px-4 pt-3">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
           <p className="text-xs text-gray-400 uppercase tracking-wide">Last sleep</p>
-          <p className="text-sm font-semibold text-gray-900">{lastSleepLabel}</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-gray-900">{lastSleepLabel}</p>
+            {lastCompletedSleep && (
+              <button
+                type="button"
+                onClick={handleUndoLastSleep}
+                className="text-xs font-semibold text-gray-600 hover:text-gray-900"
+              >
+                Undo
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -600,6 +626,7 @@ export function SleepView() {
                   onChange={(e) => setManualTime(e.target.value)}
                 />
               </div>
+              <p className="text-xs text-gray-500">Last logged: {lastSleepLabel}</p>
               <QuickTimeChips onSelect={applyManualTimeOffset} />
 
               <Input

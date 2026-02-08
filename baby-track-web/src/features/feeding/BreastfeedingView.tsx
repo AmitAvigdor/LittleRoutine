@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { format, isToday, parseISO, subMinutes } from 'date-fns';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { format, isToday, parseISO, subMinutes, differenceInMinutes } from 'date-fns';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Timer } from '@/components/ui/Timer';
 import { Button } from '@/components/ui/Button';
@@ -55,6 +55,23 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
     setManualDate(format(target, 'yyyy-MM-dd'));
     setManualTime(format(target, 'HH:mm'));
   };
+
+  const lastFeedingLabel = useMemo(() => {
+    const completed = sessions.filter((s) => !s.isActive && s.endTime);
+    if (completed.length === 0) return 'No feedings yet';
+    const mostRecent = completed.reduce((latest, session) => {
+      const latestTime = latest.endTime || latest.startTime;
+      const sessionTime = session.endTime || session.startTime;
+      return new Date(sessionTime) > new Date(latestTime) ? session : latest;
+    }, completed[0]);
+    const timestamp = mostRecent.endTime || mostRecent.startTime;
+    const minutes = differenceInMinutes(new Date(), parseISO(timestamp));
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    const remaining = minutes % 60;
+    return remaining > 0 ? `${hours}h ${remaining}m ago` : `${hours}h ago`;
+  }, [sessions]);
 
   // Pre-save edit state
   const [showEditBeforeSave, setShowEditBeforeSave] = useState(false);
@@ -610,6 +627,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
               value={manualTime}
               onChange={(e) => setManualTime(e.target.value)}
             />
+            <p className="text-xs text-gray-500">Last logged: {lastFeedingLabel}</p>
             <QuickTimeChips onSelect={applyManualTimeOffset} />
 
             <Input

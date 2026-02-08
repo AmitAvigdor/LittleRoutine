@@ -9,7 +9,8 @@ import { BottleView } from './BottleView';
 import { EditSessionModal } from '@/components/ui/EditSessionModal';
 import { MoodIndicator } from '@/components/ui/MoodSelector';
 import { useAppStore } from '@/stores/appStore';
-import { subscribeToFeedingSessions, subscribeToBottleSessions } from '@/lib/firestore';
+import { subscribeToFeedingSessions, subscribeToBottleSessions, deleteFeedingSession, deleteBottleSession } from '@/lib/firestore';
+import { toast } from '@/stores/toastStore';
 import { FeedingSession, BottleSession, BREAST_SIDE_CONFIG, BOTTLE_CONTENT_CONFIG, formatDuration } from '@/types';
 
 type FeedingTab = 'breast' | 'bottle';
@@ -116,6 +117,22 @@ export function FeedingHub() {
     return remaining > 0 ? `${hours}h ${remaining}m ago` : `${hours}h ago`;
   }, [recentFeedings]);
 
+  const handleUndoLastFeeding = async () => {
+    if (recentFeedings.length === 0) return;
+    const last = recentFeedings[0];
+    try {
+      if (last.type === 'breast') {
+        await deleteFeedingSession(last.id);
+      } else {
+        await deleteBottleSession(last.id);
+      }
+      toast.info('Last feeding removed');
+    } catch (error) {
+      console.error('Error undoing last feeding:', error);
+      toast.error('Failed to undo. Please try again.');
+    }
+  };
+
   if (babies.length === 0) {
     return <NoBabiesHeader />;
   }
@@ -138,7 +155,18 @@ export function FeedingHub() {
       <div className="px-4 pt-3">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
           <p className="text-xs text-gray-400 uppercase tracking-wide">Last feeding</p>
-          <p className="text-sm font-semibold text-gray-900">{lastFeedingLabel}</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-gray-900">{lastFeedingLabel}</p>
+            {recentFeedings.length > 0 && (
+              <button
+                type="button"
+                onClick={handleUndoLastFeeding}
+                className="text-xs font-semibold text-gray-600 hover:text-gray-900"
+              >
+                Undo
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

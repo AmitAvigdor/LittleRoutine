@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
-import { format, isToday, parseISO } from 'date-fns';
+import { useState, useEffect, useMemo } from 'react';
+import { format, isToday, parseISO, subMinutes, differenceInMinutes } from 'date-fns';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
+import { QuickTimeChips } from '@/components/ui/QuickTimeChips';
 import { BabyMoodSelector } from '@/components/ui/MoodSelector';
 import { Baby, BottleSession, BottleContentType, BabyMood, VolumeUnit, BOTTLE_CONTENT_CONFIG, convertVolume } from '@/types';
 import { createBottleSession, subscribeToBottleSessions } from '@/lib/firestore';
@@ -54,6 +55,11 @@ export function BottleView({ baby }: BottleViewProps) {
   const [entryMode, setEntryMode] = useState<EntryMode>('quick');
   const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
   const [manualTime, setManualTime] = useState(format(new Date(), 'HH:mm'));
+  const applyManualTimeOffset = (minutesAgo: number) => {
+    const target = subMinutes(new Date(), minutesAgo);
+    setManualDate(format(target, 'yyyy-MM-dd'));
+    setManualTime(format(target, 'HH:mm'));
+  };
 
   // Subscribe to sessions
   useEffect(() => {
@@ -73,6 +79,20 @@ export function BottleView({ baby }: BottleViewProps) {
       setContentType('formula');
     }
   }, [settings?.feedingTypePreference]);
+
+  const lastBottleLabel = useMemo(() => {
+    const completed = sessions;
+    if (completed.length === 0) return 'No bottle feedings yet';
+    const mostRecent = completed.reduce((latest, session) => {
+      return new Date(session.timestamp) > new Date(latest.timestamp) ? session : latest;
+    }, completed[0]);
+    const minutes = differenceInMinutes(new Date(), parseISO(mostRecent.timestamp));
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    const remaining = minutes % 60;
+    return remaining > 0 ? `${hours}h ${remaining}m ago` : `${hours}h ago`;
+  }, [sessions]);
 
   const handleQuickAdd = (quickVolume: number) => {
     setVolume(quickVolume.toString());
@@ -221,6 +241,8 @@ export function BottleView({ baby }: BottleViewProps) {
               value={manualTime}
               onChange={(e) => setManualTime(e.target.value)}
             />
+            <p className="text-xs text-gray-500">Last logged: {lastBottleLabel}</p>
+            <QuickTimeChips onSelect={applyManualTimeOffset} />
 
             <div className="flex gap-3">
               <Input

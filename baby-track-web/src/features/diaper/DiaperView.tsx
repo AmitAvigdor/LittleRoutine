@@ -266,6 +266,18 @@ export function DiaperView() {
     }
   };
 
+  const handleUndoLast = async () => {
+    if (changes.length === 0) return;
+    const last = changes[0];
+    try {
+      await deleteDiaperChange(last.id);
+      toast.info('Last diaper change removed');
+    } catch (error) {
+      console.error('Error undoing last diaper change:', error);
+      toast.error('Failed to undo. Please try again.');
+    }
+  };
+
   // Long press handlers for mobile
   const handleTouchStart = useCallback((type: DiaperType) => {
     longPressTriggeredRef.current = false;
@@ -334,7 +346,18 @@ export function DiaperView() {
       <div className="px-4 pt-3">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
           <p className="text-xs text-gray-400 uppercase tracking-wide">Last change</p>
-          <p className="text-sm font-semibold text-gray-900">{lastChangeLabel}</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-gray-900">{lastChangeLabel}</p>
+            {changes.length > 0 && (
+              <button
+                type="button"
+                onClick={handleUndoLast}
+                className="text-xs font-semibold text-gray-600 hover:text-gray-900"
+              >
+                Undo
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -469,6 +492,7 @@ export function DiaperView() {
                   onChange={(e) => setManualTime(e.target.value)}
                 />
               </div>
+              <p className="text-xs text-gray-500">Last logged: {lastChangeLabel}</p>
               <QuickTimeChips onSelect={applyManualTimeOffset} />
 
               <Button
@@ -625,6 +649,7 @@ export function DiaperView() {
                   onChange={(e) => setManualTime(e.target.value)}
                 />
               </div>
+              <p className="text-xs text-gray-500">Last logged: {lastChangeLabel}</p>
               <QuickTimeChips onSelect={applyManualTimeOffset} />
 
               <div className="flex gap-2">

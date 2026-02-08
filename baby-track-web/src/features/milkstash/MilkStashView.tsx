@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -8,7 +8,7 @@ import { useAppStore } from '@/stores/appStore';
 import { createMilkStash, subscribeToMilkStash, markMilkStashInUse, markMilkStashUsed, updateMilkStashVolume, createBottleSession } from '@/lib/firestore';
 import type { MilkStash, Baby } from '@/types';
 import { MilkStorageLocation, MILK_STORAGE_CONFIG } from '@/types/enums';
-import { Milk, Plus, X, Clock, Check, AlertTriangle } from 'lucide-react';
+import { Milk, Plus, X, Clock, Check, AlertTriangle, Timer } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export function MilkStashView() {
@@ -141,9 +141,21 @@ export function MilkStashView() {
     return new Date(item.expirationDate) < new Date();
   };
 
-  const fridgeMilk = stash.filter(s => s.location === 'fridge');
-  const freezerMilk = stash.filter(s => s.location === 'freezer');
-  const inUseMilk = stash.filter(s => s.isInUse);
+  const fridgeMilk = useMemo(
+    () => stash.filter(s => s.location === 'fridge'),
+    [stash]
+  );
+  const freezerMilk = useMemo(
+    () => stash.filter(s => s.location === 'freezer'),
+    [stash]
+  );
+  const inUseMilk = useMemo(
+    () => stash.filter(s => s.isInUse),
+    [stash]
+  );
+
+  const sortedByExpiry = (items: MilkStash[]) =>
+    [...items].sort((a, b) => new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime());
 
   const totalFridgeVolume = fridgeMilk.reduce((sum, s) => sum + s.volume, 0);
   const totalFreezerVolume = freezerMilk.reduce((sum, s) => sum + s.volume, 0);
@@ -162,6 +174,34 @@ export function MilkStashView() {
       />
 
       <div className="px-4 py-4 space-y-4">
+        {/* In Use */}
+        {inUseMilk.length > 0 && (
+          <Card className="border border-amber-200 bg-amber-50">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Timer className="w-4 h-4 text-amber-600" />
+                <h3 className="font-semibold text-amber-700">In Use</h3>
+              </div>
+              <span className="text-xs font-semibold text-amber-700">
+                {inUseMilk.length} active
+              </span>
+            </div>
+            <div className="space-y-2">
+              {sortedByExpiry(inUseMilk).map((item) => (
+                <MilkCard
+                  key={item.id}
+                  item={item}
+                  volumeUnit={volumeUnit}
+                  onMarkInUse={() => handleMarkInUse(item)}
+                  onMarkUsed={() => handleMarkUsed(item)}
+                  isExpiringSoon={isExpiringSoon(item)}
+                  isExpired={isExpired(item)}
+                />
+              ))}
+            </div>
+          </Card>
+        )}
+
         {/* Summary */}
         <div className="grid grid-cols-2 gap-4">
           <Card className="text-center bg-blue-50">
@@ -191,6 +231,19 @@ export function MilkStashView() {
             <p className="text-sm text-gray-600 mb-3">
               How much milk was used? (Total: {selectedMilkItem.volume} {volumeUnit})
             </p>
+
+            <div className="flex flex-wrap gap-2 mb-3">
+              {[1, 0.5, 0.25].map((ratio) => (
+                <button
+                  key={ratio}
+                  type="button"
+                  onClick={() => setUsedVolume((selectedMilkItem.volume * ratio).toFixed(1))}
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 bg-white text-gray-600 hover:text-gray-900"
+                >
+                  {ratio === 1 ? 'All' : `${Math.round(ratio * 100)}%`}
+                </button>
+              ))}
+            </div>
 
             <Input
               type="number"
@@ -283,6 +336,26 @@ export function MilkStashView() {
                 onChange={(e) => setPumpedDate(e.target.value)}
                 required
               />
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: 'Today', daysAgo: 0 },
+                  { label: 'Yesterday', daysAgo: 1 },
+                  { label: '2 days ago', daysAgo: 2 },
+                ].map((option) => (
+                  <button
+                    key={option.label}
+                    type="button"
+                    onClick={() => {
+                      const date = new Date();
+                      date.setDate(date.getDate() - option.daysAgo);
+                      setPumpedDate(date.toISOString().split('T')[0]);
+                    }}
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 bg-white text-gray-600 hover:text-gray-900"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
 
               <Input
                 type="number"
@@ -335,15 +408,14 @@ export function MilkStashView() {
           </Card>
         )}
 
-        {/* In Use */}
-        {inUseMilk.length > 0 && (
+        {/* In Use section moved above */}
+
+        {/* Fridge */}
+        {fridgeMilk.filter(m => !m.isInUse).length > 0 && (
           <div>
-            <h3 className="font-semibold text-green-600 mb-2 flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              In Use
-            </h3>
+            <h3 className="font-semibold text-blue-600 mb-2">Fridge</h3>
             <div className="space-y-2">
-              {inUseMilk.map((item) => (
+              {sortedByExpiry(fridgeMilk.filter(m => !m.isInUse)).map((item) => (
                 <MilkCard
                   key={item.id}
                   item={item}
@@ -357,25 +429,10 @@ export function MilkStashView() {
             </div>
           </div>
         )}
-
-        {/* Fridge */}
-        {fridgeMilk.filter(m => !m.isInUse).length > 0 && (
-          <div>
-            <h3 className="font-semibold text-blue-600 mb-2">Fridge</h3>
-            <div className="space-y-2">
-              {fridgeMilk.filter(m => !m.isInUse).map((item) => (
-                <MilkCard
-                  key={item.id}
-                  item={item}
-                  volumeUnit={volumeUnit}
-                  onMarkInUse={() => handleMarkInUse(item)}
-                  onMarkUsed={() => handleMarkUsed(item)}
-                  isExpiringSoon={isExpiringSoon(item)}
-                  isExpired={isExpired(item)}
-                />
-              ))}
-            </div>
-          </div>
+        {fridgeMilk.filter(m => !m.isInUse).length === 0 && (
+          <Card className="text-center py-4">
+            <p className="text-sm text-gray-500">No fridge milk</p>
+          </Card>
         )}
 
         {/* Freezer */}
@@ -383,7 +440,7 @@ export function MilkStashView() {
           <div>
             <h3 className="font-semibold text-indigo-600 mb-2">Freezer</h3>
             <div className="space-y-2">
-              {freezerMilk.filter(m => !m.isInUse).map((item) => (
+              {sortedByExpiry(freezerMilk.filter(m => !m.isInUse)).map((item) => (
                 <MilkCard
                   key={item.id}
                   item={item}
@@ -396,6 +453,11 @@ export function MilkStashView() {
               ))}
             </div>
           </div>
+        )}
+        {freezerMilk.filter(m => !m.isInUse).length === 0 && (
+          <Card className="text-center py-4">
+            <p className="text-sm text-gray-500">No freezer milk</p>
+          </Card>
         )}
 
         {stash.length === 0 && !showForm && (
@@ -426,6 +488,11 @@ function MilkCard({
   isExpired: boolean;
 }) {
   const locConfig = MILK_STORAGE_CONFIG[item.location];
+  const pumpedAt = new Date(item.pumpedDate);
+  const expiresAt = new Date(item.expirationDate);
+  const totalLifeMs = Math.max(0, expiresAt.getTime() - pumpedAt.getTime());
+  const remainingMs = Math.max(0, expiresAt.getTime() - Date.now());
+  const progress = totalLifeMs > 0 ? Math.min(1, Math.max(0, 1 - remainingMs / totalLifeMs)) : 1;
 
   return (
     <Card
@@ -458,12 +525,20 @@ function MilkCard({
               </span>
             )}
           </div>
-          <p className="text-sm text-gray-500">
-            Pumped: {new Date(item.pumpedDate).toLocaleDateString()}
-          </p>
-          <p className="text-xs text-gray-400">
-            Expires: {new Date(item.expirationDate).toLocaleDateString()}
-          </p>
+          <div className="mt-2 h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+            <div
+              className={clsx(
+                'h-full rounded-full',
+                isExpired ? 'bg-red-500' : isExpiringSoon ? 'bg-amber-500' : 'bg-green-500'
+              )}
+              style={{ width: `${Math.round(progress * 100)}%` }}
+            />
+          </div>
+          <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+            <span>Pumped: {new Date(item.pumpedDate).toLocaleDateString()}</span>
+            <span>•</span>
+            <span>Expires: {new Date(item.expirationDate).toLocaleDateString()}</span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {!item.isInUse ? (

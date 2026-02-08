@@ -23,7 +23,15 @@ import {
   BarChart2,
   Gamepad2,
   Footprints,
+  SwitchCamera,
 } from 'lucide-react';
+
+const favorites = [
+  { icon: BarChart2, label: 'Stats', path: '/stats', color: '#9c27b0' },
+  { icon: TrendingUp, label: 'Growth', path: '/more/growth', color: '#ff9800' },
+  { icon: Milk, label: 'Milk Stash', path: '/more/milk-stash', color: '#3f51b5' },
+  { icon: Droplet, label: 'Pump', path: '/more/pump', color: '#2196f3' },
+];
 
 const features = [
   { icon: BarChart2, label: 'Stats', path: '/stats', color: '#9c27b0', emoji: '📊' },
@@ -100,24 +108,67 @@ export function MoreView() {
               </button>
             </div>
 
-            <button
-              onClick={() => navigate('/more/babies')}
-              className="w-full mt-4 flex items-center justify-center gap-2 py-3 border-t border-gray-200/50 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <Users className="w-4 h-4" />
-              Manage All Babies
-            </button>
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              <button
+                onClick={() => navigate('/more/babies')}
+                className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/70 text-sm font-semibold text-gray-700 hover:text-gray-900"
+              >
+                <Users className="w-4 h-4" />
+                Manage Babies
+              </button>
+              <button
+                onClick={() => navigate('/more/babies')}
+                className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/70 text-sm font-semibold text-gray-700 hover:text-gray-900"
+              >
+                <SwitchCamera className="w-4 h-4" />
+                Switch Baby
+              </button>
+            </div>
           </Card>
         )}
+
+        {/* Favorites */}
+        <div>
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <span className="text-base">⭐</span>
+            <div>
+              <h3 className="text-sm font-bold text-gray-700">Favorites</h3>
+              <p className="text-xs text-gray-500">Quick access to the most used tools</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {favorites.map(({ icon: Icon, label, path, color }) => (
+              <button
+                key={path}
+                onClick={() => navigate(path)}
+                className="flex items-center gap-3 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all"
+              >
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center shadow-sm"
+                  style={{ background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)` }}
+                >
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-gray-900">{label}</p>
+                  <p className="text-xs text-gray-500">Open now</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Features Grid */}
         <div>
           <div className="flex items-center gap-2 mb-3 px-1">
             <span className="text-base">🧰</span>
-            <h3 className="text-sm font-bold text-gray-700">Features</h3>
+            <div>
+              <h3 className="text-sm font-bold text-gray-700">Features</h3>
+              <p className="text-xs text-gray-500">Health, milestones, and daily routines</p>
+            </div>
           </div>
-          <div className="grid grid-cols-4 gap-3">
-            {features.map(({ icon: Icon, label, path, color, emoji }) => (
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+            {features.map(({ icon: Icon, label, path, color }) => (
               <button
                 key={path}
                 onClick={() => navigate(path)}
