@@ -261,7 +261,7 @@ function SnapshotCard({ title, value, sub, icon, color, onClick }: SnapshotCardP
 export function DashboardView() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { selectedBaby, babies } = useAppStore();
+  const { selectedBaby, babies, statusTone } = useAppStore();
   const [, setTick] = useState(0);
 
   // Data states
@@ -583,7 +583,14 @@ export function DashboardView() {
             <span className="text-base">✨</span>
             <h3 className="text-sm font-bold text-gray-700">At a glance</h3>
           </div>
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4">
+          <div
+            className={clsx(
+              'rounded-3xl border shadow-sm p-4',
+              statusTone === 'red' && 'bg-rose-50 border-rose-200',
+              statusTone === 'yellow' && 'bg-amber-50 border-amber-200',
+              statusTone === 'green' && 'bg-emerald-50 border-emerald-200'
+            )}
+          >
             <div className="grid grid-cols-1 gap-3">
               <button
                 onClick={() => navigate('/feed')}

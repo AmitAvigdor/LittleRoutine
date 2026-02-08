@@ -271,6 +271,8 @@ export function subscribeToBabies(userId: string, callback: (babies: Baby[]) => 
     mergeBabies();
   }, (error) => {
     console.error('Error subscribing to owned babies:', error);
+    ownedBabies = [];
+    mergeBabies();
   });
 
   const unsubShared = onSnapshot(sharedQuery, (snapshot) => {
@@ -281,6 +283,8 @@ export function subscribeToBabies(userId: string, callback: (babies: Baby[]) => 
     mergeBabies();
   }, (error) => {
     console.error('Error subscribing to shared babies:', error);
+    sharedBabies = [];
+    mergeBabies();
   });
 
   return () => {

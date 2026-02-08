@@ -14,6 +14,7 @@ interface HeaderProps {
   rightAction?: React.ReactNode;
   gradient?: boolean;
   subtitle?: string;
+  statusTone?: 'green' | 'yellow' | 'red';
 }
 
 export function Header({
@@ -22,10 +23,21 @@ export function Header({
   rightAction,
   gradient = false,
   subtitle,
+  statusTone,
 }: HeaderProps) {
   const [showDropdown, setShowDropdown] = useState(false);
-  const { selectedBaby, babies, setSelectedBabyId } = useAppStore();
+  const { selectedBaby, babies, setSelectedBabyId, statusTone: storeTone } = useAppStore();
   const navigate = useNavigate();
+  const tone = statusTone ?? storeTone;
+  const isTone = tone === 'green' || tone === 'yellow' || tone === 'red';
+  const toneClass =
+    tone === 'red'
+      ? 'bg-rose-600 text-white'
+      : tone === 'yellow'
+      ? 'bg-amber-500 text-white'
+      : tone === 'green'
+      ? 'bg-emerald-600 text-white'
+      : '';
 
   const handleSelectBaby = (babyId: string) => {
     setSelectedBabyId(babyId);
@@ -40,7 +52,7 @@ export function Header({
     <header
       className={clsx(
         'sticky top-0 z-40 safe-top',
-        gradient ? 'gradient-primary text-white' : 'bg-white border-b border-gray-100'
+        isTone ? toneClass : gradient ? 'gradient-primary text-white' : 'bg-white border-b border-gray-100'
       )}
     >
       <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
@@ -62,7 +74,7 @@ export function Header({
                 className={clsx(
                   'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-medium',
                   'transition-all duration-200',
-                  gradient
+                  gradient || isTone
                     ? 'bg-white/20 text-white hover:bg-white/30'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 )}

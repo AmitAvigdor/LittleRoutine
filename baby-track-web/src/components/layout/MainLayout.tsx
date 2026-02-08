@@ -3,13 +3,24 @@ import { useEffect, useMemo, useState } from 'react';
 import { BottomNav } from './BottomNav';
 import { useAppStore } from '@/stores/appStore';
 import { useAuth } from '@/features/auth/AuthContext';
-import { subscribeToBabies, subscribeToSettings, getOrCreateSettings, createDiaperChange, createSleepSession } from '@/lib/firestore';
+import {
+  subscribeToBabies,
+  subscribeToSettings,
+  getOrCreateSettings,
+  createDiaperChange,
+  createSleepSession,
+  subscribeToFeedingSessions,
+  subscribeToBottleSessions,
+  subscribeToSleepSessions,
+  subscribeToDiaperChanges,
+} from '@/lib/firestore';
 import { useNotifications } from '@/hooks/useNotifications';
 import { clsx } from 'clsx';
 import { QuickAdd } from '@/components/ui/QuickAdd';
 import { toast } from '@/stores/toastStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Moon, Droplet, BottleWine, BedDouble, Milk, Circle, Plus } from 'lucide-react';
+import { computeStatusTone } from '@/lib/statusTone';
 
 export function MainLayout() {
   const { user } = useAuth();
@@ -24,8 +35,11 @@ export function MainLayout() {
     setLoadingBabies,
     setLoadingSettings,
     selectedBaby,
+    settings,
+    setStatusTone,
   } = useAppStore();
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [showReloadHint, setShowReloadHint] = useState(false);
 
   // Initialize notifications/reminders system
   useNotifications();
@@ -61,7 +75,80 @@ export function MainLayout() {
     };
   }, [user, setBabies, setSettings, setLoadingBabies, setLoadingSettings]);
 
+  useEffect(() => {
+    if (!selectedBaby) return;
+
+    let feedingSessions: { startTime: string; endTime?: string | null; isActive: boolean }[] = [];
+    let bottleSessions: { timestamp: string }[] = [];
+    let sleepSessions: { startTime: string; endTime?: string | null; isActive: boolean }[] = [];
+    let diaperChanges: { timestamp: string }[] = [];
+
+    const recompute = () => {
+      const feedings = [
+        ...feedingSessions.filter((s) => !s.isActive).map((s) => s.startTime),
+        ...bottleSessions.map((s) => s.timestamp),
+      ];
+      feedings.sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+      const lastFeedingAt = feedings[0] ?? null;
+
+      const lastDiaperAt = diaperChanges[0]?.timestamp ?? null;
+
+      const completedSleep = sleepSessions.filter((s) => !s.isActive && s.endTime);
+      completedSleep.sort((a, b) =>
+        new Date((b.endTime || b.startTime) as string).getTime() -
+        new Date((a.endTime || a.startTime) as string).getTime()
+      );
+      const lastSleepAt = completedSleep[0]?.endTime || completedSleep[0]?.startTime || null;
+
+      const isFeedingActive = feedingSessions.some((s) => s.isActive);
+      const isSleepActive = sleepSessions.some((s) => s.isActive);
+
+      const tone = computeStatusTone({
+        lastFeedingAt,
+        lastDiaperAt,
+        lastSleepAt,
+        isFeedingActive,
+        isSleepActive,
+        settings,
+      });
+      setStatusTone(tone);
+    };
+
+    const unsubscribeFeeding = subscribeToFeedingSessions(selectedBaby.id, (data) => {
+      feedingSessions = data;
+      recompute();
+    });
+    const unsubscribeBottle = subscribeToBottleSessions(selectedBaby.id, (data) => {
+      bottleSessions = data;
+      recompute();
+    });
+    const unsubscribeSleep = subscribeToSleepSessions(selectedBaby.id, (data) => {
+      sleepSessions = data;
+      recompute();
+    });
+    const unsubscribeDiaper = subscribeToDiaperChanges(selectedBaby.id, (data) => {
+      diaperChanges = data;
+      recompute();
+    });
+
+    return () => {
+      unsubscribeFeeding();
+      unsubscribeBottle();
+      unsubscribeSleep();
+      unsubscribeDiaper();
+    };
+  }, [selectedBaby, settings, setStatusTone]);
+
   const isLoading = isLoadingBabies || isLoadingSettings;
+
+  useEffect(() => {
+    if (!isLoading) {
+      setShowReloadHint(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setShowReloadHint(true), 8000);
+    return () => window.clearTimeout(timer);
+  }, [isLoading]);
 
   const quickActions = useMemo(() => {
     const requireContext = async (action: () => Promise<void>) => {
@@ -174,6 +261,15 @@ export function MainLayout() {
         <div className="text-white text-center">
           <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4" />
           <p className="text-lg">Loading your data...</p>
+          {showReloadHint && (
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 rounded-xl bg-white/20 text-white font-semibold"
+            >
+              Reload
+            </button>
+          )}
         </div>
       </div>
     );

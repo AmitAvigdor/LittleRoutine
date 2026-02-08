@@ -25,6 +25,7 @@ interface AppState {
   // Connectivity
   isOnline: boolean;
   hasPendingWrites: boolean;
+  statusTone: 'green' | 'yellow' | 'red';
 
   // Loading states
   isLoadingBabies: boolean;
@@ -43,6 +44,7 @@ interface AppState {
   setLoadingSettings: (loading: boolean) => void;
   setOnlineStatus: (online: boolean) => void;
   setPendingWrites: (pending: boolean) => void;
+  setStatusTone: (tone: 'green' | 'yellow' | 'red') => void;
   reset: () => void;
 }
 
@@ -57,6 +59,7 @@ const initialState = {
   sidebarOpen: false,
   isOnline: true,
   hasPendingWrites: false,
+  statusTone: 'green',
   isLoadingBabies: true,
   isLoadingSettings: true,
 };
@@ -118,6 +121,7 @@ export const useAppStore = create<AppState>()(
 
       setOnlineStatus: (online) => set({ isOnline: online }),
       setPendingWrites: (pending) => set({ hasPendingWrites: pending }),
+      setStatusTone: (tone) => set({ statusTone: tone }),
 
       reset: () => set(initialState),
     }),

@@ -329,7 +329,7 @@ export function DiaperView() {
   const isInDetailForm = showForm && selectedType !== null;
 
   return (
-    <div>
+    <div className="min-h-screen bg-[#ECFDF5]">
       <Header title="Diaper" />
 
       <div className="px-4 pt-3">
