@@ -1,61 +1,63 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 :root {
-  --app-bg: linear-gradient(180deg, #fff6f2 0%, #f7f1ff 55%, #f5f8ff 100%);
+  --app-bg: radial-gradient(1200px 600px at 10% -10%, #fff1e5 0%, rgba(255, 241, 229, 0) 60%),
+    radial-gradient(1200px 800px at 95% -20%, #e8f7f4 0%, rgba(232, 247, 244, 0) 55%),
+    linear-gradient(180deg, #fffaf2 0%, #f6f3ea 50%, #f3f7f6 100%);
   --app-surface: #ffffff;
-  --app-surface-alt: #fbf7ff;
-  --app-text: #2b2231;
-  --app-muted: #6b5a72;
-  --app-border: rgba(43, 34, 49, 0.08);
-  --app-shadow: 0 10px 30px rgba(43, 34, 49, 0.08);
-  --app-shadow-soft: 0 6px 16px rgba(43, 34, 49, 0.06);
-  --gradient-primary: linear-gradient(135deg, #9c27b0 0%, #e91e63 100%);
-  --gradient-feeding: linear-gradient(135deg, #9c27b0 0%, #e91e63 100%);
-  --gradient-sleep: linear-gradient(135deg, #3f51b5 0%, #7c4dff 100%);
-  --gradient-diaper: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);
+  --app-surface-alt: #f8f2e8;
+  --app-text: #1f1b16;
+  --app-muted: #6a6159;
+  --app-border: rgba(31, 27, 22, 0.08);
+  --app-shadow: 0 18px 40px rgba(31, 27, 22, 0.12);
+  --app-shadow-soft: 0 10px 20px rgba(31, 27, 22, 0.08);
+  --gradient-primary: linear-gradient(135deg, #1f8a82 0%, #f08a5d 100%);
+  --gradient-feeding: linear-gradient(135deg, #f5a561 0%, #f08a5d 100%);
+  --gradient-sleep: linear-gradient(135deg, #1f5f8b 0%, #5fa8d3 100%);
+  --gradient-diaper: linear-gradient(135deg, #2f9d70 0%, #8ad2a6 100%);
 }
 
 .theme-soft {
-  --app-bg: radial-gradient(1200px 600px at 10% -10%, #ffe9e1 0%, rgba(255, 233, 225, 0) 60%),
-    radial-gradient(1200px 800px at 90% -20%, #e8f0ff 0%, rgba(232, 240, 255, 0) 55%),
-    linear-gradient(180deg, #fff9f6 0%, #f8f5ff 55%, #f6f8ff 100%);
+  --app-bg: radial-gradient(1200px 600px at 10% -10%, #ffeede 0%, rgba(255, 238, 222, 0) 60%),
+    radial-gradient(1200px 800px at 90% -20%, #e9f6f3 0%, rgba(233, 246, 243, 0) 55%),
+    linear-gradient(180deg, #fff9f2 0%, #f7f2e8 55%, #f3f7f6 100%);
   --app-surface: #ffffff;
-  --app-surface-alt: #fff5f2;
-  --app-text: #2c1f2a;
-  --app-muted: #6f5d6a;
-  --app-border: rgba(44, 31, 42, 0.08);
-  --app-shadow: 0 14px 34px rgba(44, 31, 42, 0.12);
-  --app-shadow-soft: 0 8px 20px rgba(44, 31, 42, 0.1);
-  --gradient-primary: linear-gradient(135deg, #ef8fb1 0%, #a78bfa 100%);
-  --gradient-feeding: linear-gradient(135deg, #f3a7c1 0%, #f58aa6 100%);
-  --gradient-sleep: linear-gradient(135deg, #9bb5ff 0%, #7aa3ff 100%);
-  --gradient-diaper: linear-gradient(135deg, #82d9b3 0%, #a5e2c8 100%);
+  --app-surface-alt: #f6efe4;
+  --app-text: #1f1b16;
+  --app-muted: #6a6159;
+  --app-border: rgba(31, 27, 22, 0.08);
+  --app-shadow: 0 14px 34px rgba(31, 27, 22, 0.12);
+  --app-shadow-soft: 0 8px 20px rgba(31, 27, 22, 0.1);
+  --gradient-primary: linear-gradient(135deg, #2c9087 0%, #f09a6a 100%);
+  --gradient-feeding: linear-gradient(135deg, #f5ad72 0%, #f08a5d 100%);
+  --gradient-sleep: linear-gradient(135deg, #206491 0%, #63a9d5 100%);
+  --gradient-diaper: linear-gradient(135deg, #2f9d70 0%, #9bdab7 100%);
 }
 
 @theme {
-  /* Primary Colors - Purple/Pink */
-  --color-primary-50: #f3e5f5;
-  --color-primary-100: #e1bee7;
-  --color-primary-200: #ce93d8;
-  --color-primary-300: #ba68c8;
-  --color-primary-400: #ab47bc;
-  --color-primary-500: #9c27b0;
-  --color-primary-600: #8e24aa;
-  --color-primary-700: #7b1fa2;
-  --color-primary-800: #6a1b9a;
-  --color-primary-900: #4a148c;
+  /* Primary Colors - Teal */
+  --color-primary-50: #e8f7f4;
+  --color-primary-100: #cceee8;
+  --color-primary-200: #9fded4;
+  --color-primary-300: #6fcbbd;
+  --color-primary-400: #3db3a3;
+  --color-primary-500: #1f8a82;
+  --color-primary-600: #18736d;
+  --color-primary-700: #135c58;
+  --color-primary-800: #0f4744;
+  --color-primary-900: #0a3432;
 
-  --color-secondary-50: #fce4ec;
-  --color-secondary-100: #f8bbd9;
-  --color-secondary-200: #f48fb1;
-  --color-secondary-300: #f06292;
-  --color-secondary-400: #ec407a;
-  --color-secondary-500: #e91e63;
-  --color-secondary-600: #d81b60;
-  --color-secondary-700: #c2185b;
-  --color-secondary-800: #ad1457;
-  --color-secondary-900: #880e4f;
+  --color-secondary-50: #fff3ea;
+  --color-secondary-100: #ffe1cf;
+  --color-secondary-200: #ffc7a3;
+  --color-secondary-300: #ffab78;
+  --color-secondary-400: #f9925f;
+  --color-secondary-500: #f08a5d;
+  --color-secondary-600: #d9724c;
+  --color-secondary-700: #b75a3c;
+  --color-secondary-800: #94462f;
+  --color-secondary-900: #6f3322;
 
   /* Baby Profile Colors */
   --color-baby-purple: #9c27b0;
@@ -99,7 +101,7 @@
 
 /* Base styles */
 html {
-  font-family: "Manrope", "Helvetica Neue", sans-serif;
+  font-family: "Plus Jakarta Sans", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -117,10 +119,28 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.02em;
 }
 
+.app-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(400px 400px at 15% 20%, rgba(31, 138, 130, 0.08), rgba(31, 138, 130, 0) 60%),
+    radial-gradient(500px 500px at 85% 10%, rgba(240, 138, 93, 0.08), rgba(240, 138, 93, 0) 65%),
+    radial-gradient(600px 600px at 70% 90%, rgba(95, 168, 211, 0.08), rgba(95, 168, 211, 0) 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+
 .card {
   background: var(--app-surface);
   border: 1px solid var(--app-border);
   box-shadow: var(--app-shadow-soft);
+  border-radius: 20px;
 }
 
 /* Night mode */

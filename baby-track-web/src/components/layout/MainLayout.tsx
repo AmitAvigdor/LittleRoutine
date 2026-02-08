@@ -165,7 +165,7 @@ export function MainLayout() {
         label: 'Wet Diaper',
         description: 'Log now',
         icon: <Droplet className="w-5 h-5" />,
-        color: '#374151',
+        color: '#3b82f6',
         onClick: () =>
           requireContext(async () => {
             await createDiaperChange(selectedBaby!.id, user!.uid, {
@@ -183,7 +183,7 @@ export function MainLayout() {
         label: 'Full Diaper',
         description: 'Log now',
         icon: <Circle className="w-5 h-5" />,
-        color: '#374151',
+        color: '#f59e0b',
         onClick: () =>
           requireContext(async () => {
             await createDiaperChange(selectedBaby!.id, user!.uid, {
@@ -201,7 +201,7 @@ export function MainLayout() {
         label: 'Start Nap',
         description: 'Begin timer',
         icon: <Moon className="w-5 h-5" />,
-        color: '#374151',
+        color: '#1f5f8b',
         onClick: () =>
           requireContext(async () => {
             await createSleepSession(selectedBaby!.id, user!.uid, {
@@ -218,7 +218,7 @@ export function MainLayout() {
         label: 'Start Night',
         description: 'Begin timer',
         icon: <BedDouble className="w-5 h-5" />,
-        color: '#374151',
+        color: '#0f172a',
         onClick: () =>
           requireContext(async () => {
             await createSleepSession(selectedBaby!.id, user!.uid, {
@@ -235,7 +235,7 @@ export function MainLayout() {
         label: 'Breast Feed',
         description: 'Open feed',
         icon: <Milk className="w-5 h-5" />,
-        color: '#374151',
+        color: '#f08a5d',
         onClick: () => {
           setQuickAddOpen(false);
           navigate('/feed?tab=breast');
@@ -246,7 +246,7 @@ export function MainLayout() {
         label: 'Bottle Feed',
         description: 'Open bottle',
         icon: <BottleWine className="w-5 h-5" />,
-        color: '#374151',
+        color: '#1f8a82',
         onClick: () => {
           setQuickAddOpen(false);
           navigate('/feed?tab=bottle');
@@ -257,7 +257,7 @@ export function MainLayout() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-gray-700 text-center">
           <div className="w-12 h-12 border-4 border-gray-200 border-t-gray-600 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-lg">Loading your data...</p>
@@ -265,7 +265,7 @@ export function MainLayout() {
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="mt-4 px-4 py-2 rounded-xl bg-white text-gray-700 font-semibold border border-gray-200"
+              className="mt-4 px-4 py-2 rounded-xl bg-white text-gray-700 font-semibold border border-gray-200 shadow-sm"
             >
               Reload
             </button>
@@ -282,7 +282,7 @@ export function MainLayout() {
   return (
     <div
       className={clsx(
-        'min-h-screen pb-20',
+        'min-h-screen pb-20 app-shell',
         nightMode && 'night-mode'
       )}
     >
@@ -295,8 +295,8 @@ export function MainLayout() {
           onClick={() => setQuickAddOpen(true)}
           className={clsx(
             'fixed bottom-36 right-4 z-40 w-16 h-16 rounded-full text-white',
-            'shadow-lg shadow-black/20 transition-transform active:scale-95',
-            'flex items-center justify-center border-4 border-white/70 bg-gray-900'
+            'shadow-xl shadow-black/20 transition-transform active:scale-95',
+            'flex items-center justify-center border-4 border-white/70 gradient-primary'
           )}
           aria-label="Quick add"
         >

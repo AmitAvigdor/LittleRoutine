@@ -12,16 +12,17 @@ const navItems = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-100 bottom-nav z-50 shadow-lg shadow-gray-200/50">
-      <div className="max-w-lg mx-auto flex items-center justify-around px-2">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-xl border-t border-white/60 bottom-nav z-50 shadow-[0_-12px_30px_rgba(31,27,22,0.12)]">
+      <div className="max-w-lg mx-auto flex items-center justify-around px-3 py-1">
         {navItems.map(({ to, label, icon: Icon, color }) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
               clsx(
-                'flex flex-col items-center py-2 px-3 min-w-[60px] transition-all duration-200',
-                isActive ? 'text-primary-600' : 'text-gray-400'
+                'flex flex-col items-center py-2 px-3 min-w-[60px] transition-all duration-200 rounded-2xl',
+                'hover:-translate-y-0.5 active:translate-y-0',
+                isActive ? 'text-gray-900' : 'text-gray-500'
               )
             }
           >
@@ -29,11 +30,11 @@ export function BottomNav() {
               <>
                 <div
                   className={clsx(
-                    'p-2 rounded-2xl transition-all duration-300',
-                    isActive && 'shadow-sm'
+                    'p-2.5 rounded-2xl transition-all duration-300',
+                    isActive && 'shadow-md'
                   )}
                   style={isActive ? {
-                    backgroundColor: `${color}15`,
+                    backgroundColor: `${color}1f`,
                   } : undefined}
                 >
                   <Icon
@@ -46,8 +47,8 @@ export function BottomNav() {
                 </div>
                 <span
                   className={clsx(
-                    'text-[11px] mt-1 font-semibold transition-colors duration-200',
-                    isActive ? 'text-gray-900' : 'text-gray-400'
+                    'text-[11px] mt-1 font-semibold tracking-wide transition-colors duration-200',
+                    isActive ? 'text-gray-900' : 'text-gray-500'
                   )}
                 >
                   {label}

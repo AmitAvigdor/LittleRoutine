@@ -31,11 +31,11 @@ export function Header({
   const isTone = statusTone === 'green' || statusTone === 'yellow' || statusTone === 'red';
   const toneClass =
     statusTone === 'red'
-      ? 'bg-white border-b-2 border-red-300'
+      ? 'bg-white/90 backdrop-blur-xl border-b-2 border-red-300'
       : statusTone === 'yellow'
-      ? 'bg-white border-b-2 border-amber-300'
+      ? 'bg-white/90 backdrop-blur-xl border-b-2 border-amber-300'
       : statusTone === 'green'
-      ? 'bg-white border-b-2 border-emerald-300'
+      ? 'bg-white/90 backdrop-blur-xl border-b-2 border-emerald-300'
       : '';
   const toneTextClass = 'text-gray-900';
 
@@ -52,7 +52,7 @@ export function Header({
     <header
       className={clsx(
         'sticky top-0 z-40 safe-top',
-        isTone ? toneClass : gradient ? 'gradient-primary text-white' : 'bg-white border-b border-gray-100'
+        isTone ? toneClass : gradient ? 'gradient-primary text-white' : 'bg-white/90 backdrop-blur-xl border-b border-white/70 shadow-sm'
       )}
     >
       <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
@@ -106,7 +106,7 @@ export function Header({
                     className="fixed inset-0 z-40"
                     onClick={() => setShowDropdown(false)}
                   />
-                  <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+                    <div className="absolute top-full left-0 mt-2 w-48 bg-white/95 backdrop-blur-xl rounded-xl shadow-lg border border-white/70 py-1 z-50">
                     {babies.map((baby) => {
                       const color = BABY_COLOR_CONFIG[baby.color]?.hex || '#9c27b0';
                       const isSelected = baby.id === selectedBaby.id;
@@ -193,7 +193,7 @@ export function NoBabiesHeader() {
   };
 
   return (
-    <header className="bg-white border-b border-gray-100">
+    <header className="bg-white/90 backdrop-blur-xl border-b border-white/70 shadow-sm">
       <div className="max-w-lg mx-auto px-4 py-4">
         <div className="text-center">
           <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center mx-auto mb-3">

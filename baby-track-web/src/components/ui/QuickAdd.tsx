@@ -23,12 +23,12 @@ export function QuickAdd({ open, onClose, actions }: QuickAddProps) {
     <div className="fixed inset-0 z-[60]">
       <button
         type="button"
-        className="absolute inset-0 bg-black/30"
+        className="absolute inset-0 bg-black/20 backdrop-blur-[2px]"
         onClick={onClose}
         aria-label="Close quick add"
       />
       <div className="absolute bottom-0 left-0 right-0">
-        <div className="max-w-lg mx-auto bg-white rounded-t-3xl shadow-2xl p-4 pb-6">
+        <div className="max-w-lg mx-auto bg-white/95 rounded-t-[28px] shadow-2xl p-4 pb-6 border border-white/70">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Quick Add</h3>
@@ -37,7 +37,7 @@ export function QuickAdd({ open, onClose, actions }: QuickAddProps) {
             <button
               type="button"
               onClick={onClose}
-              className="w-9 h-9 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center"
+              className="w-9 h-9 rounded-full bg-white text-gray-600 flex items-center justify-center shadow-sm border border-gray-100"
               aria-label="Close quick add"
             >
               <X className="w-4 h-4" />
@@ -50,12 +50,12 @@ export function QuickAdd({ open, onClose, actions }: QuickAddProps) {
                 type="button"
                 onClick={action.onClick}
                 className={clsx(
-                  'flex items-center gap-3 p-3 rounded-2xl border border-gray-100',
-                  'bg-white shadow-sm hover:shadow-md transition-all text-left'
+                  'flex items-center gap-3 p-3 rounded-2xl border border-white/80',
+                  'bg-white/90 shadow-sm hover:shadow-md transition-all text-left'
                 )}
               >
                 <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center text-white"
+                  className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-sm"
                   style={{ background: action.color }}
                 >
                   {action.icon}
