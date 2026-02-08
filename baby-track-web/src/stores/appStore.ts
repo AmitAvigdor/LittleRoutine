@@ -48,7 +48,21 @@ interface AppState {
   reset: () => void;
 }
 
-const initialState: AppState = {
+const initialState: Pick<AppState,
+  | 'userId'
+  | 'isAuthenticated'
+  | 'selectedBabyId'
+  | 'selectedBaby'
+  | 'babies'
+  | 'settings'
+  | 'nightMode'
+  | 'sidebarOpen'
+  | 'isOnline'
+  | 'hasPendingWrites'
+  | 'statusTone'
+  | 'isLoadingBabies'
+  | 'isLoadingSettings'
+> = {
   userId: null,
   isAuthenticated: false,
   selectedBabyId: null,
