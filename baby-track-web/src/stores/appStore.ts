@@ -48,7 +48,7 @@ interface AppState {
   reset: () => void;
 }
 
-const initialState = {
+const initialState: AppState = {
   userId: null,
   isAuthenticated: false,
   selectedBabyId: null,
@@ -62,7 +62,7 @@ const initialState = {
   statusTone: 'green',
   isLoadingBabies: true,
   isLoadingSettings: true,
-} as const;
+};
 
 export const useAppStore = create<AppState>()(
   persist(
