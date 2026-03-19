@@ -123,12 +123,19 @@ body {
 
 /* Bottom navigation safe area */
 .bottom-nav {
-  height: calc(64px + env(safe-area-inset-bottom));
-  padding-bottom: env(safe-area-inset-bottom);
+  --bottom-nav-base-height: 64px;
+  --bottom-nav-safe-area: env(safe-area-inset-bottom);
+  --bottom-nav-height: calc(var(--bottom-nav-base-height) + var(--bottom-nav-safe-area));
+  height: var(--bottom-nav-height);
+  padding-bottom: var(--bottom-nav-safe-area);
 }
 
 .bottom-nav-inner {
-  height: 64px;
+  height: var(--bottom-nav-base-height);
+}
+
+.app-shell {
+  padding-bottom: var(--bottom-nav-height, 64px);
 }
 
 /* Scrollbar styling */

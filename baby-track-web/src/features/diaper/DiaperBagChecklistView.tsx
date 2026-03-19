@@ -484,7 +484,10 @@ export function DiaperBagChecklistView() {
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 px-4 pb-4 pointer-events-none">
+      <div
+        className="fixed inset-x-0 z-30 px-4 pointer-events-none"
+        style={{ bottom: 'calc(var(--bottom-nav-height, 64px) + 1rem)' }}
+      >
         <div className="max-w-lg mx-auto pointer-events-auto">
           <Button
             type="button"

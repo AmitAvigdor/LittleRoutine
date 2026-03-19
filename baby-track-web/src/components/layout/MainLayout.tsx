@@ -69,7 +69,7 @@ export function MainLayout() {
   return (
     <div
       className={clsx(
-        'min-h-screen pb-20',
+        'app-shell min-h-screen',
         nightMode && 'night-mode'
       )}
     >
