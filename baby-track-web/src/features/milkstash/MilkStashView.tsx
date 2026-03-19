@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
-import { createMilkStash, subscribeToMilkStash, markMilkStashInUse, markMilkStashUsed, updateMilkStashVolume, createBottleSession } from '@/lib/firestore';
+import { createMilkStash, subscribeToMilkStash, markMilkStashInUse, markMilkStashUsed, updateMilkStashVolume, createBottleSession, deleteMilkStashEntry, deleteMilkStashEntries } from '@/lib/firestore';
 import type { MilkStash, Baby } from '@/types';
 import { MilkStorageLocation, MILK_STORAGE_CONFIG } from '@/types/enums';
-import { Milk, Plus, X, Clock, Check, AlertTriangle } from 'lucide-react';
+import { Milk, Plus, X, Clock, Check, AlertTriangle, Trash2, Pencil } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export function MilkStashView() {
@@ -17,12 +17,19 @@ export function MilkStashView() {
   const [stash, setStash] = useState<MilkStash[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedForDeletion, setSelectedForDeletion] = useState<string[]>([]);
 
   // Confirmation dialog state
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [selectedMilkItem, setSelectedMilkItem] = useState<MilkStash | null>(null);
   const [selectedBabyForFeeding, setSelectedBabyForFeeding] = useState<Baby | null>(null);
   const [usedVolume, setUsedVolume] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingMilkItem, setEditingMilkItem] = useState<MilkStash | null>(null);
+  const [editVolume, setEditVolume] = useState('');
 
   // Form state
   const [pumpedDate, setPumpedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -97,6 +104,7 @@ export function MilkStashView() {
           volume: usedAmount,
           volumeUnit: selectedMilkItem.volumeUnit,
           contentType: 'breastMilk',
+          milkStashId: selectedMilkItem.id,
           notes: `From milk stash (pumped: ${new Date(selectedMilkItem.pumpedDate).toLocaleDateString()})`,
           babyMood: null,
         });
@@ -128,6 +136,78 @@ export function MilkStashView() {
     setShowConfirmDialog(false);
     setSelectedMilkItem(null);
     setUsedVolume('');
+  };
+
+  const toggleSelectionMode = () => {
+    setSelectionMode((prev) => !prev);
+    setSelectedForDeletion([]);
+  };
+
+  const handleToggleDeleteSelection = (itemId: string) => {
+    setSelectedForDeletion((prev) =>
+      prev.includes(itemId) ? prev.filter((id) => id !== itemId) : [...prev, itemId]
+    );
+  };
+
+  const requestDelete = (itemIds: string[]) => {
+    if (itemIds.length === 0) return;
+    setPendingDeleteIds(itemIds);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleCancelDelete = () => {
+    setPendingDeleteIds([]);
+    setShowDeleteConfirm(false);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (pendingDeleteIds.length === 0) return;
+
+    setLoading(true);
+    try {
+      if (pendingDeleteIds.length === 1) {
+        await deleteMilkStashEntry(pendingDeleteIds[0]);
+      } else {
+        await deleteMilkStashEntries(pendingDeleteIds);
+      }
+
+      setSelectedForDeletion((prev) => prev.filter((id) => !pendingDeleteIds.includes(id)));
+      setSelectionMode(false);
+      handleCancelDelete();
+    } catch (error) {
+      console.error('Error deleting milk stash entries:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const requestEdit = (item: MilkStash) => {
+    setEditingMilkItem(item);
+    setEditVolume(item.volume.toString());
+    setShowEditDialog(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMilkItem(null);
+    setEditVolume('');
+    setShowEditDialog(false);
+  };
+
+  const handleConfirmEdit = async () => {
+    if (!editingMilkItem || !editVolume) return;
+
+    const nextVolume = parseFloat(editVolume);
+    if (isNaN(nextVolume) || nextVolume <= 0) return;
+
+    setLoading(true);
+    try {
+      await updateMilkStashVolume(editingMilkItem.id, nextVolume);
+      handleCancelEdit();
+    } catch (error) {
+      console.error('Error updating milk stash volume:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const isExpiringSoon = (item: MilkStash) => {
@@ -176,6 +256,24 @@ export function MilkStashView() {
             </p>
             <p className="text-sm text-indigo-500">Freezer ({freezerMilk.length})</p>
           </Card>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <Button size="sm" variant="outline" onClick={toggleSelectionMode}>
+            {selectionMode ? 'Cancel Selection' : 'Select Multiple'}
+          </Button>
+
+          {selectionMode && (
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => requestDelete(selectedForDeletion)}
+              disabled={selectedForDeletion.length === 0 || loading}
+            >
+              <Trash2 className="w-4 h-4 mr-1" />
+              Delete Selected ({selectedForDeletion.length})
+            </Button>
+          )}
         </div>
 
         {/* Confirmation Dialog */}
@@ -256,6 +354,84 @@ export function MilkStashView() {
               <Button
                 variant="outline"
                 onClick={handleCancelConfirm}
+                className="flex-1"
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {showDeleteConfirm && (
+          <Card className="border-2 border-red-300 bg-red-50">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">Delete milk stash {pendingDeleteIds.length > 1 ? 'entries' : 'entry'}?</h3>
+              <button onClick={handleCancelDelete}>
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            <p className="text-sm text-red-700 mb-4">
+              {pendingDeleteIds.length > 1
+                ? `You are about to permanently delete ${pendingDeleteIds.length} milk stash entries. This cannot be undone.`
+                : 'This milk stash entry will be permanently deleted. This cannot be undone.'}
+            </p>
+
+            <div className="flex gap-2">
+              <Button
+                variant="danger"
+                onClick={handleConfirmDelete}
+                className="flex-1"
+                disabled={loading}
+              >
+                {loading ? 'Deleting...' : 'Delete'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleCancelDelete}
+                className="flex-1"
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {showEditDialog && editingMilkItem && (
+          <Card className="border-2 border-blue-300 bg-blue-50">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">Edit milk volume</h3>
+              <button onClick={handleCancelEdit}>
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            <p className="text-sm text-blue-700 mb-3">
+              Update the stored amount for this entry to correct a logging error.
+            </p>
+
+            <Input
+              type="number"
+              step="0.5"
+              label={`Volume (${volumeUnit})`}
+              value={editVolume}
+              onChange={(e) => setEditVolume(e.target.value)}
+              min="0.5"
+            />
+
+            <div className="flex gap-2 mt-4">
+              <Button
+                onClick={handleConfirmEdit}
+                className="flex-1"
+                disabled={loading || !editVolume || parseFloat(editVolume) <= 0}
+              >
+                {loading ? 'Saving...' : 'Save Changes'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleCancelEdit}
                 className="flex-1"
                 disabled={loading}
               >
@@ -348,6 +524,11 @@ export function MilkStashView() {
                   key={item.id}
                   item={item}
                   volumeUnit={volumeUnit}
+                  selectionMode={selectionMode}
+                  isSelected={selectedForDeletion.includes(item.id)}
+                  onToggleSelect={() => handleToggleDeleteSelection(item.id)}
+                  onEdit={() => requestEdit(item)}
+                  onDelete={() => requestDelete([item.id])}
                   onMarkInUse={() => handleMarkInUse(item)}
                   onMarkUsed={() => handleMarkUsed(item)}
                   isExpiringSoon={isExpiringSoon(item)}
@@ -368,6 +549,11 @@ export function MilkStashView() {
                   key={item.id}
                   item={item}
                   volumeUnit={volumeUnit}
+                  selectionMode={selectionMode}
+                  isSelected={selectedForDeletion.includes(item.id)}
+                  onToggleSelect={() => handleToggleDeleteSelection(item.id)}
+                  onEdit={() => requestEdit(item)}
+                  onDelete={() => requestDelete([item.id])}
                   onMarkInUse={() => handleMarkInUse(item)}
                   onMarkUsed={() => handleMarkUsed(item)}
                   isExpiringSoon={isExpiringSoon(item)}
@@ -388,6 +574,11 @@ export function MilkStashView() {
                   key={item.id}
                   item={item}
                   volumeUnit={volumeUnit}
+                  selectionMode={selectionMode}
+                  isSelected={selectedForDeletion.includes(item.id)}
+                  onToggleSelect={() => handleToggleDeleteSelection(item.id)}
+                  onEdit={() => requestEdit(item)}
+                  onDelete={() => requestDelete([item.id])}
                   onMarkInUse={() => handleMarkInUse(item)}
                   onMarkUsed={() => handleMarkUsed(item)}
                   isExpiringSoon={isExpiringSoon(item)}
@@ -413,6 +604,11 @@ export function MilkStashView() {
 function MilkCard({
   item,
   volumeUnit,
+  selectionMode,
+  isSelected,
+  onToggleSelect,
+  onEdit,
+  onDelete,
   onMarkInUse,
   onMarkUsed,
   isExpiringSoon,
@@ -420,6 +616,11 @@ function MilkCard({
 }: {
   item: MilkStash;
   volumeUnit: string;
+  selectionMode: boolean;
+  isSelected: boolean;
+  onToggleSelect: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
   onMarkInUse: () => void;
   onMarkUsed: () => void;
   isExpiringSoon: boolean;
@@ -466,18 +667,32 @@ function MilkCard({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {!item.isInUse ? (
-            <Button size="sm" variant="outline" onClick={onMarkInUse}>
-              Use
+          {selectionMode ? (
+            <Button size="sm" variant={isSelected ? 'primary' : 'outline'} onClick={onToggleSelect}>
+              {isSelected ? 'Selected' : 'Select'}
             </Button>
           ) : (
             <>
-              <Button size="sm" onClick={onMarkUsed}>
-                <Check className="w-4 h-4 mr-1" />
-                Done
+              {!item.isInUse ? (
+                <Button size="sm" variant="outline" onClick={onMarkInUse}>
+                  Use
+                </Button>
+              ) : (
+                <>
+                  <Button size="sm" onClick={onMarkUsed}>
+                    <Check className="w-4 h-4 mr-1" />
+                    Done
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={onMarkInUse}>
+                    Cancel
+                  </Button>
+                </>
+              )}
+              <Button size="sm" variant="outline" onClick={onEdit} aria-label={`Edit ${item.volume} ${volumeUnit} milk stash entry`}>
+                <Pencil className="w-4 h-4 text-blue-500" />
               </Button>
-              <Button size="sm" variant="outline" onClick={onMarkInUse}>
-                Cancel
+              <Button size="sm" variant="outline" onClick={onDelete} aria-label={`Delete ${item.volume} ${volumeUnit} milk stash entry`}>
+                <Trash2 className="w-4 h-4 text-red-500" />
               </Button>
             </>
           )}
