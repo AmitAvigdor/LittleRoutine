@@ -20,7 +20,7 @@ export function BottomNav() {
             to={to}
             className={({ isActive }) =>
               clsx(
-                'flex flex-col items-center py-2 px-3 min-w-[60px] transition-all duration-200',
+                'flex flex-col items-center py-1.5 px-2.5 min-w-[56px] transition-all duration-200',
                 isActive ? 'text-primary-600' : 'text-gray-400'
               )
             }
@@ -29,7 +29,7 @@ export function BottomNav() {
               <>
                 <div
                   className={clsx(
-                    'p-2 rounded-2xl transition-all duration-300',
+                    'p-1.5 rounded-2xl transition-all duration-300',
                     isActive && 'shadow-sm'
                   )}
                   style={isActive ? {
@@ -38,7 +38,7 @@ export function BottomNav() {
                 >
                   <Icon
                     className={clsx(
-                      'w-6 h-6 transition-transform duration-200',
+                      'w-5 h-5 transition-transform duration-200',
                       isActive && 'scale-110'
                     )}
                     style={isActive ? { color } : undefined}
@@ -46,7 +46,7 @@ export function BottomNav() {
                 </div>
                 <span
                   className={clsx(
-                    'text-[11px] mt-1 font-semibold transition-colors duration-200',
+                    'text-[10px] mt-0.5 font-semibold transition-colors duration-200',
                     isActive ? 'text-gray-900' : 'text-gray-400'
                   )}
                 >

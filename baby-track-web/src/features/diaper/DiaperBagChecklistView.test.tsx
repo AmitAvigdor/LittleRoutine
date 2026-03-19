@@ -38,7 +38,7 @@ describe('DiaperBagChecklistView', () => {
     expect(screen.getByText('Your bag is empty.')).toBeInTheDocument();
     expect(screen.getByText('Start packing your essentials!')).toBeInTheDocument();
     expect(screen.getByText('No custom items yet. Use the button below to add one.')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Edit Diapers')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Edit Diapers')).toBeInTheDocument();
     expect(screen.getAllByText('Qty missing').length).toBeGreaterThan(0);
     expect(screen.queryByLabelText('Mark Diapers packed')).not.toBeInTheDocument();
 
@@ -68,6 +68,24 @@ describe('DiaperBagChecklistView', () => {
 
     expect(screen.getByText('Everything is packed!')).toBeInTheDocument();
     expect(screen.getByText("You're ready to go.")).toBeInTheDocument();
+  });
+
+  it('lets users customize preset target quantities and persists the new target', async () => {
+    const user = userEvent.setup();
+    renderChecklist();
+
+    await user.click(screen.getByLabelText('Edit Diapers'));
+    expect(screen.getByText('Adjust Diapers')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Item name')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Quantity')).not.toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText('Edit target quantity'));
+    await user.type(screen.getByLabelText('Edit target quantity'), '7');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(screen.getByText('Essential item • Target 7 • Tap to adjust target')).toBeInTheDocument();
+    expect(localStorage.getItem(STORAGE_KEY)).toContain('"id":"preset-diapers"');
+    expect(localStorage.getItem(STORAGE_KEY)).toContain('"targetQuantity":7');
   });
 
   it('lets users add and edit a custom item from the sticky action', async () => {
@@ -122,7 +140,7 @@ describe('DiaperBagChecklistView', () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify([
-        { id: 'preset-diapers', label: 'Diapers', quantity: 2, targetQuantity: 7, isPreset: true, isPacked: true },
+        { id: 'preset-diapers', label: 'Diapers', quantity: 2, targetQuantity: 5, isPreset: true, isPacked: true },
         { id: 'preset-wipes', label: 'Wipes', quantity: 1, isPreset: true },
         { id: 'custom-meds', label: 'Medication', quantity: 3, targetQuantity: 4, isPreset: false },
       ])
@@ -140,8 +158,6 @@ describe('DiaperBagChecklistView', () => {
       expect(localStorage.getItem(STORAGE_KEY)).toContain('"label":"Medication"');
       expect(localStorage.getItem(STORAGE_KEY)).toContain('"quantity":3');
       expect(localStorage.getItem(STORAGE_KEY)).toContain('"targetQuantity":4');
-      expect(localStorage.getItem(STORAGE_KEY)).toContain('"id":"preset-diapers"');
-      expect(localStorage.getItem(STORAGE_KEY)).not.toContain('"targetQuantity":7');
     });
   });
 });

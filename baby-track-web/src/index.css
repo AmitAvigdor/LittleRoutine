@@ -123,7 +123,7 @@ body {
 
 /* Bottom navigation safe area */
 .bottom-nav {
-  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
 }
 
 /* Scrollbar styling */

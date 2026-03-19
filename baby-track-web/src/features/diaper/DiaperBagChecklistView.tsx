@@ -93,6 +93,7 @@ function mergeWithPresetItems(savedItems: SavedChecklistItem[] | null): Checklis
     return {
       ...item,
       quantity: saved.quantity ?? item.quantity,
+      targetQuantity: saved.targetQuantity ?? item.targetQuantity,
     };
   });
 
@@ -124,7 +125,7 @@ export function DiaperBagChecklistView() {
   const [editItemTargetQuantity, setEditItemTargetQuantity] = useState('1');
 
   const editingItem = useMemo(
-    () => items.find((item) => item.id === editingItemId && !item.isPreset) ?? null,
+    () => items.find((item) => item.id === editingItemId) ?? null,
     [editingItemId, items]
   );
 
@@ -241,8 +242,6 @@ export function DiaperBagChecklistView() {
   };
 
   const openEditItemDialog = (item: ChecklistItem) => {
-    if (item.isPreset) return;
-
     setEditingItemId(item.id);
     setEditItemName(item.label);
     setEditItemQuantity(String(item.quantity));
@@ -396,7 +395,12 @@ export function DiaperBagChecklistView() {
                         >
                           <div className="flex items-start gap-3">
                             {item.isPreset ? (
-                              <div className="flex-1 min-w-0">
+                              <button
+                                type="button"
+                                aria-label={`Edit ${item.label}`}
+                                onClick={() => openEditItemDialog(item)}
+                                className="flex-1 min-w-0 text-left rounded-xl -m-2 p-2 hover:bg-white/70 transition-colors"
+                              >
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <p className="font-semibold text-gray-900">{item.label}</p>
                                   {isMissingQuantity && (
@@ -410,8 +414,8 @@ export function DiaperBagChecklistView() {
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">Essential item • Target {item.targetQuantity}</p>
-                              </div>
+                                <p className="text-xs text-gray-500 mt-1">Essential item • Target {item.targetQuantity} • Tap to adjust target</p>
+                              </button>
                             ) : (
                               <button
                                 type="button"
