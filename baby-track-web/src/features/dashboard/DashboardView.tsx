@@ -36,8 +36,6 @@ import {
   Milk,
   Sun,
   ChevronRight,
-  Gamepad2,
-  Footprints,
   Pill,
   Circle,
   CheckCircle2,
@@ -652,16 +650,16 @@ export function DashboardView() {
               onClick={() => navigate('/diaper')}
             />
             <QuickAction
-              label="Play"
-              icon={<Gamepad2 className="w-5 h-5" />}
-              color="#ff9800"
-              onClick={() => navigate('/more/play')}
+              label="Bag"
+              icon={<Briefcase className="w-5 h-5" />}
+              color="#f59e0b"
+              onClick={() => navigate('/more/diaper-bag')}
             />
             <QuickAction
-              label="Walk"
-              icon={<Footprints className="w-5 h-5" />}
-              color="#8bc34a"
-              onClick={() => navigate('/more/walks')}
+              label="Milk Stash"
+              icon={<Milk className="w-5 h-5" />}
+              color="#3f51b5"
+              onClick={() => navigate('/more/milk-stash')}
             />
           </div>
         </div>
