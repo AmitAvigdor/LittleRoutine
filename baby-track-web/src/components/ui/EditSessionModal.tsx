@@ -169,8 +169,14 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
     }
   }, [session, sessionType]);
 
-  // Helper to validate date/time and check end > start
-  const validateTimes = (date: string, startTimeStr: string, endTimeStr: string | null, requireEnd: boolean = true): { startTime: Date; endTime: Date | null } | null => {
+  // Sleep sessions can validly end after midnight, so optionally roll the end time to the next day.
+  const validateTimes = (
+    date: string,
+    startTimeStr: string,
+    endTimeStr: string | null,
+    requireEnd: boolean = true,
+    allowOvernight: boolean = false
+  ): { startTime: Date; endTime: Date | null } | null => {
     if (!date || !startTimeStr) {
       toast.error('Please enter a valid date and time.');
       return null;
@@ -196,6 +202,10 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
       return null;
     }
 
+    if (allowOvernight && endTime < startTime) {
+      endTime.setDate(endTime.getDate() + 1);
+    }
+
     // Check if end time is after start time
     if (endTime <= startTime) {
       toast.error('End time must be after start time.');
@@ -209,7 +219,7 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
     setSaving(true);
     try {
       if (sessionType === 'sleep') {
-        const times = validateTimes(sleepDate, sleepStartTime, sleepEndTime, false);
+        const times = validateTimes(sleepDate, sleepStartTime, sleepEndTime, false, true);
         if (!times) {
           setSaving(false);
           return;
