@@ -503,87 +503,92 @@ export function DiaperBagChecklistView() {
       </div>
 
       {showAddCustomSheet && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-gray-900/40 p-4 sm:items-center">
-          <Card className="w-full max-w-md border-2 border-amber-200 bg-white shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-semibold text-gray-900">Add custom item</h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  Add toys, medication, or anything else specific to your bag.
-                </p>
-              </div>
-              <button
-                type="button"
-                aria-label="Close add custom item"
-                onClick={() => {
-                  setShowAddCustomSheet(false);
-                  setCustomItemName('');
-                }}
-              >
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <Input
-                aria-label="Add custom item"
-                placeholder="Add custom item"
-                value={customItemName}
-                onChange={(e) => setCustomItemName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddCustomItem();
-                  }
-                }}
-              />
-
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  type="number"
-                  label="Initial quantity"
-                  aria-label="Initial quantity"
-                  min="0"
-                  step="1"
-                  value={customItemQuantity}
-                  onChange={(e) => setCustomItemQuantity(e.target.value)}
-                />
-                <Input
-                  type="number"
-                  label="Target quantity"
-                  aria-label="Target quantity"
-                  min="1"
-                  step="1"
-                  value={customItemTargetQuantity}
-                  onChange={(e) => setCustomItemTargetQuantity(e.target.value)}
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button
+        <div className="fixed inset-0 z-50 bg-gray-900/55">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <Card
+              className="w-full max-w-md overflow-y-auto border-2 border-amber-200 bg-white shadow-xl"
+              style={{ maxHeight: 'calc(100dvh - 2rem)' }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-semibold text-gray-900">Add custom item</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Add toys, medication, or anything else specific to your bag.
+                  </p>
+                </div>
+                <button
                   type="button"
-                  variant="outline"
+                  aria-label="Close add custom item"
                   onClick={() => {
                     setShowAddCustomSheet(false);
                     setCustomItemName('');
-                    setCustomItemQuantity('0');
-                    setCustomItemTargetQuantity('1');
                   }}
-                  className="flex-1"
                 >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleAddCustomItem}
-                  disabled={!customItemName.trim()}
-                  className="flex-1"
-                >
-                  Add
-                </Button>
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
               </div>
-            </div>
-          </Card>
+
+              <div className="space-y-4">
+                <Input
+                  aria-label="Add custom item"
+                  placeholder="Add custom item"
+                  value={customItemName}
+                  onChange={(e) => setCustomItemName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddCustomItem();
+                    }
+                  }}
+                />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    type="number"
+                    label="Initial quantity"
+                    aria-label="Initial quantity"
+                    min="0"
+                    step="1"
+                    value={customItemQuantity}
+                    onChange={(e) => setCustomItemQuantity(e.target.value)}
+                  />
+                  <Input
+                    type="number"
+                    label="Target quantity"
+                    aria-label="Target quantity"
+                    min="1"
+                    step="1"
+                    value={customItemTargetQuantity}
+                    onChange={(e) => setCustomItemTargetQuantity(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowAddCustomSheet(false);
+                      setCustomItemName('');
+                      setCustomItemQuantity('0');
+                      setCustomItemTargetQuantity('1');
+                    }}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleAddCustomItem}
+                    disabled={!customItemName.trim()}
+                    className="flex-1"
+                  >
+                    Add
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
         </div>
       )}
 
