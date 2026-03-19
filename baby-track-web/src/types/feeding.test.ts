@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { formatDuration, convertVolume, calculateMilkExpiration, getRoomTempExpirationMinutes } from './feeding';
+import type { FeedingSession, PumpSession } from './feeding';
+import { formatDuration, convertVolume, calculateMilkExpiration, getRoomTempExpirationMinutes, getLastBreastActivity, getSuggestedBreastSide } from './feeding';
 
 describe('formatDuration', () => {
   it('formats seconds only', () => {
@@ -145,5 +146,91 @@ describe('getRoomTempExpirationMinutes', () => {
     const tenHoursAgo = new Date(Date.now() - 10 * 60 * 60 * 1000);
     const result = getRoomTempExpirationMinutes(tenHoursAgo.toISOString());
     expect(result).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('getSuggestedBreastSide', () => {
+  const baseFeedingSession: FeedingSession = {
+    id: 'feeding-1',
+    babyId: 'baby-1',
+    userId: 'user-1',
+    date: '2024-01-15',
+    duration: 900,
+    breastSide: 'left',
+    startTime: '2024-01-15T09:00:00.000Z',
+    endTime: '2024-01-15T09:15:00.000Z',
+    isActive: false,
+    isPaused: false,
+    pausedAt: null,
+    totalPausedDuration: 0,
+    notes: null,
+    babyMood: null,
+    momMood: null,
+    loggedBy: null,
+    createdAt: '2024-01-15T09:00:00.000Z',
+    updatedAt: '2024-01-15T09:15:00.000Z',
+  };
+
+  const basePumpSession: PumpSession = {
+    id: 'pump-1',
+    babyId: 'baby-1',
+    userId: 'user-1',
+    date: '2024-01-15',
+    duration: 900,
+    startTime: '2024-01-15T10:00:00.000Z',
+    endTime: '2024-01-15T10:15:00.000Z',
+    isActive: false,
+    isPaused: false,
+    pausedAt: null,
+    totalPausedDuration: 0,
+    side: 'left',
+    volume: 3,
+    volumeUnit: 'oz',
+    notes: null,
+    momMood: null,
+    createdAt: '2024-01-15T10:00:00.000Z',
+    updatedAt: '2024-01-15T10:15:00.000Z',
+  };
+
+  it('defaults to left when there is no prior feeding or pumping activity', () => {
+    expect(getSuggestedBreastSide([], [])).toBe('left');
+  });
+
+  it('suggests the opposite side after a one-sided pump session', () => {
+    expect(getSuggestedBreastSide([], [basePumpSession])).toBe('right');
+  });
+
+  it('uses the latest one-sided breast activity across feeding and pump sessions', () => {
+    const latestPumpSession: PumpSession = {
+      ...basePumpSession,
+      side: 'right',
+      startTime: '2024-01-15T11:00:00.000Z',
+      endTime: '2024-01-15T11:15:00.000Z',
+      updatedAt: '2024-01-15T11:15:00.000Z',
+    };
+
+    expect(getSuggestedBreastSide([baseFeedingSession], [latestPumpSession])).toBe('left');
+    expect(getLastBreastActivity([baseFeedingSession], [latestPumpSession])).toEqual({
+      side: 'right',
+      timestamp: '2024-01-15T11:15:00.000Z',
+      source: 'pump',
+    });
+  });
+
+  it('ignores pump sessions logged on both sides', () => {
+    const bothSidesPump: PumpSession = {
+      ...basePumpSession,
+      side: 'both',
+      startTime: '2024-01-15T12:00:00.000Z',
+      endTime: '2024-01-15T12:20:00.000Z',
+      updatedAt: '2024-01-15T12:20:00.000Z',
+    };
+
+    expect(getSuggestedBreastSide([baseFeedingSession], [bothSidesPump])).toBe('right');
+    expect(getLastBreastActivity([baseFeedingSession], [bothSidesPump])).toEqual({
+      side: 'left',
+      timestamp: '2024-01-15T09:15:00.000Z',
+      source: 'feeding',
+    });
   });
 });

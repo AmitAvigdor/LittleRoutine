@@ -76,6 +76,7 @@ export interface BottleSession {
   volume: number;
   volumeUnit: VolumeUnit;
   contentType: BottleContentType;
+  milkStashId?: string | null;
   notes: string | null;
   babyMood: BabyMood | null;
   createdAt: string;
@@ -87,6 +88,7 @@ export interface CreateBottleSessionInput {
   volume: number;
   volumeUnit: VolumeUnit;
   contentType: BottleContentType;
+  milkStashId?: string | null;
   notes?: string | null;
   babyMood?: BabyMood | null;
 }
@@ -116,6 +118,12 @@ export interface CreateMilkStashInput {
   location: MilkStorageLocation;
   pumpedDate: string;
   notes?: string | null;
+}
+
+export interface BreastActivityReference {
+  side: BreastSide;
+  timestamp: string;
+  source: 'feeding' | 'pump';
 }
 
 // Helper functions
@@ -158,4 +166,39 @@ export function convertVolume(value: number, from: VolumeUnit, to: VolumeUnit): 
   if (from === 'oz' && to === 'ml') return value * 29.5735;
   if (from === 'ml' && to === 'oz') return value / 29.5735;
   return value;
+}
+
+export function getLastBreastActivity(
+  feedingSessions: FeedingSession[],
+  pumpSessions: PumpSession[]
+): BreastActivityReference | null {
+  const feedingActivities: BreastActivityReference[] = feedingSessions
+    .filter((session) => !session.isActive)
+    .map((session) => ({
+      side: session.breastSide,
+      timestamp: session.endTime ?? session.startTime,
+      source: 'feeding' as const,
+    }));
+
+  const pumpActivities: BreastActivityReference[] = pumpSessions
+    .filter((session) => !session.isActive && session.side !== 'both')
+    .map((session) => ({
+      side: session.side as BreastSide,
+      timestamp: session.endTime ?? session.startTime,
+      source: 'pump' as const,
+    }));
+
+  const allActivities = [...feedingActivities, ...pumpActivities];
+  if (allActivities.length === 0) return null;
+
+  allActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return allActivities[0];
+}
+
+export function getSuggestedBreastSide(
+  feedingSessions: FeedingSession[],
+  pumpSessions: PumpSession[]
+): BreastSide {
+  const lastActivity = getLastBreastActivity(feedingSessions, pumpSessions);
+  return lastActivity?.side === 'left' ? 'right' : 'left';
 }

@@ -54,7 +54,7 @@ import type {
   BabyMood,
   MomMood,
 } from '@/types';
-import { DEFAULT_SETTINGS, calculateMilkExpiration } from '@/types';
+import { DEFAULT_SETTINGS, calculateMilkExpiration, convertVolume } from '@/types';
 
 // Helper to convert Firestore timestamps
 function convertTimestamps<T extends object>(data: T): T {
@@ -668,6 +668,67 @@ export async function createBottleSession(
   return docRef.id;
 }
 
+export async function createBottleSessionFromMilkStash(
+  babyId: string,
+  userId: string,
+  input: CreateBottleSessionInput & { milkStashId: string }
+): Promise<string> {
+  markPendingWrite();
+
+  const stashRef = doc(db, 'milkStash', input.milkStashId);
+  const stashSnap = await getDoc(stashRef);
+  if (!stashSnap.exists()) {
+    throw new Error('Selected milk bottle was not found.');
+  }
+
+  const stash = convertTimestamps(stashSnap.data()) as MilkStash;
+  if (stash.isUsed) {
+    throw new Error('Selected milk bottle has already been used.');
+  }
+
+  const usedVolumeInStashUnit = convertVolume(input.volume, input.volumeUnit, stash.volumeUnit);
+  const remainingVolume = stash.volume - usedVolumeInStashUnit;
+  const volumeTolerance = 0.0001;
+
+  if (remainingVolume < -volumeTolerance) {
+    const availableVolume = convertVolume(stash.volume, stash.volumeUnit, input.volumeUnit);
+    throw new Error(`Selected bottle only has ${availableVolume.toFixed(1)} ${input.volumeUnit} available.`);
+  }
+
+  const now = new Date().toISOString();
+  const timestamp = new Date(input.timestamp);
+  const bottleRef = doc(collection(db, 'bottleSessions'));
+  const batch = writeBatch(db);
+
+  batch.set(bottleRef, {
+    ...input,
+    babyId,
+    userId,
+    date: getLocalDateString(timestamp),
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  if (remainingVolume <= volumeTolerance) {
+    batch.update(stashRef, {
+      volume: 0,
+      isUsed: true,
+      usedDate: now,
+      isInUse: false,
+      inUseStartDate: null,
+      updatedAt: now,
+    });
+  } else {
+    batch.update(stashRef, {
+      volume: remainingVolume,
+      updatedAt: now,
+    });
+  }
+
+  await batch.commit();
+  return bottleRef.id;
+}
+
 export function subscribeToBottleSessions(
   babyId: string,
   callback: (sessions: BottleSession[]) => void
@@ -725,6 +786,20 @@ export async function updateMilkStashVolume(stashId: string, newVolume: number):
     volume: newVolume,
     updatedAt: new Date().toISOString(),
   });
+}
+
+export async function deleteMilkStashEntry(stashId: string): Promise<void> {
+  await deleteDoc(doc(db, 'milkStash', stashId));
+}
+
+export async function deleteMilkStashEntries(stashIds: string[]): Promise<void> {
+  if (stashIds.length === 0) return;
+
+  const batch = writeBatch(db);
+  for (const stashId of stashIds) {
+    batch.delete(doc(db, 'milkStash', stashId));
+  }
+  await batch.commit();
 }
 
 export function subscribeToMilkStash(
@@ -1434,6 +1509,7 @@ export async function updateBottleSession(
     volume?: number;
     volumeUnit?: 'oz' | 'ml';
     contentType?: 'breastMilk' | 'formula' | 'mixed';
+    milkStashId?: string | null;
     notes?: string | null;
     babyMood?: BabyMood | null;
   }

@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
 import { BabyMoodSelector } from '@/components/ui/MoodSelector';
-import { Baby, BottleSession, BottleContentType, BabyMood, VolumeUnit, BOTTLE_CONTENT_CONFIG, convertVolume } from '@/types';
-import { createBottleSession, subscribeToBottleSessions } from '@/lib/firestore';
+import { Baby, BottleSession, BottleContentType, BabyMood, MilkStash, VolumeUnit, BOTTLE_CONTENT_CONFIG, convertVolume } from '@/types';
+import { createBottleSession, createBottleSessionFromMilkStash, subscribeToBottleSessions, subscribeToMilkStash } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
-import { Plus, Zap, Edit3 } from 'lucide-react';
+import { Milk, Plus, Zap, Edit3 } from 'lucide-react';
 
 type EntryMode = 'quick' | 'manual';
 
@@ -34,6 +34,7 @@ export function BottleView({ baby }: BottleViewProps) {
   const { user } = useAuth();
   const { settings } = useAppStore();
   const [sessions, setSessions] = useState<BottleSession[]>([]);
+  const [milkStash, setMilkStash] = useState<MilkStash[]>([]);
 
   // Default to formula if feeding preference is formula
   const getInitialContentType = (): BottleContentType => {
@@ -54,12 +55,23 @@ export function BottleView({ baby }: BottleViewProps) {
   const [entryMode, setEntryMode] = useState<EntryMode>('quick');
   const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
   const [manualTime, setManualTime] = useState(format(new Date(), 'HH:mm'));
+  const [selectedMilkStashId, setSelectedMilkStashId] = useState<string | null>(null);
 
   // Subscribe to sessions
   useEffect(() => {
     const unsubscribe = subscribeToBottleSessions(baby.id, setSessions);
     return () => unsubscribe();
   }, [baby.id]);
+
+  useEffect(() => {
+    if (!user) {
+      setMilkStash([]);
+      return;
+    }
+
+    const unsubscribe = subscribeToMilkStash(user.uid, setMilkStash);
+    return () => unsubscribe();
+  }, [user]);
 
   useEffect(() => {
     if (settings?.preferredVolumeUnit) {
@@ -73,6 +85,20 @@ export function BottleView({ baby }: BottleViewProps) {
       setContentType('formula');
     }
   }, [settings?.feedingTypePreference]);
+
+  useEffect(() => {
+    if (contentType !== 'breastMilk' && selectedMilkStashId) {
+      setSelectedMilkStashId(null);
+    }
+  }, [contentType, selectedMilkStashId]);
+
+  const availableFridgeMilk = milkStash.filter((item) => item.location === 'fridge' && !item.isInUse);
+
+  useEffect(() => {
+    if (selectedMilkStashId && !availableFridgeMilk.some((item) => item.id === selectedMilkStashId)) {
+      setSelectedMilkStashId(null);
+    }
+  }, [availableFridgeMilk, selectedMilkStashId]);
 
   const handleQuickAdd = (quickVolume: number) => {
     setVolume(quickVolume.toString());
@@ -91,6 +117,17 @@ export function BottleView({ baby }: BottleViewProps) {
 
     const savedVolume = parseFloat(volume);
     const savedUnit = volumeUnit;
+    const selectedMilkStash = selectedMilkStashId
+      ? availableFridgeMilk.find((item) => item.id === selectedMilkStashId) ?? null
+      : null;
+
+    if (selectedMilkStash && contentType === 'breastMilk') {
+      const availableVolume = convertVolume(selectedMilkStash.volume, selectedMilkStash.volumeUnit, volumeUnit);
+      if (savedVolume > availableVolume + 0.0001) {
+        toast.error(`Selected bottle only has ${availableVolume.toFixed(1)} ${volumeUnit} available.`);
+        return;
+      }
+    }
 
     // Determine timestamp based on entry mode
     const timestamp = entryMode === 'manual'
@@ -99,14 +136,22 @@ export function BottleView({ baby }: BottleViewProps) {
 
     setSaving(true);
     try {
-      const sessionId = await createBottleSession(baby.id, user.uid, {
+      const bottleInput = {
         timestamp,
         volume: savedVolume,
         volumeUnit,
         contentType,
+        milkStashId: contentType === 'breastMilk' ? selectedMilkStashId : null,
         notes: notes || null,
         babyMood,
-      });
+      };
+
+      const sessionId = selectedMilkStash && contentType === 'breastMilk'
+        ? await createBottleSessionFromMilkStash(baby.id, user.uid, {
+          ...bottleInput,
+          milkStashId: selectedMilkStash.id,
+        })
+        : await createBottleSession(baby.id, user.uid, bottleInput);
 
       // Reset form only on success
       setVolume('');
@@ -115,6 +160,7 @@ export function BottleView({ baby }: BottleViewProps) {
       setShowForm(false);
       setManualDate(new Date().toISOString().split('T')[0]);
       setManualTime(format(new Date(), 'HH:mm'));
+      setSelectedMilkStashId(null);
 
       toast.success(`Bottle ${savedVolume} ${savedUnit} logged`);
     } catch (error) {
@@ -132,6 +178,7 @@ export function BottleView({ baby }: BottleViewProps) {
     setShowForm(false);
     setManualDate(new Date().toISOString().split('T')[0]);
     setManualTime(format(new Date(), 'HH:mm'));
+    setSelectedMilkStashId(null);
   };
 
   // Today's stats
@@ -246,6 +293,15 @@ export function BottleView({ baby }: BottleViewProps) {
               </div>
             </div>
 
+            {contentType === 'breastMilk' && (
+              <FridgeMilkPicker
+                stash={availableFridgeMilk}
+                volumeUnit={volumeUnit}
+                selectedMilkStashId={selectedMilkStashId}
+                onSelect={setSelectedMilkStashId}
+              />
+            )}
+
             <BabyMoodSelector
               label="Baby's mood"
               value={babyMood}
@@ -301,6 +357,15 @@ export function BottleView({ baby }: BottleViewProps) {
               </div>
             </div>
 
+            {contentType === 'breastMilk' && (
+              <FridgeMilkPicker
+                stash={availableFridgeMilk}
+                volumeUnit={volumeUnit}
+                selectedMilkStashId={selectedMilkStashId}
+                onSelect={setSelectedMilkStashId}
+              />
+            )}
+
             <BabyMoodSelector
               label="Baby's mood"
               value={babyMood}
@@ -342,5 +407,94 @@ export function BottleView({ baby }: BottleViewProps) {
       </div>
 
     </div>
+  );
+}
+
+function FridgeMilkPicker({
+  stash,
+  volumeUnit,
+  selectedMilkStashId,
+  onSelect,
+}: {
+  stash: MilkStash[];
+  volumeUnit: VolumeUnit;
+  selectedMilkStashId: string | null;
+  onSelect: (id: string | null) => void;
+}) {
+  const totalVolume = stash.reduce((sum, item) => sum + convertVolume(item.volume, item.volumeUnit, volumeUnit), 0);
+
+  return (
+    <Card className="border border-blue-100 bg-blue-50/50">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <p className="text-sm font-medium text-blue-900">Fridge breast milk inventory</p>
+          <p className="text-xs text-blue-700 mt-1">
+            {stash.length} bottle{stash.length === 1 ? '' : 's'} available • {totalVolume.toFixed(1)} {volumeUnit}
+          </p>
+        </div>
+        <Milk className="w-5 h-5 text-blue-500 shrink-0" />
+      </div>
+
+      {stash.length === 0 ? (
+        <p className="text-sm text-blue-700">
+          No fridge bottles available to link. You can still log this feeding without selecting one.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => onSelect(null)}
+            className={clsx(
+              'w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors',
+              selectedMilkStashId === null
+                ? 'border-blue-500 bg-white text-blue-900'
+                : 'border-blue-100 bg-white/70 text-blue-800 hover:border-blue-300'
+            )}
+          >
+            Do not link a fridge bottle
+          </button>
+
+          {stash.map((item) => {
+            const displayVolume = convertVolume(item.volume, item.volumeUnit, volumeUnit);
+            const isSelected = selectedMilkStashId === item.id;
+            const pumpedDateLabel = format(
+              parseISO(item.pumpedDate),
+              item.pumpedDate.includes('T') ? 'MMM d, h:mm a' : 'MMM d'
+            );
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onSelect(item.id)}
+                className={clsx(
+                  'w-full rounded-xl border px-3 py-3 text-left transition-all',
+                  isSelected
+                    ? 'border-blue-500 bg-white shadow-sm'
+                    : 'border-blue-100 bg-white/70 hover:border-blue-300'
+                )}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {displayVolume.toFixed(1)} {volumeUnit}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Pumped {pumpedDateLabel}
+                    </p>
+                  </div>
+                  <div
+                    className={clsx(
+                      'w-4 h-4 rounded-full border-2',
+                      isSelected ? 'border-blue-500 bg-blue-500' : 'border-blue-200 bg-white'
+                    )}
+                  />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </Card>
   );
 }

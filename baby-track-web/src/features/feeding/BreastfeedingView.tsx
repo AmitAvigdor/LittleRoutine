@@ -7,8 +7,8 @@ import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
 import { BabyMoodSelector, MomMoodSelector } from '@/components/ui/MoodSelector';
 import { StaleTimerModal, STALE_TIMER_THRESHOLD } from '@/components/ui/StaleTimerModal';
-import { Baby, FeedingSession, BreastSide, BabyMood, MomMood, BREAST_SIDE_CONFIG, formatDuration } from '@/types';
-import { createFeedingSession, startFeedingSession, endFeedingSession, updateFeedingSession, subscribeToFeedingSessions, deleteFeedingSession, pauseFeedingSession, resumeFeedingSession } from '@/lib/firestore';
+import { Baby, FeedingSession, PumpSession, BreastSide, BabyMood, MomMood, BREAST_SIDE_CONFIG, formatDuration, getLastBreastActivity, getSuggestedBreastSide } from '@/types';
+import { createFeedingSession, startFeedingSession, endFeedingSession, updateFeedingSession, subscribeToFeedingSessions, subscribeToPumpSessions, deleteFeedingSession, pauseFeedingSession, resumeFeedingSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
@@ -28,6 +28,7 @@ interface BreastfeedingViewProps {
 export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
   const { user } = useAuth();
   const [sessions, setSessions] = useState<FeedingSession[]>([]);
+  const [pumpSessions, setPumpSessions] = useState<PumpSession[]>([]);
   const [selectedSide, setSelectedSide] = useState<BreastSide>('left');
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -59,10 +60,16 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
   // Stale timer modal state
   const [showStaleModal, setShowStaleModal] = useState(false);
   const staleModalDismissedRef = useRef(false);
+  const manualSideSelectionRef = useRef(false);
 
   // Subscribe to sessions
   useEffect(() => {
     const unsubscribe = subscribeToFeedingSessions(baby.id, setSessions);
+    return () => unsubscribe();
+  }, [baby.id]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToPumpSessions(baby.id, setPumpSessions);
     return () => unsubscribe();
   }, [baby.id]);
 
@@ -88,6 +95,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
 
     const activeSession = sessions.find((s) => s.isActive);
     if (activeSession) {
+      manualSideSelectionRef.current = false;
       setActiveSessionId(activeSession.id);
       setSelectedSide(activeSession.breastSide);
       // Restore pause state from database
@@ -105,6 +113,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
       if (document.visibilityState === 'visible' && !showForm) {
         const activeSession = sessions.find((s) => s.isActive);
         if (activeSession) {
+          manualSideSelectionRef.current = false;
           setActiveSessionId(activeSession.id);
           setSelectedSide(activeSession.breastSide);
           // Restore pause state from database
@@ -180,21 +189,27 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
     }
   };
 
-  // Get last completed session to suggest next side
+  // Use the latest completed feed or one-sided pump to suggest the next nursing side.
   const completedSessions = sessions.filter(s => !s.isActive);
-  const lastSession = completedSessions[0];
-  const suggestedSide: BreastSide = lastSession?.breastSide === 'left' ? 'right' : 'left';
+  const lastBreastActivity = getLastBreastActivity(sessions, pumpSessions);
+  const suggestedSide = getSuggestedBreastSide(sessions, pumpSessions);
 
   useEffect(() => {
-    if (!isTimerRunning && !activeSessionId) {
+    if (!isTimerRunning && !activeSessionId && !manualSideSelectionRef.current) {
       setSelectedSide(suggestedSide);
     }
   }, [suggestedSide, isTimerRunning, activeSessionId]);
+
+  const handleSideSelect = useCallback((side: BreastSide) => {
+    manualSideSelectionRef.current = true;
+    setSelectedSide(side);
+  }, []);
 
   const handleStart = useCallback(async () => {
     if (!user || starting) return;
 
     staleModalDismissedRef.current = false; // Reset for new timer
+    manualSideSelectionRef.current = true;
     setStarting(true);
     try {
       const sessionId = await startFeedingSession(baby.id, user.uid, {
@@ -254,6 +269,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
   }, []);
 
   const handleReset = useCallback(() => {
+    manualSideSelectionRef.current = false;
     setIsTimerRunning(false);
     setIsPaused(false);
     setTimerSeconds(0);
@@ -475,7 +491,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
       )}
 
       {/* Next Side Suggestion */}
-      {lastSession && !isTimerRunning && !showForm && entryMode === 'timer' && !activeSessionId && (
+      {lastBreastActivity && !isTimerRunning && !showForm && entryMode === 'timer' && !activeSessionId && (
         <div
           className="rounded-2xl p-4 text-center border"
           style={{
@@ -491,7 +507,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
             {BREAST_SIDE_CONFIG[suggestedSide].label} Side
           </p>
           <p className="text-xs text-gray-400 mt-2">
-            Last: {BREAST_SIDE_CONFIG[lastSession.breastSide].label} • {format(parseISO(lastSession.startTime), 'h:mm a')}
+            Last {lastBreastActivity.source === 'pump' ? 'pumped' : 'fed'}: {BREAST_SIDE_CONFIG[lastBreastActivity.side].label} • {format(parseISO(lastBreastActivity.timestamp), 'h:mm a')}
           </p>
         </div>
       )}
@@ -505,15 +521,15 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
           return (
             <button
               key={side}
-              onClick={() => !isTimerRunning && !activeSessionId && setSelectedSide(side)}
-              disabled={isTimerRunning || !!activeSessionId}
+              onClick={() => !isTimerRunning && !activeSessionId && !starting && handleSideSelect(side)}
+              disabled={isTimerRunning || !!activeSessionId || starting}
               className={clsx(
                 'relative w-24 h-24 rounded-full flex flex-col items-center justify-center',
                 'transition-all duration-300 transform',
                 isSelected
                   ? 'scale-110 shadow-xl'
                   : 'scale-100 opacity-40 hover:opacity-60',
-                (isTimerRunning || activeSessionId) && !isSelected && 'opacity-20 cursor-not-allowed'
+                (isTimerRunning || activeSessionId || starting) && !isSelected && 'opacity-20 cursor-not-allowed'
               )}
               style={isSelected ? {
                 background: `linear-gradient(135deg, ${config.color} 0%, ${config.color}dd 100%)`,
