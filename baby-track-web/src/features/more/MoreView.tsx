@@ -23,6 +23,7 @@ import {
   BarChart2,
   Gamepad2,
   Footprints,
+  Briefcase,
 } from 'lucide-react';
 
 const features = [
@@ -31,6 +32,7 @@ const features = [
   { icon: Footprints, label: 'Walks', path: '/more/walks', color: '#8bc34a', emoji: '🚶' },
   { icon: Droplet, label: 'Pump', path: '/more/pump', color: '#2196f3', emoji: '🍼' },
   { icon: Milk, label: 'Milk Stash', path: '/more/milk-stash', color: '#3f51b5', emoji: '🥛' },
+  { icon: Briefcase, label: 'Bag', path: '/more/diaper-bag', color: '#f59e0b', emoji: '🎒' },
   { icon: TrendingUp, label: 'Growth', path: '/more/growth', color: '#ff9800', emoji: '📈' },
   { icon: Apple, label: 'Solids', path: '/more/solid-foods', color: '#4caf50', emoji: '🍎' },
   { icon: Syringe, label: 'Vaccines', path: '/more/vaccinations', color: '#03a9f4', emoji: '💉' },

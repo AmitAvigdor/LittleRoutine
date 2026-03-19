@@ -31,6 +31,7 @@ import { ExportView } from '@/features/export/ExportView';
 import { DashboardView } from '@/features/dashboard/DashboardView';
 import { PlayTimeView } from '@/features/play/PlayTimeView';
 import { WalksView } from '@/features/walks/WalksView';
+import { DiaperBagChecklistView } from '@/features/diaper/DiaperBagChecklistView';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -140,6 +141,7 @@ function AppRoutes() {
         <Route path="/more/teething" element={<TeethingView />} />
         <Route path="/more/pediatrician" element={<PediatricianNotesView />} />
         <Route path="/more/milk-stash" element={<MilkStashView />} />
+        <Route path="/more/diaper-bag" element={<DiaperBagChecklistView />} />
         <Route path="/more/pump" element={<PumpPage />} />
         <Route path="/more/play" element={<PlayTimeView />} />
         <Route path="/more/walks" element={<WalksView />} />
