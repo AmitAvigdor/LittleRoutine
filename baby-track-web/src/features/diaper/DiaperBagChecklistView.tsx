@@ -493,13 +493,9 @@ export function DiaperBagChecklistView() {
       </div>
 
       {showAddCustomSheet && (
-        <div className="fixed inset-0 z-50 bg-gray-900/40">
-          <div className="flex min-h-full items-end justify-center overflow-y-auto p-4 sm:items-center">
-            <Card
-              className="w-full max-w-md border-2 border-amber-200 bg-white shadow-xl flex flex-col overflow-hidden"
-              style={{ maxHeight: 'calc(100dvh - 2rem)' }}
-            >
-            <div className="flex items-center justify-between mb-4 px-5 pt-5 flex-shrink-0">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-gray-900/40 p-4 sm:items-center">
+          <Card className="w-full max-w-md border-2 border-amber-200 bg-white shadow-xl">
+            <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="font-semibold text-gray-900">Add custom item</h3>
                 <p className="text-sm text-gray-500 mt-1">
@@ -518,10 +514,7 @@ export function DiaperBagChecklistView() {
               </button>
             </div>
 
-            <div
-              className="space-y-4 overflow-y-auto px-5 pb-5"
-              style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom, 0px))' }}
-            >
+            <div className="space-y-4">
               <Input
                 aria-label="Add custom item"
                 placeholder="Add custom item"
@@ -555,12 +548,8 @@ export function DiaperBagChecklistView() {
                   onChange={(e) => setCustomItemTargetQuantity(e.target.value)}
                 />
               </div>
-            </div>
 
-            <div
-              className="flex gap-2 border-t border-gray-100 px-5 pt-4 flex-shrink-0 bg-white"
-              style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom, 0px))' }}
-            >
+              <div className="flex gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -583,19 +572,15 @@ export function DiaperBagChecklistView() {
                   Add
                 </Button>
               </div>
-            </Card>
-          </div>
+            </div>
+          </Card>
         </div>
       )}
 
       {editingItem && (
-        <div className="fixed inset-0 z-50 bg-gray-900/40">
-          <div className="flex min-h-full items-end justify-center overflow-y-auto p-4 sm:items-center">
-            <Card
-              className="w-full max-w-md border-2 border-amber-200 bg-white shadow-xl flex flex-col overflow-hidden"
-              style={{ maxHeight: 'calc(100dvh - 2rem)' }}
-            >
-            <div className="flex items-center justify-between mb-4 px-5 pt-5 flex-shrink-0">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-gray-900/40 p-4 sm:items-center">
+          <Card className="w-full max-w-md border-2 border-amber-200 bg-white shadow-xl">
+            <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="font-semibold text-gray-900">
                   {editingItem.isPreset ? `Adjust ${editingItem.label}` : 'Edit custom item'}
@@ -615,10 +600,7 @@ export function DiaperBagChecklistView() {
               </button>
             </div>
 
-            <div
-              className="space-y-4 overflow-y-auto px-5 pb-5"
-              style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom, 0px))' }}
-            >
+            <div className="space-y-4">
               {!editingItem.isPreset && (
                 <Input
                   label="Item name"
@@ -650,12 +632,8 @@ export function DiaperBagChecklistView() {
                 value={editItemTargetQuantity}
                 onChange={(e) => setEditItemTargetQuantity(e.target.value)}
               />
-            </div>
 
-            <div
-              className="flex gap-2 border-t border-gray-100 px-5 pt-4 flex-shrink-0 bg-white"
-              style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom, 0px))' }}
-            >
+              <div className="flex gap-2 pt-2">
                 {!editingItem.isPreset && (
                   <Button type="button" variant="danger" onClick={handleDeleteCustomItem} className="flex-1">
                     <Trash2 className="w-4 h-4 mr-2" />
@@ -669,8 +647,8 @@ export function DiaperBagChecklistView() {
                   Save
                 </Button>
               </div>
-            </Card>
-          </div>
+            </div>
+          </Card>
         </div>
       )}
     </div>
