@@ -307,7 +307,10 @@ export function DiaperBagChecklistView() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-amber-50/40 to-white">
       <Header title="Diaper Bag" showBabySwitcher={false} />
 
-      <div className="px-4 py-4 pb-28 space-y-5">
+      <div
+        className="px-4 py-4 space-y-5"
+        style={{ paddingBottom: 'calc(var(--bottom-nav-height, 64px) + 6rem)' }}
+      >
         <Card
           className="overflow-hidden border-amber-100"
           style={{
@@ -485,10 +488,10 @@ export function DiaperBagChecklistView() {
       </div>
 
       <div
-        className="fixed inset-x-0 z-30 px-4 pointer-events-none"
-        style={{ bottom: 'calc(var(--bottom-nav-height, 64px) + 1rem)' }}
+        className="fixed inset-x-0 z-30 border-t border-amber-100 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur-sm"
+        style={{ bottom: 'var(--bottom-nav-height, 64px)' }}
       >
-        <div className="max-w-lg mx-auto pointer-events-auto">
+        <div className="max-w-lg mx-auto">
           <Button
             type="button"
             onClick={() => setShowAddCustomSheet(true)}
