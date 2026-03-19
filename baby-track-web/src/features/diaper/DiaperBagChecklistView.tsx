@@ -582,8 +582,12 @@ export function DiaperBagChecklistView() {
       )}
 
       {editingItem && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-gray-900/40 p-4 sm:items-center">
-          <Card className="w-full max-w-md border-2 border-amber-200 bg-white shadow-xl">
+        <div className="fixed inset-0 z-[60] bg-gray-900/55">
+          <div className="flex min-h-full items-center justify-center p-4">
+          <Card
+            className="w-full max-w-md border-2 border-amber-200 bg-white shadow-xl"
+            style={{ maxHeight: 'calc(100dvh - 2rem)' }}
+          >
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="font-semibold text-gray-900">
@@ -653,6 +657,7 @@ export function DiaperBagChecklistView() {
               </div>
             </div>
           </Card>
+          </div>
         </div>
       )}
     </div>

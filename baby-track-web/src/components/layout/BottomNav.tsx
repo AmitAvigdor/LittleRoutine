@@ -13,14 +13,14 @@ const navItems = [
 export function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-100 bottom-nav z-50 shadow-lg shadow-gray-200/50">
-      <div className="max-w-lg mx-auto flex items-center justify-around px-2">
+      <div className="bottom-nav-inner max-w-lg mx-auto flex items-stretch justify-around px-2">
         {navItems.map(({ to, label, icon: Icon, color }) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
               clsx(
-                'flex flex-col items-center py-1.5 px-2.5 min-w-[56px] transition-all duration-200',
+                'flex h-full min-w-[56px] flex-col items-center justify-center gap-0.5 px-2.5 transition-all duration-200',
                 isActive ? 'text-primary-600' : 'text-gray-400'
               )
             }
@@ -29,7 +29,7 @@ export function BottomNav() {
               <>
                 <div
                   className={clsx(
-                    'p-1.5 rounded-2xl transition-all duration-300',
+                    'flex h-8 w-8 items-center justify-center rounded-xl transition-all duration-300',
                     isActive && 'shadow-sm'
                   )}
                   style={isActive ? {
@@ -46,7 +46,7 @@ export function BottomNav() {
                 </div>
                 <span
                   className={clsx(
-                    'text-[10px] mt-0.5 font-semibold transition-colors duration-200',
+                    'text-[10px] leading-none font-semibold transition-colors duration-200',
                     isActive ? 'text-gray-900' : 'text-gray-400'
                   )}
                 >
