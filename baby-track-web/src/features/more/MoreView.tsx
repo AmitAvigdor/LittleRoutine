@@ -4,47 +4,23 @@ import { Card } from '@/components/ui/Card';
 import { useAppStore } from '@/stores/appStore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { BABY_COLOR_CONFIG, calculateBabyAge } from '@/types';
+import { getFeatureShortcuts, MAX_FAVORITES } from '@/features/featureCatalog';
+import type { FeatureId } from '@/features/featureCatalog';
+import { toast } from '@/stores/toastStore';
+import { clsx } from 'clsx';
 import {
-  TrendingUp,
-  Apple,
-  Syringe,
-  Pill,
-  SmilePlus,
-  Stethoscope,
-  Star,
-  Milk,
-  Droplet,
   Settings,
   FileText,
   LogOut,
   ChevronRight,
   Users,
   Edit,
-  BarChart2,
-  Gamepad2,
-  Footprints,
-  Briefcase,
+  Star,
 } from 'lucide-react';
-
-const features = [
-  { icon: BarChart2, label: 'Stats', path: '/stats', color: '#9c27b0', emoji: '📊' },
-  { icon: Gamepad2, label: 'Play', path: '/more/play', color: '#ff9800', emoji: '🎮' },
-  { icon: Footprints, label: 'Walks', path: '/more/walks', color: '#8bc34a', emoji: '🚶' },
-  { icon: Droplet, label: 'Pump', path: '/more/pump', color: '#2196f3', emoji: '🍼' },
-  { icon: Milk, label: 'Milk Stash', path: '/more/milk-stash', color: '#3f51b5', emoji: '🥛' },
-  { icon: Briefcase, label: 'Bag', path: '/more/diaper-bag', color: '#f59e0b', emoji: '🎒' },
-  { icon: TrendingUp, label: 'Growth', path: '/more/growth', color: '#ff9800', emoji: '📈' },
-  { icon: Apple, label: 'Solids', path: '/more/solid-foods', color: '#4caf50', emoji: '🍎' },
-  { icon: Syringe, label: 'Vaccines', path: '/more/vaccinations', color: '#03a9f4', emoji: '💉' },
-  { icon: Pill, label: 'Medicine', path: '/more/medicine', color: '#9c27b0', emoji: '💊' },
-  { icon: SmilePlus, label: 'Teething', path: '/more/teething', color: '#e91e63', emoji: '🦷' },
-  { icon: Stethoscope, label: 'Doctor', path: '/more/pediatrician', color: '#00bcd4', emoji: '👨‍⚕️' },
-  { icon: Star, label: 'Milestones', path: '/more/milestones', color: '#ffc107', emoji: '⭐' },
-];
 
 export function MoreView() {
   const navigate = useNavigate();
-  const { selectedBaby, babies } = useAppStore();
+  const { selectedBaby, babies, settings, favoriteFeatureIds, toggleFavoriteFeature } = useAppStore();
   const { logout } = useAuth();
 
   if (babies.length === 0) {
@@ -58,6 +34,22 @@ export function MoreView() {
   const babyAge = selectedBaby?.birthDate
     ? calculateBabyAge(selectedBaby.birthDate)
     : null;
+
+  const features = getFeatureShortcuts(settings?.feedingTypePreference).map((feature) =>
+    feature.id === 'feed'
+      ? { ...feature, label: 'Feed' }
+      : feature
+  );
+
+  const handleToggleFavorite = (featureId: FeatureId) => {
+    const isFavorite = favoriteFeatureIds.includes(featureId);
+    if (!isFavorite && favoriteFeatureIds.length >= MAX_FAVORITES) {
+      toast.error(`You can pin up to ${MAX_FAVORITES} favorites.`);
+      return;
+    }
+
+    toggleFavoriteFeature(featureId);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
@@ -116,27 +108,50 @@ export function MoreView() {
         <div>
           <div className="flex items-center gap-2 mb-3 px-1">
             <span className="text-base">🧰</span>
-            <h3 className="text-sm font-bold text-gray-700">Features</h3>
+            <div>
+              <h3 className="text-sm font-bold text-gray-700">Features</h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Tap the star to pin up to {MAX_FAVORITES} favorites on Home
+              </p>
+            </div>
           </div>
           <div className="grid grid-cols-4 gap-3">
-            {features.map(({ icon: Icon, label, path, color, emoji }) => (
-              <button
-                key={path}
-                onClick={() => navigate(path)}
-                className="flex flex-col items-center p-3 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95"
+            {features.map(({ id, Icon, label, path, color }) => (
+              <div
+                key={id}
+                className="relative bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200"
               >
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-2 shadow-sm"
-                  style={{
-                    background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
-                  }}
+                <button
+                  type="button"
+                  aria-label={`${favoriteFeatureIds.includes(id) ? 'Remove' : 'Add'} ${label} favorite`}
+                  onClick={() => handleToggleFavorite(id)}
+                  className={clsx(
+                    'absolute top-2 right-2 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-colors',
+                    favoriteFeatureIds.includes(id)
+                      ? 'bg-amber-100 text-amber-500'
+                      : 'bg-gray-100 text-gray-400 hover:text-amber-500'
+                  )}
                 >
-                  <Icon className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-[11px] text-center text-gray-700 font-semibold leading-tight">
-                  {label}
-                </span>
-              </button>
+                  <Star className={clsx('w-4 h-4', favoriteFeatureIds.includes(id) && 'fill-current')} />
+                </button>
+
+                <button
+                  onClick={() => navigate(path)}
+                  className="w-full flex flex-col items-center p-3 rounded-2xl hover:scale-105 transition-all duration-200 active:scale-95"
+                >
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center mb-2 shadow-sm"
+                    style={{
+                      background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
+                    }}
+                  >
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                  <span className="text-[11px] text-center text-gray-700 font-semibold leading-tight">
+                    {label}
+                  </span>
+                </button>
+              </div>
             ))}
           </div>
         </div>

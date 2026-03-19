@@ -29,6 +29,7 @@ import {
 } from '@/types';
 import type { Medicine, MedicineLog } from '@/types';
 import { MedicationFrequency } from '@/types/enums';
+import { resolveFavoriteFeatures } from '@/features/featureCatalog';
 import {
   Baby,
   Moon,
@@ -304,7 +305,7 @@ function TodoItem({ icon, iconBg, title, subtitle, done, onClick }: TodoItemProp
 export function DashboardView() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { selectedBaby, babies, settings } = useAppStore();
+  const { selectedBaby, babies, settings, favoriteFeatureIds } = useAppStore();
   const [, setTick] = useState(0);
 
   // Data states
@@ -466,6 +467,11 @@ export function DashboardView() {
     return timers;
   }, [feedingSessions, pumpSessions, sleepSessions, milkStash]);
 
+  const { features: favoriteFeatures, usesDefault: usesDefaultFavorites } = useMemo(
+    () => resolveFavoriteFeatures(favoriteFeatureIds, settings?.feedingTypePreference),
+    [favoriteFeatureIds, settings?.feedingTypePreference]
+  );
+
   // Get last feeding info (breastfeeding or bottle - pump is not feeding, it's milk collection)
   const lastFeeding = useMemo(() => {
     const allFeedings: { timestamp: string; type: string; details: string }[] = [];
@@ -612,55 +618,35 @@ export function DashboardView() {
           </div>
         )}
 
-        {/* Quick Actions */}
+        {/* Favorites */}
         <div>
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <span className="text-base">⚡</span>
-            <h3 className="text-sm font-bold text-gray-700">Quick Actions</h3>
+          <div className="flex items-center justify-between gap-3 mb-3 px-1">
+            <div className="flex items-center gap-2">
+              <span className="text-base">⭐</span>
+              <div>
+                <h3 className="text-sm font-bold text-gray-700">Favorites</h3>
+                {usesDefaultFavorites && (
+                  <p className="text-xs text-gray-500 mt-0.5">Showing default shortcuts</p>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/more')}
+              className="text-xs font-semibold text-primary-600 hover:text-primary-700"
+            >
+              Customize
+            </button>
           </div>
-          <div className="grid grid-cols-6 gap-2">
-            <QuickAction
-              label={settings?.feedingTypePreference === 'formula' ? 'Bottle' : 'Feed'}
-              icon={
-                settings?.feedingTypePreference === 'formula' ? (
-                  <Milk className="w-5 h-5" />
-                ) : (
-                  <Baby className="w-5 h-5" />
-                )
-              }
-              color="#e91e63"
-              onClick={() => navigate('/feed')}
-            />
-            <QuickAction
-              label="Pump"
-              icon={<Droplets className="w-5 h-5" />}
-              color="#9c27b0"
-              onClick={() => navigate('/more/pump')}
-            />
-            <QuickAction
-              label="Sleep"
-              icon={<Moon className="w-5 h-5" />}
-              color="#3f51b5"
-              onClick={() => navigate('/sleep')}
-            />
-            <QuickAction
-              label="Diaper"
-              icon={<Leaf className="w-5 h-5" />}
-              color="#4caf50"
-              onClick={() => navigate('/diaper')}
-            />
-            <QuickAction
-              label="Bag"
-              icon={<Briefcase className="w-5 h-5" />}
-              color="#f59e0b"
-              onClick={() => navigate('/more/diaper-bag')}
-            />
-            <QuickAction
-              label="Milk Stash"
-              icon={<Milk className="w-5 h-5" />}
-              color="#3f51b5"
-              onClick={() => navigate('/more/milk-stash')}
-            />
+          <div className={clsx('grid gap-2', favoriteFeatures.length <= 4 ? 'grid-cols-4' : 'grid-cols-3')}>
+            {favoriteFeatures.map((feature) => (
+              <QuickAction
+                key={feature.id}
+                label={feature.label}
+                icon={<feature.Icon className="w-5 h-5" />}
+                color={feature.color}
+                onClick={() => navigate(feature.path)}
+              />
+            ))}
           </div>
         </div>
 

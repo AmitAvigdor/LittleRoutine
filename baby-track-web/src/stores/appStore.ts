@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Baby, AppSettings } from '@/types';
 import { isNightModeTime } from '@/types';
+import { MAX_FAVORITES } from '@/features/featureCatalog';
+import type { FeatureId } from '@/features/featureCatalog';
 
 interface AppState {
   // Auth
@@ -21,6 +23,7 @@ interface AppState {
   // UI State
   nightMode: boolean;
   sidebarOpen: boolean;
+  favoriteFeatureIds: FeatureId[];
 
   // Connectivity
   isOnline: boolean;
@@ -37,6 +40,8 @@ interface AppState {
   setBabies: (babies: Baby[]) => void;
   setSettings: (settings: AppSettings | null) => void;
   setNightMode: (enabled: boolean) => void;
+  setFavoriteFeatureIds: (featureIds: FeatureId[]) => void;
+  toggleFavoriteFeature: (featureId: FeatureId) => void;
   toggleSidebar: () => void;
   updateNightModeFromSettings: () => void;
   setLoadingBabies: (loading: boolean) => void;
@@ -55,11 +60,16 @@ const initialState = {
   settings: null,
   nightMode: false,
   sidebarOpen: false,
+  favoriteFeatureIds: [],
   isOnline: true,
   hasPendingWrites: false,
   isLoadingBabies: true,
   isLoadingSettings: true,
 };
+
+function sanitizeFavoriteFeatureIds(featureIds: FeatureId[]): FeatureId[] {
+  return Array.from(new Set(featureIds)).slice(0, MAX_FAVORITES);
+}
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -102,6 +112,16 @@ export const useAppStore = create<AppState>()(
 
       setNightMode: (enabled) => set({ nightMode: enabled }),
 
+      setFavoriteFeatureIds: (featureIds) =>
+        set({ favoriteFeatureIds: sanitizeFavoriteFeatureIds(featureIds) }),
+
+      toggleFavoriteFeature: (featureId) =>
+        set((state) => ({
+          favoriteFeatureIds: state.favoriteFeatureIds.includes(featureId)
+            ? state.favoriteFeatureIds.filter((id) => id !== featureId)
+            : sanitizeFavoriteFeatureIds([...state.favoriteFeatureIds, featureId]),
+        })),
+
       toggleSidebar: () =>
         set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 
@@ -125,6 +145,7 @@ export const useAppStore = create<AppState>()(
       name: 'baby-track-store',
       partialize: (state) => ({
         selectedBabyId: state.selectedBabyId,
+        favoriteFeatureIds: state.favoriteFeatureIds,
       }),
     }
   )
