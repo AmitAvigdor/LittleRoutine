@@ -14,7 +14,6 @@ interface ChecklistItem {
   id: string;
   label: string;
   quantity: number;
-  targetQuantity: number;
   isPreset: boolean;
   category: ChecklistCategory;
 }
@@ -23,7 +22,6 @@ type SavedChecklistItem = Partial<ChecklistItem> & {
   id: string;
   label: string;
   quantity?: number;
-  targetQuantity?: number;
   isPreset: boolean;
 };
 
@@ -55,28 +53,27 @@ const CATEGORY_CONFIG: Record<ChecklistCategory, { label: string; emoji: string;
 const CATEGORY_ORDER: ChecklistCategory[] = ['hygiene', 'clothing', 'feeding', 'custom'];
 
 const PRESET_ITEMS: ChecklistItem[] = [
-  { id: 'preset-diapers', label: 'Diapers', quantity: 0, targetQuantity: 5, isPreset: true, category: 'hygiene' },
-  { id: 'preset-wipes', label: 'Wipes', quantity: 0, targetQuantity: 1, isPreset: true, category: 'hygiene' },
-  { id: 'preset-changing-mat', label: 'Changing Mat', quantity: 0, targetQuantity: 1, isPreset: true, category: 'hygiene' },
-  { id: 'preset-rash-cream', label: 'Diaper Rash Cream', quantity: 0, targetQuantity: 1, isPreset: true, category: 'hygiene' },
-  { id: 'preset-disposable-diaper-bag', label: 'Disposable Diaper Bag', quantity: 0, targetQuantity: 3, isPreset: true, category: 'hygiene' },
-  { id: 'preset-hand-sanitizer', label: 'Hand Sanitizer', quantity: 0, targetQuantity: 1, isPreset: true, category: 'hygiene' },
-  { id: 'preset-change-clothes', label: 'Change of Clothes', quantity: 0, targetQuantity: 1, isPreset: true, category: 'clothing' },
-  { id: 'preset-hat', label: 'Hat', quantity: 0, targetQuantity: 1, isPreset: true, category: 'clothing' },
-  { id: 'preset-burp-cloth', label: 'Burp Cloth', quantity: 0, targetQuantity: 2, isPreset: true, category: 'feeding' },
-  { id: 'preset-pacifier', label: 'Pacifier', quantity: 0, targetQuantity: 1, isPreset: true, category: 'feeding' },
+  { id: 'preset-diapers', label: 'Diapers', quantity: 0, isPreset: true, category: 'hygiene' },
+  { id: 'preset-wipes', label: 'Wipes', quantity: 0, isPreset: true, category: 'hygiene' },
+  { id: 'preset-changing-mat', label: 'Changing Mat', quantity: 0, isPreset: true, category: 'hygiene' },
+  { id: 'preset-rash-cream', label: 'Diaper Rash Cream', quantity: 0, isPreset: true, category: 'hygiene' },
+  { id: 'preset-disposable-diaper-bag', label: 'Disposable Diaper Bag', quantity: 0, isPreset: true, category: 'hygiene' },
+  { id: 'preset-hand-sanitizer', label: 'Hand Sanitizer', quantity: 0, isPreset: true, category: 'hygiene' },
+  { id: 'preset-change-clothes', label: 'Change of Clothes', quantity: 0, isPreset: true, category: 'clothing' },
+  { id: 'preset-hat', label: 'Hat', quantity: 0, isPreset: true, category: 'clothing' },
+  { id: 'preset-burp-cloth', label: 'Burp Cloth', quantity: 0, isPreset: true, category: 'feeding' },
+  { id: 'preset-pacifier', label: 'Pacifier', quantity: 0, isPreset: true, category: 'feeding' },
 ];
 
 function getStorageKey(userId: string | null | undefined) {
   return `${STORAGE_KEY_PREFIX}:${userId ?? 'anonymous'}`;
 }
 
-function createCustomItem(id: string, label: string, quantity = 0, targetQuantity = 1): ChecklistItem {
+function createCustomItem(id: string, label: string, quantity = 0): ChecklistItem {
   return {
     id,
     label,
     quantity,
-    targetQuantity,
     isPreset: false,
     category: 'custom',
   };
@@ -93,7 +90,6 @@ function mergeWithPresetItems(savedItems: SavedChecklistItem[] | null): Checklis
     return {
       ...item,
       quantity: saved.quantity ?? item.quantity,
-      targetQuantity: saved.targetQuantity ?? item.targetQuantity,
     };
   });
 
@@ -103,8 +99,7 @@ function mergeWithPresetItems(savedItems: SavedChecklistItem[] | null): Checklis
       createCustomItem(
         item.id,
         item.label,
-        item.quantity ?? 0,
-        item.targetQuantity ?? 1
+        item.quantity ?? 0
       )
     );
 
@@ -121,8 +116,6 @@ export function DiaperBagChecklistView() {
   const [editItemName, setEditItemName] = useState('');
   const [editItemQuantity, setEditItemQuantity] = useState('0');
   const [customItemQuantity, setCustomItemQuantity] = useState('0');
-  const [customItemTargetQuantity, setCustomItemTargetQuantity] = useState('1');
-  const [editItemTargetQuantity, setEditItemTargetQuantity] = useState('1');
 
   const editingItem = useMemo(
     () => items.find((item) => item.id === editingItemId) ?? null,
@@ -156,7 +149,7 @@ export function DiaperBagChecklistView() {
   }, [items, user, hasHydrated]);
 
   const packedItemsCount = useMemo(
-    () => items.filter((item) => item.quantity >= item.targetQuantity).length,
+    () => items.filter((item) => item.quantity > 0).length,
     [items]
   );
 
@@ -165,11 +158,11 @@ export function DiaperBagChecklistView() {
     [items]
   );
 
-  const underfilledItems = useMemo(
+  const missingItems = useMemo(
     () =>
       items
-        .filter((item) => item.quantity < item.targetQuantity)
-        .sort((a, b) => (a.quantity / a.targetQuantity) - (b.quantity / b.targetQuantity)),
+        .filter((item) => item.quantity === 0)
+        .sort((a, b) => a.label.localeCompare(b.label)),
     [items]
   );
 
@@ -182,7 +175,7 @@ export function DiaperBagChecklistView() {
       };
     }
 
-    if (underfilledItems.length === 0) {
+    if (missingItems.length === 0) {
       return {
         tone: 'emerald' as const,
         title: "Everything is packed!",
@@ -195,7 +188,7 @@ export function DiaperBagChecklistView() {
       title: 'Almost there!',
       body: 'You still need to pack:',
     };
-  }, [packedTotal, underfilledItems]);
+  }, [packedTotal, missingItems]);
 
   const itemsByCategory = useMemo(
     () =>
@@ -228,16 +221,12 @@ export function DiaperBagChecklistView() {
 
     const parsedQuantity = Number.parseInt(customItemQuantity, 10);
     const quantity = Number.isNaN(parsedQuantity) ? 0 : Math.max(0, parsedQuantity);
-    const parsedTargetQuantity = Number.parseInt(customItemTargetQuantity, 10);
-    const targetQuantity = Number.isNaN(parsedTargetQuantity) ? 1 : Math.max(1, parsedTargetQuantity);
-
     setItems((currentItems) => [
       ...currentItems,
-      createCustomItem(`custom-${Date.now()}`, trimmedName, quantity, targetQuantity),
+      createCustomItem(`custom-${Date.now()}`, trimmedName, quantity),
     ]);
     setCustomItemName('');
     setCustomItemQuantity('0');
-    setCustomItemTargetQuantity('1');
     setShowAddCustomSheet(false);
   };
 
@@ -245,14 +234,12 @@ export function DiaperBagChecklistView() {
     setEditingItemId(item.id);
     setEditItemName(item.label);
     setEditItemQuantity(String(item.quantity));
-    setEditItemTargetQuantity(String(item.targetQuantity));
   };
 
   const closeEditItemDialog = () => {
     setEditingItemId(null);
     setEditItemName('');
     setEditItemQuantity('0');
-    setEditItemTargetQuantity('1');
   };
 
   const handleSaveItem = () => {
@@ -277,17 +264,14 @@ export function DiaperBagChecklistView() {
 
     const parsedQuantity = Number.parseInt(editItemQuantity, 10);
     const quantity = Number.isNaN(parsedQuantity) ? 0 : Math.max(0, parsedQuantity);
-    const parsedTargetQuantity = Number.parseInt(editItemTargetQuantity, 10);
-    const targetQuantity = Number.isNaN(parsedTargetQuantity) ? 1 : Math.max(1, parsedTargetQuantity);
 
     setItems((currentItems) =>
       currentItems.map((item) =>
         item.id === editingItem.id
           ? {
               ...item,
-              label: item.isPreset ? item.label : trimmedName,
-              quantity: item.isPreset ? item.quantity : quantity,
-              targetQuantity,
+              label: trimmedName,
+              quantity,
             }
           : item
       )
@@ -332,9 +316,9 @@ export function DiaperBagChecklistView() {
               <p className="text-3xl font-bold text-gray-900 mt-1">{bagStatus.title}</p>
               <p className="text-sm text-gray-600 mt-2">{bagStatus.body}</p>
 
-              {underfilledItems.length > 0 && packedTotal > 0 && (
+              {missingItems.length > 0 && packedTotal > 0 && (
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {underfilledItems.map((item) => (
+                  {missingItems.map((item) => (
                     <span
                       key={item.id}
                       className="text-xs font-medium px-2.5 py-1 rounded-full border border-rose-200 bg-rose-100 text-rose-700"
@@ -346,9 +330,9 @@ export function DiaperBagChecklistView() {
               )}
 
               <div className="flex items-center gap-3 mt-4 text-sm text-gray-600">
-                <span>{packedItemsCount} items at target</span>
+                <span>{packedItemsCount} items packed</span>
                 <span className="text-gray-300">•</span>
-                <span>{underfilledItems.length} items still below target</span>
+                <span>{missingItems.length} items still missing</span>
               </div>
             </div>
 
@@ -382,28 +366,20 @@ export function DiaperBagChecklistView() {
                   <div className="space-y-3">
                     {categoryItems.map((item) => {
                       const isMissingQuantity = item.quantity === 0;
-                      const isBelowTarget = item.quantity < item.targetQuantity;
 
                       return (
                         <Card
                           key={item.id}
                           className={clsx(
                             'transition-all',
-                            !isBelowTarget
-                              ? 'border-emerald-200 bg-emerald-50/70'
-                              : isMissingQuantity
-                                ? 'border-rose-200 bg-rose-50/70'
-                                : 'border-amber-200 bg-amber-50/70'
+                            isMissingQuantity
+                              ? 'border-rose-200 bg-rose-50/70'
+                              : 'border-emerald-200 bg-emerald-50/70'
                           )}
                         >
                           <div className="flex items-start gap-3">
                             {item.isPreset ? (
-                              <button
-                                type="button"
-                                aria-label={`Edit ${item.label}`}
-                                onClick={() => openEditItemDialog(item)}
-                                className="flex-1 min-w-0 text-left rounded-xl -m-2 p-2 hover:bg-white/70 transition-colors"
-                              >
+                              <div className="flex-1 min-w-0 rounded-xl -m-2 p-2">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <p className="font-semibold text-gray-900">{item.label}</p>
                                   {isMissingQuantity && (
@@ -411,14 +387,9 @@ export function DiaperBagChecklistView() {
                                       Qty missing
                                     </span>
                                   )}
-                                  {!isMissingQuantity && isBelowTarget && (
-                                    <span className="text-[11px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-                                      Need {item.targetQuantity - item.quantity} more
-                                    </span>
-                                  )}
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">Essential item • Target {item.targetQuantity} • Tap to adjust target</p>
-                              </button>
+                                <p className="text-xs text-gray-500 mt-1">Essential item</p>
+                              </div>
                             ) : (
                               <button
                                 type="button"
@@ -433,14 +404,9 @@ export function DiaperBagChecklistView() {
                                       Qty missing
                                     </span>
                                   )}
-                                  {!isMissingQuantity && isBelowTarget && (
-                                    <span className="text-[11px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-                                      Need {item.targetQuantity - item.quantity} more
-                                    </span>
-                                  )}
                                 </div>
                                 <p className="text-xs text-amber-700 mt-1 font-medium">
-                                  Custom item • Target {item.targetQuantity} • Tap to edit or remove
+                                  Custom item • Tap to edit or remove
                                 </p>
                               </button>
                             )}
@@ -459,11 +425,11 @@ export function DiaperBagChecklistView() {
                               <div className="w-14 text-center">
                                 <p className={clsx(
                                   'text-2xl font-bold',
-                                  isMissingQuantity ? 'text-rose-600' : isBelowTarget ? 'text-amber-700' : 'text-gray-900'
+                                  isMissingQuantity ? 'text-rose-600' : 'text-gray-900'
                                 )}>
                                   {item.quantity}
                                 </p>
-                                <p className="text-[11px] text-gray-500">/ {item.targetQuantity}</p>
+                                <p className="text-[11px] text-gray-500">packed</p>
                               </div>
 
                               <button
@@ -542,26 +508,15 @@ export function DiaperBagChecklistView() {
                   }}
                 />
 
-                <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    type="number"
-                    label="Initial quantity"
-                    aria-label="Initial quantity"
-                    min="0"
-                    step="1"
-                    value={customItemQuantity}
-                    onChange={(e) => setCustomItemQuantity(e.target.value)}
-                  />
-                  <Input
-                    type="number"
-                    label="Target quantity"
-                    aria-label="Target quantity"
-                    min="1"
-                    step="1"
-                    value={customItemTargetQuantity}
-                    onChange={(e) => setCustomItemTargetQuantity(e.target.value)}
-                  />
-                </div>
+                <Input
+                  type="number"
+                  label="Initial quantity"
+                  aria-label="Initial quantity"
+                  min="0"
+                  step="1"
+                  value={customItemQuantity}
+                  onChange={(e) => setCustomItemQuantity(e.target.value)}
+                />
 
                 <div className="flex gap-2">
                   <Button
@@ -571,7 +526,6 @@ export function DiaperBagChecklistView() {
                       setShowAddCustomSheet(false);
                       setCustomItemName('');
                       setCustomItemQuantity('0');
-                      setCustomItemTargetQuantity('1');
                     }}
                     className="flex-1"
                   >
@@ -601,13 +555,9 @@ export function DiaperBagChecklistView() {
           >
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-semibold text-gray-900">
-                  {editingItem.isPreset ? `Adjust ${editingItem.label}` : 'Edit custom item'}
-                </h3>
+                <h3 className="font-semibold text-gray-900">Edit custom item</h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  {editingItem.isPreset
-                    ? 'Set how many of this item you want to keep stocked in the bag.'
-                    : 'Rename it, adjust the quantity, target, or remove it from the bag.'}
+                  Rename it, adjust the quantity, or remove it from the bag.
                 </p>
               </div>
               <button
@@ -620,45 +570,29 @@ export function DiaperBagChecklistView() {
             </div>
 
             <div className="space-y-4">
-              {!editingItem.isPreset && (
-                <Input
-                  label="Item name"
-                  aria-label="Item name"
-                  value={editItemName}
-                  onChange={(e) => setEditItemName(e.target.value)}
-                  placeholder="Custom item name"
-                />
-              )}
-
-              {!editingItem.isPreset && (
-                <Input
-                  type="number"
-                  label="Quantity"
-                  aria-label="Quantity"
-                  min="0"
-                  step="1"
-                  value={editItemQuantity}
-                  onChange={(e) => setEditItemQuantity(e.target.value)}
-                />
-              )}
+              <Input
+                label="Item name"
+                aria-label="Item name"
+                value={editItemName}
+                onChange={(e) => setEditItemName(e.target.value)}
+                placeholder="Custom item name"
+              />
 
               <Input
                 type="number"
-                label="Target quantity"
-                aria-label="Edit target quantity"
-                min="1"
+                label="Quantity"
+                aria-label="Quantity"
+                min="0"
                 step="1"
-                value={editItemTargetQuantity}
-                onChange={(e) => setEditItemTargetQuantity(e.target.value)}
+                value={editItemQuantity}
+                onChange={(e) => setEditItemQuantity(e.target.value)}
               />
 
               <div className="flex gap-2 pt-2">
-                {!editingItem.isPreset && (
-                  <Button type="button" variant="danger" onClick={handleDeleteCustomItem} className="flex-1">
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Remove
-                  </Button>
-                )}
+                <Button type="button" variant="danger" onClick={handleDeleteCustomItem} className="flex-1">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Remove
+                </Button>
                 <Button type="button" variant="outline" onClick={closeEditItemDialog} className="flex-1">
                   Cancel
                 </Button>
