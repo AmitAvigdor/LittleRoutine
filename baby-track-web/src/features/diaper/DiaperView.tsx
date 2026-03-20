@@ -13,12 +13,19 @@ import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
 import { Droplet, Circle, Clock, Check, Edit3, Trash2, Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import { consumeDiaperBagSupplies, DIAPER_BAG_ITEM_IDS } from './diaperBagStorage';
 
 type EntryMode = 'quick' | 'manual';
+type DiaperSource = 'home' | 'bag';
 
 const entryModeOptions = [
   { value: 'quick', label: 'Quick', icon: <Zap className="w-4 h-4" /> },
   { value: 'manual', label: 'Manual', icon: <Edit3 className="w-4 h-4" /> },
+];
+
+const diaperSourceOptions = [
+  { value: 'home', label: 'From Home' },
+  { value: 'bag', label: 'From Bag' },
 ];
 
 const DIAPER_ICONS: Record<DiaperType, React.ReactNode> = {
@@ -42,6 +49,7 @@ export function DiaperView() {
 
   // Entry mode state
   const [entryMode, setEntryMode] = useState<EntryMode>('quick');
+  const [diaperSource, setDiaperSource] = useState<DiaperSource>('home');
   const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
   const [manualTime, setManualTime] = useState(format(new Date(), 'HH:mm'));
 
@@ -72,6 +80,7 @@ export function DiaperView() {
 
   const handleQuickLog = async (type: DiaperType) => {
     if (!user || !selectedBaby) return;
+    const source = diaperSource;
 
     try {
       await createDiaperChange(selectedBaby.id, user.uid, {
@@ -82,6 +91,8 @@ export function DiaperView() {
       });
 
       toast.success(`${DIAPER_TYPE_CONFIG[type].label} diaper logged`);
+      applyBagSourceAdjustment(user.uid, source);
+      setDiaperSource('home');
     } catch (error) {
       console.error('Error saving diaper change:', error);
       toast.error('Failed to save diaper change. Please try again.');
@@ -95,6 +106,7 @@ export function DiaperView() {
 
   const handleSave = async () => {
     if (!user || !selectedBaby || !selectedType) return;
+    const source = diaperSource;
 
     setSaving(true);
     try {
@@ -111,9 +123,11 @@ export function DiaperView() {
       setBabyMood(null);
       setShowForm(false);
       setShowDetails(false);
+      setDiaperSource('home');
       setJustSaved(true);
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = window.setTimeout(() => setJustSaved(false), 1500);
+      applyBagSourceAdjustment(user.uid, source);
     } catch (error) {
       console.error('Error saving diaper change:', error);
       toast.error('Failed to save diaper change. Please try again.');
@@ -124,6 +138,7 @@ export function DiaperView() {
 
   const handleManualSave = async () => {
     if (!user || !selectedBaby || !selectedType || !manualDate || !manualTime) return;
+    const source = diaperSource;
 
     const timestamp = new Date(`${manualDate}T${manualTime}`);
 
@@ -153,10 +168,12 @@ export function DiaperView() {
       setNotes('');
       setBabyMood(null);
       setShowDetails(false);
+      setDiaperSource('home');
       setManualDate(new Date().toISOString().split('T')[0]);
       setManualTime(format(new Date(), 'HH:mm'));
 
       toast.success(`${DIAPER_TYPE_CONFIG[selectedType].label} diaper logged`);
+      applyBagSourceAdjustment(user.uid, source);
     } catch (error) {
       console.error('Error saving diaper change:', error);
       toast.error('Failed to save diaper change. Please try again.');
@@ -171,6 +188,7 @@ export function DiaperView() {
     setBabyMood(null);
     setShowForm(false);
     setShowDetails(false);
+    setDiaperSource('home');
   };
 
   const handleEditClick = (change: DiaperChange) => {
@@ -236,6 +254,7 @@ export function DiaperView() {
     setNotes('');
     setBabyMood(null);
     setShowDetails(false);
+    setDiaperSource('home');
     setManualDate(new Date().toISOString().split('T')[0]);
     setManualTime(format(new Date(), 'HH:mm'));
   };
@@ -283,7 +302,7 @@ export function DiaperView() {
       return;
     }
     handleQuickLog(type);
-  }, [user, selectedBaby]);
+  }, [diaperSource, user, selectedBaby]);
 
   const handleTouchMove = useCallback(() => {
     // Cancel long press if user moves finger
@@ -292,6 +311,27 @@ export function DiaperView() {
       longPressTimeoutRef.current = null;
     }
   }, []);
+
+  const applyBagSourceAdjustment = (userId: string, source: DiaperSource) => {
+    if (source !== 'bag') {
+      return;
+    }
+
+    try {
+      const { consumedItems } = consumeDiaperBagSupplies(userId, [DIAPER_BAG_ITEM_IDS.diapers]);
+      const diapersItem = consumedItems.find((item) => item.id === DIAPER_BAG_ITEM_IDS.diapers);
+
+      if (diapersItem?.quantity === 0) {
+        toast.warning('Your bag is now out of diapers!');
+        return;
+      }
+
+      toast.info('Diaper removed from bag. Remember to check if your wipes pack is getting low!');
+    } catch (error) {
+      console.error('Error updating diaper bag inventory:', error);
+      toast.error('Diaper logged, but the bag inventory could not be updated.');
+    }
+  };
 
   if (babies.length === 0) {
     return <NoBabiesHeader />;
@@ -332,6 +372,16 @@ export function DiaperView() {
             <div className="text-center mb-4">
               <h3 className="font-semibold text-gray-900">Quick Log</h3>
               <p className="text-sm text-gray-500">Tap to log, hold for details</p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Source</label>
+              <SegmentedControl
+                options={diaperSourceOptions}
+                value={diaperSource}
+                onChange={(value) => setDiaperSource(value as DiaperSource)}
+                fullWidth
+              />
             </div>
 
             {justSaved && (
@@ -446,6 +496,16 @@ export function DiaperView() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Source</label>
+                <SegmentedControl
+                  options={diaperSourceOptions}
+                  value={diaperSource}
+                  onChange={(value) => setDiaperSource(value as DiaperSource)}
+                  fullWidth
+                />
+              </div>
+
               <Button
                 onClick={handleManualSave}
                 className="w-full"
@@ -502,6 +562,16 @@ export function DiaperView() {
             </div>
 
             <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Source</label>
+                <SegmentedControl
+                  options={diaperSourceOptions}
+                  value={diaperSource}
+                  onChange={(value) => setDiaperSource(value as DiaperSource)}
+                  fullWidth
+                />
+              </div>
+
               <div className="flex gap-3">
                 <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
                   Cancel

@@ -7,25 +7,13 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { toast } from '@/stores/toastStore';
 import { Baby, Minus, Plus, Trash2, X } from 'lucide-react';
 import { clsx } from 'clsx';
-
-type ChecklistCategory = 'hygiene' | 'clothing' | 'feeding' | 'custom';
-
-interface ChecklistItem {
-  id: string;
-  label: string;
-  quantity: number;
-  isPreset: boolean;
-  category: ChecklistCategory;
-}
-
-type SavedChecklistItem = Partial<ChecklistItem> & {
-  id: string;
-  label: string;
-  quantity?: number;
-  isPreset: boolean;
-};
-
-const STORAGE_KEY_PREFIX = 'diaper-bag-checklist';
+import {
+  type ChecklistCategory,
+  type ChecklistItem,
+  DIAPER_BAG_PRESET_ITEMS,
+  loadDiaperBagItems,
+  saveDiaperBagItems,
+} from './diaperBagStorage';
 
 const CATEGORY_CONFIG: Record<ChecklistCategory, { label: string; emoji: string; description: string }> = {
   hygiene: {
@@ -52,23 +40,6 @@ const CATEGORY_CONFIG: Record<ChecklistCategory, { label: string; emoji: string;
 
 const CATEGORY_ORDER: ChecklistCategory[] = ['hygiene', 'clothing', 'feeding', 'custom'];
 
-const PRESET_ITEMS: ChecklistItem[] = [
-  { id: 'preset-diapers', label: 'Diapers', quantity: 0, isPreset: true, category: 'hygiene' },
-  { id: 'preset-wipes', label: 'Wipes', quantity: 0, isPreset: true, category: 'hygiene' },
-  { id: 'preset-changing-mat', label: 'Changing Mat', quantity: 0, isPreset: true, category: 'hygiene' },
-  { id: 'preset-rash-cream', label: 'Diaper Rash Cream', quantity: 0, isPreset: true, category: 'hygiene' },
-  { id: 'preset-disposable-diaper-bag', label: 'Disposable Diaper Bag', quantity: 0, isPreset: true, category: 'hygiene' },
-  { id: 'preset-hand-sanitizer', label: 'Hand Sanitizer', quantity: 0, isPreset: true, category: 'hygiene' },
-  { id: 'preset-change-clothes', label: 'Change of Clothes', quantity: 0, isPreset: true, category: 'clothing' },
-  { id: 'preset-hat', label: 'Hat', quantity: 0, isPreset: true, category: 'clothing' },
-  { id: 'preset-burp-cloth', label: 'Burp Cloth', quantity: 0, isPreset: true, category: 'feeding' },
-  { id: 'preset-pacifier', label: 'Pacifier', quantity: 0, isPreset: true, category: 'feeding' },
-];
-
-function getStorageKey(userId: string | null | undefined) {
-  return `${STORAGE_KEY_PREFIX}:${userId ?? 'anonymous'}`;
-}
-
 function createCustomItem(id: string, label: string, quantity = 0): ChecklistItem {
   return {
     id,
@@ -79,36 +50,9 @@ function createCustomItem(id: string, label: string, quantity = 0): ChecklistIte
   };
 }
 
-function mergeWithPresetItems(savedItems: SavedChecklistItem[] | null): ChecklistItem[] {
-  if (!savedItems || savedItems.length === 0) return PRESET_ITEMS;
-
-  const savedById = new Map(savedItems.map((item) => [item.id, item]));
-  const presetItems = PRESET_ITEMS.map((item) => {
-    const saved = savedById.get(item.id);
-    if (!saved) return item;
-
-    return {
-      ...item,
-      quantity: saved.quantity ?? item.quantity,
-    };
-  });
-
-  const customItems = savedItems
-    .filter((item) => !item.isPreset)
-    .map((item) =>
-      createCustomItem(
-        item.id,
-        item.label,
-        item.quantity ?? 0
-      )
-    );
-
-  return [...presetItems, ...customItems];
-}
-
 export function DiaperBagChecklistView() {
   const { user } = useAuth();
-  const [items, setItems] = useState<ChecklistItem[]>(PRESET_ITEMS);
+  const [items, setItems] = useState<ChecklistItem[]>(DIAPER_BAG_PRESET_ITEMS);
   const [customItemName, setCustomItemName] = useState('');
   const [hasHydrated, setHasHydrated] = useState(false);
   const [showAddCustomSheet, setShowAddCustomSheet] = useState(false);
@@ -126,26 +70,18 @@ export function DiaperBagChecklistView() {
     setHasHydrated(false);
 
     try {
-      const stored = localStorage.getItem(getStorageKey(user?.uid));
-      if (!stored) {
-        setItems(PRESET_ITEMS);
-        setHasHydrated(true);
-        return;
-      }
-
-      const parsed = JSON.parse(stored) as SavedChecklistItem[];
-      setItems(mergeWithPresetItems(parsed));
+      setItems(loadDiaperBagItems(user?.uid));
       setHasHydrated(true);
     } catch (error) {
       console.error('Error loading diaper bag checklist:', error);
-      setItems(PRESET_ITEMS);
+      setItems(DIAPER_BAG_PRESET_ITEMS);
       setHasHydrated(true);
     }
   }, [user]);
 
   useEffect(() => {
     if (!hasHydrated) return;
-    localStorage.setItem(getStorageKey(user?.uid), JSON.stringify(items));
+    saveDiaperBagItems(user?.uid, items);
   }, [items, user, hasHydrated]);
 
   const bagViewModel = useMemo(() => {
