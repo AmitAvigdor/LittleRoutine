@@ -148,56 +148,46 @@ export function DiaperBagChecklistView() {
     localStorage.setItem(getStorageKey(user?.uid), JSON.stringify(items));
   }, [items, user, hasHydrated]);
 
-  const packedItemsCount = useMemo(
-    () => items.filter((item) => item.quantity > 0).length,
-    [items]
-  );
+  const bagViewModel = useMemo(() => {
+    const packedItemsCount = items.filter((item) => item.quantity > 0).length;
+    const packedTotal = items.reduce((sum, item) => sum + item.quantity, 0);
+    const missingItems = items
+      .filter((item) => item.quantity === 0)
+      .sort((a, b) => a.label.localeCompare(b.label));
 
-  const packedTotal = useMemo(
-    () => items.reduce((sum, item) => sum + item.quantity, 0),
-    [items]
-  );
+    const itemsByCategory = CATEGORY_ORDER.map((category) => ({
+      category,
+      items: items.filter((item) => item.category === category),
+    }));
 
-  const missingItems = useMemo(
-    () =>
-      items
-        .filter((item) => item.quantity === 0)
-        .sort((a, b) => a.label.localeCompare(b.label)),
-    [items]
-  );
-
-  const bagStatus = useMemo(() => {
-    if (packedTotal === 0) {
-      return {
-        tone: 'amber' as const,
-        title: 'Your bag is empty.',
-        body: 'Start packing your essentials!',
-      };
-    }
-
-    if (missingItems.length === 0) {
-      return {
-        tone: 'emerald' as const,
-        title: "Everything is packed!",
-        body: "You're ready to go.",
-      };
-    }
+    const bagStatus = packedTotal === 0
+      ? {
+          tone: 'amber' as const,
+          title: 'Your bag is empty.',
+          body: 'Start packing your essentials!',
+        }
+      : missingItems.length === 0
+        ? {
+            tone: 'emerald' as const,
+            title: "Everything is packed!",
+            body: "You're ready to go.",
+          }
+        : {
+            tone: 'rose' as const,
+            title: 'Almost there!',
+            body: 'You still need to pack:',
+          };
 
     return {
-      tone: 'rose' as const,
-      title: 'Almost there!',
-      body: 'You still need to pack:',
+      bagStatus,
+      itemsByCategory,
+      missingItems,
+      packedItemsCount,
+      packedTotal,
     };
-  }, [packedTotal, missingItems]);
+  }, [items]);
 
-  const itemsByCategory = useMemo(
-    () =>
-      CATEGORY_ORDER.map((category) => ({
-        category,
-        items: items.filter((item) => item.category === category),
-      })),
-    [items]
-  );
+  const { bagStatus, itemsByCategory, missingItems, packedItemsCount, packedTotal } = bagViewModel;
 
   const updateQuantity = (itemId: string, nextQuantity: number) => {
     setItems((currentItems) =>

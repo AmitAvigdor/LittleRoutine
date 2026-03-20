@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { parseISO, differenceInMinutes, isToday as isTodayFns } from 'date-fns';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
@@ -44,6 +44,8 @@ import {
   Briefcase,
 } from 'lucide-react';
 import { clsx } from 'clsx';
+
+type DashboardIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
 // Format remaining time for countdown timers (e.g., "3:45:00" for 3h 45m remaining)
 function formatRemainingTime(minutesRemaining: number): string {
@@ -134,7 +136,7 @@ function getMaxDosesPerDay(frequency: MedicationFrequency): number | null {
 
 interface StatusCardProps {
   title: string;
-  icon: React.ReactNode;
+  Icon: DashboardIcon;
   iconBg: string;
   timeSince: string | null;
   subtitle?: string;
@@ -142,7 +144,7 @@ interface StatusCardProps {
   onClick?: () => void;
 }
 
-function StatusCard({ title, icon, iconBg, timeSince, subtitle, urgencyColor, onClick }: StatusCardProps) {
+const StatusCard = memo(function StatusCard({ title, Icon, iconBg, timeSince, subtitle, urgencyColor, onClick }: StatusCardProps) {
   return (
     <button
       className="w-full flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] border border-gray-100"
@@ -152,7 +154,7 @@ function StatusCard({ title, icon, iconBg, timeSince, subtitle, urgencyColor, on
         className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
         style={{ backgroundColor: iconBg }}
       >
-        {icon}
+        <Icon className="w-5 h-5 text-white" />
       </div>
       <div className="flex-1 min-w-0 text-left">
         <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{title}</p>
@@ -168,16 +170,16 @@ function StatusCard({ title, icon, iconBg, timeSince, subtitle, urgencyColor, on
       <ChevronRight className="w-5 h-5 text-gray-300 flex-shrink-0" />
     </button>
   );
-}
+});
 
 interface QuickActionProps {
   label: string;
-  icon: React.ReactNode;
+  Icon: DashboardIcon;
   color: string;
   onClick: () => void;
 }
 
-function QuickAction({ label, icon, color, onClick }: QuickActionProps) {
+const QuickAction = memo(function QuickAction({ label, Icon, color, onClick }: QuickActionProps) {
   return (
     <button
       onClick={onClick}
@@ -189,12 +191,12 @@ function QuickAction({ label, icon, color, onClick }: QuickActionProps) {
           background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
         }}
       >
-        <span className="text-white">{icon}</span>
+        <Icon className="w-5 h-5 text-white" />
       </div>
       <span className="text-[11px] font-semibold text-gray-700">{label}</span>
     </button>
   );
-}
+});
 
 interface ActiveTimerCardProps {
   icon: React.ReactNode;
@@ -208,7 +210,7 @@ interface ActiveTimerCardProps {
   onClick: () => void;
 }
 
-function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused, isCountdown, isExpiringSoon, onClick }: ActiveTimerCardProps) {
+const ActiveTimerCard = memo(function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused, isCountdown, isExpiringSoon, onClick }: ActiveTimerCardProps) {
   return (
     <button
       onClick={onClick}
@@ -256,10 +258,10 @@ function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused,
       </div>
     </button>
   );
-}
+});
 
 interface TodoItemProps {
-  icon: React.ReactNode;
+  Icon: DashboardIcon;
   iconBg: string;
   title: string;
   subtitle: string;
@@ -267,7 +269,7 @@ interface TodoItemProps {
   onClick: () => void;
 }
 
-function TodoItem({ icon, iconBg, title, subtitle, done, onClick }: TodoItemProps) {
+const TodoItem = memo(function TodoItem({ Icon, iconBg, title, subtitle, done, onClick }: TodoItemProps) {
   return (
     <button
       onClick={onClick}
@@ -285,7 +287,7 @@ function TodoItem({ icon, iconBg, title, subtitle, done, onClick }: TodoItemProp
         )}
         style={{ backgroundColor: iconBg }}
       >
-        {icon}
+        <Icon className="w-5 h-5 text-white" />
       </div>
       <div className="flex-1 text-left min-w-0">
         <p className={clsx('font-semibold text-sm', done ? 'text-gray-400 line-through' : 'text-gray-900')}>
@@ -300,13 +302,86 @@ function TodoItem({ icon, iconBg, title, subtitle, done, onClick }: TodoItemProp
       )}
     </button>
   );
+});
+
+interface ActiveTimerInfo {
+  id: string;
+  type: 'feeding' | 'pump' | 'sleep' | 'milk';
+  title: string;
+  subtitle: string;
+  startTime: string;
+  isPaused?: boolean;
+  pausedAt?: string | null;
+  totalPausedDuration?: number;
+  icon: React.ReactNode;
+  iconBg: string;
+  route: string;
+  isCountdown?: boolean;
 }
+
+function buildTimerPresentation(timer: ActiveTimerInfo) {
+  const minutesRemaining = timer.isCountdown
+    ? getRoomTempExpirationMinutes(timer.startTime)
+    : 0;
+
+  const isExpiringSoon = !!timer.isCountdown && minutesRemaining <= 30;
+
+  return {
+    iconBg: timer.isCountdown && isExpiringSoon ? '#f44336' : timer.iconBg,
+    subtitle: timer.isCountdown
+      ? (minutesRemaining <= 0 ? 'Expired!' : `${timer.subtitle} remaining`)
+      : timer.subtitle,
+    elapsedTime: timer.isCountdown
+      ? formatRemainingTime(minutesRemaining)
+      : formatElapsedTime(
+          timer.startTime,
+          timer.isPaused,
+          timer.pausedAt,
+          timer.totalPausedDuration
+        ),
+    isExpiringSoon,
+  };
+}
+
+const LiveTimerCard = memo(function LiveTimerCard({ timer, onClick }: { timer: ActiveTimerInfo; onClick: () => void }) {
+  const [presentation, setPresentation] = useState(() => buildTimerPresentation(timer));
+
+  useEffect(() => {
+    setPresentation(buildTimerPresentation(timer));
+
+    if (timer.isPaused && !timer.isCountdown) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setPresentation(buildTimerPresentation(timer));
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [timer]);
+
+  return (
+    <ActiveTimerCard
+      icon={timer.icon}
+      iconBg={presentation.iconBg}
+      title={timer.title}
+      subtitle={presentation.subtitle}
+      elapsedTime={presentation.elapsedTime}
+      isPaused={timer.isPaused}
+      isCountdown={timer.isCountdown}
+      isExpiringSoon={presentation.isExpiringSoon}
+      onClick={onClick}
+    />
+  );
+});
 
 export function DashboardView() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { selectedBaby, babies, settings, favoriteFeatureIds } = useAppStore();
-  const [, setTick] = useState(0);
+  const selectedBaby = useAppStore((state) => state.selectedBaby);
+  const babies = useAppStore((state) => state.babies);
+  const settings = useAppStore((state) => state.settings);
+  const favoriteFeatureIds = useAppStore((state) => state.favoriteFeatureIds);
 
   // Data states
   const [feedingSessions, setFeedingSessions] = useState<FeedingSession[]>([]);
@@ -364,39 +439,9 @@ export function DashboardView() {
     };
   }, [medicines]);
 
-  // Update counters - every second when there are active timers, otherwise every minute
-  useEffect(() => {
-    const hasActiveTimers =
-      feedingSessions.some(s => s.isActive) ||
-      pumpSessions.some(s => s.isActive) ||
-      sleepSessions.some(s => s.isActive) ||
-      milkStash.some(s => s.isInUse);
-
-    const intervalMs = hasActiveTimers ? 1000 : 60000; // 1 second or 1 minute
-
-    const interval = setInterval(() => {
-      setTick((t) => t + 1);
-    }, intervalMs);
-
-    return () => clearInterval(interval);
-  }, [feedingSessions, pumpSessions, sleepSessions, milkStash]);
-
   // Get all active timers
   const activeTimers = useMemo(() => {
-    const timers: {
-      id: string;
-      type: 'feeding' | 'pump' | 'sleep' | 'milk';
-      title: string;
-      subtitle: string;
-      startTime: string;
-      isPaused?: boolean;
-      pausedAt?: string | null;
-      totalPausedDuration?: number;
-      icon: React.ReactNode;
-      iconBg: string;
-      route: string;
-      isCountdown?: boolean;
-    }[] = [];
+    const timers: ActiveTimerInfo[] = [];
 
     // Active breastfeeding
     feedingSessions.filter(s => s.isActive).forEach(s => {
@@ -560,6 +605,52 @@ export function DashboardView() {
     });
   }, [medicines, medicineLogs]);
 
+  const feedingStatusCard = useMemo(() => ({
+    title: 'Last Feeding',
+    Icon: lastFeeding?.type === 'bottle' ? Milk : Baby,
+    iconBg: '#e91e63',
+    timeSince: lastFeeding ? formatTimeSince(lastFeeding.timestamp) : null,
+    subtitle: lastFeeding?.details,
+    urgencyColor: lastFeeding ? getUrgencyColor(lastFeeding.timestamp, 120, 180) : undefined,
+    route: '/feed',
+  }), [lastFeeding]);
+
+  const sleepStatusCard = useMemo(() => ({
+    title: sleepStatus?.isAsleep ? 'Sleeping' : 'Last Woke Up',
+    Icon: sleepStatus?.isAsleep ? Moon : Sun,
+    iconBg: sleepStatus?.isAsleep ? '#3f51b5' : '#ff9800',
+    timeSince: sleepStatus ? formatTimeSince(sleepStatus.timestamp) : null,
+    subtitle: sleepStatus?.details,
+    urgencyColor:
+      sleepStatus && !sleepStatus.isAsleep
+        ? getUrgencyColor(sleepStatus.timestamp, 120, 180)
+        : undefined,
+    route: '/sleep',
+  }), [sleepStatus]);
+
+  const diaperStatusCard = useMemo(() => ({
+    title: 'Last Diaper',
+    Icon: Leaf,
+    iconBg: '#4caf50',
+    timeSince: lastDiaper ? formatTimeSince(lastDiaper.timestamp) : null,
+    subtitle: lastDiaper?.details,
+    urgencyColor: lastDiaper ? getUrgencyColor(lastDiaper.timestamp, 120, 180) : undefined,
+    route: '/diaper',
+  }), [lastDiaper]);
+
+  const todaySummary = useMemo(() => ({
+    feedings:
+      feedingSessions.filter((s) => !s.isActive && isToday(s.startTime)).length +
+      bottleSessions.filter((s) => isToday(s.timestamp)).length,
+    sleeps: sleepSessions.filter((s) => {
+      if (s.isActive || !s.endTime) return false;
+      return s.type === 'nap'
+        ? isToday(s.startTime)
+        : isToday(s.endTime);
+    }).length,
+    diapers: diaperChanges.filter((c) => isToday(c.timestamp)).length,
+  }), [feedingSessions, bottleSessions, sleepSessions, diaperChanges]);
+
   if (babies.length === 0) {
     return <NoBabiesHeader />;
   }
@@ -584,32 +675,10 @@ export function DashboardView() {
             </div>
             <div className="space-y-2">
               {activeTimers.map((timer) => {
-                // Calculate minutes remaining fresh on each render for countdown timers
-                const minutesRemaining = timer.isCountdown
-                  ? getRoomTempExpirationMinutes(timer.startTime)
-                  : 0;
                 return (
-                  <ActiveTimerCard
+                  <LiveTimerCard
                     key={timer.id}
-                    icon={timer.icon}
-                    iconBg={timer.isCountdown && minutesRemaining <= 30 ? '#f44336' : timer.iconBg}
-                    title={timer.title}
-                    subtitle={timer.isCountdown
-                      ? (minutesRemaining <= 0 ? 'Expired!' : `${timer.subtitle} remaining`)
-                      : timer.subtitle
-                    }
-                    elapsedTime={timer.isCountdown
-                      ? formatRemainingTime(minutesRemaining)
-                      : formatElapsedTime(
-                          timer.startTime,
-                          timer.isPaused,
-                          timer.pausedAt,
-                          timer.totalPausedDuration
-                        )
-                    }
-                    isPaused={timer.isPaused}
-                    isCountdown={timer.isCountdown}
-                    isExpiringSoon={timer.isCountdown && minutesRemaining <= 30}
+                    timer={timer}
                     onClick={() => navigate(timer.route)}
                   />
                 );
@@ -642,7 +711,7 @@ export function DashboardView() {
               <QuickAction
                 key={feature.id}
                 label={feature.label}
-                icon={<feature.Icon className="w-5 h-5" />}
+                Icon={feature.Icon}
                 color={feature.color}
                 onClick={() => navigate(feature.path)}
               />
@@ -668,7 +737,7 @@ export function DashboardView() {
               {medicineTodos.map((todo) => (
                 <TodoItem
                   key={todo.id}
-                  icon={<Pill className="w-5 h-5 text-white" />}
+                  Icon={Pill}
                   iconBg="#9c27b0"
                   title={todo.medicine.name}
                   subtitle={
@@ -693,51 +762,35 @@ export function DashboardView() {
           <div className="space-y-2">
             {/* Last Feeding */}
             <StatusCard
-              title="Last Feeding"
-              icon={
-                lastFeeding?.type === 'bottle' ? (
-                  <Milk className="w-5 h-5 text-white" />
-                ) : (
-                  <Baby className="w-5 h-5 text-white" />
-                )
-              }
-              iconBg="#e91e63"
-              timeSince={lastFeeding ? formatTimeSince(lastFeeding.timestamp) : null}
-              subtitle={lastFeeding?.details}
-              urgencyColor={lastFeeding ? getUrgencyColor(lastFeeding.timestamp, 120, 180) : undefined}
-              onClick={() => navigate('/feed')}
+              title={feedingStatusCard.title}
+              Icon={feedingStatusCard.Icon}
+              iconBg={feedingStatusCard.iconBg}
+              timeSince={feedingStatusCard.timeSince}
+              subtitle={feedingStatusCard.subtitle}
+              urgencyColor={feedingStatusCard.urgencyColor}
+              onClick={() => navigate(feedingStatusCard.route)}
             />
 
             {/* Sleep Status */}
             <StatusCard
-              title={sleepStatus?.isAsleep ? 'Sleeping' : 'Last Woke Up'}
-              icon={
-                sleepStatus?.isAsleep ? (
-                  <Moon className="w-5 h-5 text-white" />
-                ) : (
-                  <Sun className="w-5 h-5 text-white" />
-                )
-              }
-              iconBg={sleepStatus?.isAsleep ? '#3f51b5' : '#ff9800'}
-              timeSince={sleepStatus ? formatTimeSince(sleepStatus.timestamp) : null}
-              subtitle={sleepStatus?.details}
-              urgencyColor={
-                sleepStatus && !sleepStatus.isAsleep
-                  ? getUrgencyColor(sleepStatus.timestamp, 120, 180)
-                  : undefined
-              }
-              onClick={() => navigate('/sleep')}
+              title={sleepStatusCard.title}
+              Icon={sleepStatusCard.Icon}
+              iconBg={sleepStatusCard.iconBg}
+              timeSince={sleepStatusCard.timeSince}
+              subtitle={sleepStatusCard.subtitle}
+              urgencyColor={sleepStatusCard.urgencyColor}
+              onClick={() => navigate(sleepStatusCard.route)}
             />
 
             {/* Last Diaper */}
             <StatusCard
-              title="Last Diaper"
-              icon={<Leaf className="w-5 h-5 text-white" />}
-              iconBg="#4caf50"
-              timeSince={lastDiaper ? formatTimeSince(lastDiaper.timestamp) : null}
-              subtitle={lastDiaper?.details}
-              urgencyColor={lastDiaper ? getUrgencyColor(lastDiaper.timestamp, 120, 180) : undefined}
-              onClick={() => navigate('/diaper')}
+              title={diaperStatusCard.title}
+              Icon={diaperStatusCard.Icon}
+              iconBg={diaperStatusCard.iconBg}
+              timeSince={diaperStatusCard.timeSince}
+              subtitle={diaperStatusCard.subtitle}
+              urgencyColor={diaperStatusCard.urgencyColor}
+              onClick={() => navigate(diaperStatusCard.route)}
             />
           </div>
         </div>
@@ -752,27 +805,21 @@ export function DashboardView() {
             <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-2xl p-4 text-center shadow-sm">
               <span className="text-2xl mb-1 block">🍼</span>
               <p className="text-3xl font-bold text-pink-600">
-                {feedingSessions.filter((s) => !s.isActive && isToday(s.startTime)).length +
-                  bottleSessions.filter((s) => isToday(s.timestamp)).length}
+                {todaySummary.feedings}
               </p>
               <p className="text-xs text-pink-600/80 font-semibold mt-1">Feedings</p>
             </div>
             <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-4 text-center shadow-sm">
               <span className="text-2xl mb-1 block">😴</span>
               <p className="text-3xl font-bold text-indigo-600">
-                {sleepSessions.filter((s) => {
-                  if (s.isActive || !s.endTime) return false;
-                  return s.type === 'nap'
-                    ? isToday(s.startTime)
-                    : isToday(s.endTime);
-                }).length}
+                {todaySummary.sleeps}
               </p>
               <p className="text-xs text-indigo-600/80 font-semibold mt-1">Sleeps</p>
             </div>
             <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 text-center shadow-sm">
               <span className="text-2xl mb-1 block">🧷</span>
               <p className="text-3xl font-bold text-green-600">
-                {diaperChanges.filter((c) => isToday(c.timestamp)).length}
+                {todaySummary.diapers}
               </p>
               <p className="text-xs text-green-600/80 font-semibold mt-1">Diapers</p>
             </div>
