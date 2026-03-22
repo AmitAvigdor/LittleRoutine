@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { BottomNav } from './BottomNav';
 import { useAppStore } from '@/stores/appStore';
 import { useAuth } from '@/features/auth/AuthContext';
+import { useHomeDataSync } from '@/features/dashboard/homeDataSync';
 import { subscribeToBabies, subscribeToSettings, getOrCreateSettings } from '@/lib/firestore';
 import { useNotifications } from '@/hooks/useNotifications';
 import { clsx } from 'clsx';
@@ -12,6 +13,7 @@ export function MainLayout() {
   const {
     setBabies,
     setSettings,
+    selectedBabyId,
     nightMode,
     isLoadingBabies,
     isLoadingSettings,
@@ -21,6 +23,7 @@ export function MainLayout() {
 
   // Initialize notifications/reminders system
   useNotifications();
+  useHomeDataSync(user?.uid ?? null, selectedBabyId);
 
   // Subscribe to babies and settings
   useEffect(() => {

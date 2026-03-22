@@ -3,31 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { parseISO, differenceInMinutes, isToday as isTodayFns } from 'date-fns';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { useAppStore } from '@/stores/appStore';
-import { useAuth } from '@/features/auth/AuthContext';
+import { useHomeStore } from '@/stores/homeStore';
 import {
-  subscribeToFeedingSessions,
-  subscribeToPumpSessions,
-  subscribeToBottleSessions,
-  subscribeToSleepSessions,
-  subscribeToDiaperChanges,
-  subscribeToMedicines,
-  subscribeToMedicineLogs,
-  subscribeToMilkStash,
-} from '@/lib/firestore';
-import {
-  FeedingSession,
-  PumpSession,
-  BottleSession,
-  SleepSession,
-  DiaperChange,
-  MilkStash,
   BREAST_SIDE_CONFIG,
   DIAPER_TYPE_CONFIG,
   SLEEP_TYPE_CONFIG,
   calculateBabyAge,
   getRoomTempExpirationMinutes,
 } from '@/types';
-import type { Medicine, MedicineLog } from '@/types';
 import { MedicationFrequency } from '@/types/enums';
 import { resolveFavoriteFeatures } from '@/features/featureCatalog';
 import {
@@ -62,7 +45,13 @@ function formatRemainingTime(minutesRemaining: number): string {
 }
 
 // Format elapsed time for active timers (e.g., "12:34" or "1:23:45")
-function formatElapsedTime(startTime: string, isPaused?: boolean, pausedAt?: string | null, totalPausedDuration?: number): string {
+function formatElapsedTime(
+  startTime: string,
+  isPaused?: boolean,
+  pausedAt?: string | null,
+  totalPausedDuration?: number,
+  nowMs: number = Date.now()
+): string {
   const start = new Date(startTime);
   const pausedDuration = totalPausedDuration || 0;
 
@@ -73,7 +62,7 @@ function formatElapsedTime(startTime: string, isPaused?: boolean, pausedAt?: str
     elapsedMs = pauseTime.getTime() - start.getTime() - (pausedDuration * 1000);
   } else {
     // If running, calculate from now
-    elapsedMs = Date.now() - start.getTime() - (pausedDuration * 1000);
+    elapsedMs = nowMs - start.getTime() - (pausedDuration * 1000);
   }
 
   const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
@@ -319,7 +308,7 @@ interface ActiveTimerInfo {
   isCountdown?: boolean;
 }
 
-function buildTimerPresentation(timer: ActiveTimerInfo) {
+function buildTimerPresentation(timer: ActiveTimerInfo, nowMs: number) {
   const minutesRemaining = timer.isCountdown
     ? getRoomTempExpirationMinutes(timer.startTime)
     : 0;
@@ -337,28 +326,28 @@ function buildTimerPresentation(timer: ActiveTimerInfo) {
           timer.startTime,
           timer.isPaused,
           timer.pausedAt,
-          timer.totalPausedDuration
+          timer.totalPausedDuration,
+          nowMs
         ),
     isExpiringSoon,
   };
 }
 
 const LiveTimerCard = memo(function LiveTimerCard({ timer, onClick }: { timer: ActiveTimerInfo; onClick: () => void }) {
-  const [presentation, setPresentation] = useState(() => buildTimerPresentation(timer));
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const presentation = useMemo(() => buildTimerPresentation(timer, nowMs), [timer, nowMs]);
 
   useEffect(() => {
-    setPresentation(buildTimerPresentation(timer));
-
     if (timer.isPaused && !timer.isCountdown) {
       return;
     }
 
     const interval = window.setInterval(() => {
-      setPresentation(buildTimerPresentation(timer));
+      setNowMs(Date.now());
     }, 1000);
 
     return () => window.clearInterval(interval);
-  }, [timer]);
+  }, [timer.isCountdown, timer.isPaused]);
 
   return (
     <ActiveTimerCard
@@ -377,67 +366,18 @@ const LiveTimerCard = memo(function LiveTimerCard({ timer, onClick }: { timer: A
 
 export function DashboardView() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const selectedBaby = useAppStore((state) => state.selectedBaby);
   const babies = useAppStore((state) => state.babies);
   const settings = useAppStore((state) => state.settings);
   const favoriteFeatureIds = useAppStore((state) => state.favoriteFeatureIds);
-
-  // Data states
-  const [feedingSessions, setFeedingSessions] = useState<FeedingSession[]>([]);
-  const [pumpSessions, setPumpSessions] = useState<PumpSession[]>([]);
-  const [bottleSessions, setBottleSessions] = useState<BottleSession[]>([]);
-  const [sleepSessions, setSleepSessions] = useState<SleepSession[]>([]);
-  const [diaperChanges, setDiaperChanges] = useState<DiaperChange[]>([]);
-  const [milkStash, setMilkStash] = useState<MilkStash[]>([]);
-
-  // Medicine states
-  const [medicines, setMedicines] = useState<Medicine[]>([]);
-  const [medicineLogs, setMedicineLogs] = useState<Record<string, MedicineLog[]>>({});
-
-  // Subscribe to all data
-  useEffect(() => {
-    if (!selectedBaby) return;
-
-    const unsubscribes = [
-      subscribeToFeedingSessions(selectedBaby.id, setFeedingSessions),
-      subscribeToPumpSessions(selectedBaby.id, setPumpSessions),
-      subscribeToBottleSessions(selectedBaby.id, setBottleSessions),
-      subscribeToSleepSessions(selectedBaby.id, setSleepSessions),
-      subscribeToDiaperChanges(selectedBaby.id, setDiaperChanges),
-      subscribeToMedicines(selectedBaby.id, setMedicines),
-    ];
-
-    return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
-  }, [selectedBaby]);
-
-  // Subscribe to milk stash (user-based, not baby-based)
-  useEffect(() => {
-    if (!user) return;
-
-    const unsubscribe = subscribeToMilkStash(user.uid, setMilkStash);
-    return () => unsubscribe();
-  }, [user]);
-
-  // Subscribe to logs for all active medicines
-  useEffect(() => {
-    const activeMeds = medicines.filter(m => m.isActive);
-    const unsubscribes: (() => void)[] = [];
-
-    activeMeds.forEach((medicine) => {
-      const unsubscribe = subscribeToMedicineLogs(medicine.id, (logs) => {
-        setMedicineLogs((prev) => ({
-          ...prev,
-          [medicine.id]: logs,
-        }));
-      });
-      unsubscribes.push(unsubscribe);
-    });
-
-    return () => {
-      unsubscribes.forEach((unsub) => unsub());
-    };
-  }, [medicines]);
+  const feedingSessions = useHomeStore((state) => state.feedingSessions);
+  const pumpSessions = useHomeStore((state) => state.pumpSessions);
+  const bottleSessions = useHomeStore((state) => state.bottleSessions);
+  const sleepSessions = useHomeStore((state) => state.sleepSessions);
+  const diaperChanges = useHomeStore((state) => state.diaperChanges);
+  const medicines = useHomeStore((state) => state.medicines);
+  const medicineLogs = useHomeStore((state) => state.medicineLogs);
+  const milkStash = useHomeStore((state) => state.milkStash);
 
   // Get all active timers
   const activeTimers = useMemo(() => {

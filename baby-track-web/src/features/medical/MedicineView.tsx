@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
-import { createMedicine, subscribeToMedicines, createMedicineLog, subscribeToMedicineLogs, updateMedicine } from '@/lib/firestore';
+import { useHomeStore } from '@/stores/homeStore';
+import { prefetchHomeData } from '@/features/dashboard/homeDataSync';
+import { createMedicine, createMedicineLog, subscribeToMedicineLogs, updateMedicine } from '@/lib/firestore';
 import type { Medicine, MedicineLog } from '@/types';
 import { MedicationFrequency, MEDICATION_FREQUENCY_CONFIG } from '@/types/enums';
-import { Pill, Plus, X, Clock, Check, History, AlertTriangle } from 'lucide-react';
+import { Pill, Plus, X, Check, History, AlertTriangle } from 'lucide-react';
 import { clsx } from 'clsx';
 import { toast } from '@/stores/toastStore';
 
@@ -63,15 +65,14 @@ function getHoursUntilNextDose(logs: MedicineLog[], hoursInterval: number | null
 export function MedicineView() {
   const { user } = useAuth();
   const { selectedBaby } = useAppStore();
-  const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const medicines = useHomeStore((state) => state.medicines);
+  const medicineLogs = useHomeStore((state) => state.medicineLogs);
+  const addOptimisticMedicineLog = useHomeStore((state) => state.addOptimisticMedicineLog);
+  const removeMedicineLog = useHomeStore((state) => state.removeMedicineLog);
+  const updateMedicineOptimistically = useHomeStore((state) => state.updateMedicineOptimistically);
   const [showForm, setShowForm] = useState(false);
-  const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
+  const [selectedMedicineId, setSelectedMedicineId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  // Track logs for each medicine
-  const [medicineLogs, setMedicineLogs] = useState<Record<string, MedicineLog[]>>({});
-  // Track which medicines have had their logs loaded
-  const [logsLoadedFor, setLogsLoadedFor] = useState<Set<string>>(new Set());
 
   // Reminder modal state
   const [showReminder, setShowReminder] = useState(false);
@@ -85,44 +86,14 @@ export function MedicineView() {
   const [hoursInterval, setHoursInterval] = useState('');
   const [instructions, setInstructions] = useState('');
 
-  useEffect(() => {
-    if (!selectedBaby) return;
-
-    const unsubscribe = subscribeToMedicines(selectedBaby.id, (data) => {
-      setMedicines(data);
-    });
-
-    return () => unsubscribe();
-  }, [selectedBaby]);
-
-  // Subscribe to logs for all active medicines
-  useEffect(() => {
-    const activeMeds = medicines.filter(m => m.isActive);
-    const unsubscribes: (() => void)[] = [];
-
-    // Reset loaded tracking when medicines change
-    setLogsLoadedFor(new Set());
-
-    activeMeds.forEach((medicine) => {
-      const unsubscribe = subscribeToMedicineLogs(medicine.id, (logs) => {
-        setMedicineLogs((prev) => ({
-          ...prev,
-          [medicine.id]: logs,
-        }));
-        setLogsLoadedFor((prev) => new Set([...prev, medicine.id]));
-      });
-      unsubscribes.push(unsubscribe);
-    });
-
-    return () => {
-      unsubscribes.forEach((unsub) => unsub());
-    };
-  }, [medicines]);
-
   // Check if all active medicine logs have been loaded
   const allLogsLoaded = medicines
-    .filter(m => m.isActive)
-    .every(m => logsLoadedFor.has(m.id));
+    .filter((medicine) => medicine.isActive)
+    .every((medicine) => medicineLogs[medicine.id] !== undefined);
+
+  const selectedMedicine = selectedMedicineId
+    ? medicines.find((medicine) => medicine.id === selectedMedicineId) || null
+    : null;
 
   // Helper to get medicines that still need doses today
   const getMissedMedicines = useCallback((): Medicine[] => {
@@ -248,6 +219,7 @@ export function MedicineView() {
         hoursInterval: validHoursInterval,
         instructions: instructions || null,
       });
+      prefetchHomeData({ userId: user.uid, babyId: selectedBaby.id });
 
       setName('');
       setDosage('');
@@ -257,6 +229,7 @@ export function MedicineView() {
       setShowForm(false);
     } catch (error) {
       console.error('Error adding medicine:', error);
+      toast.error('Failed to add medicine');
     } finally {
       setLoading(false);
     }
@@ -279,22 +252,47 @@ export function MedicineView() {
       return;
     }
 
+    const timestamp = new Date().toISOString();
+    const optimisticLogId = `optimistic-medicine-log-${medicine.id}-${Date.now()}`;
+
+    addOptimisticMedicineLog(medicine.id, {
+      id: optimisticLogId,
+      medicineId: medicine.id,
+      babyId: selectedBaby.id,
+      userId: user.uid,
+      timestamp,
+      givenBy: null,
+      notes: null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+
     try {
       await createMedicineLog(medicine.id, selectedBaby.id, user.uid, {
-        timestamp: new Date().toISOString(),
+        timestamp,
       });
+      prefetchHomeData({ userId: user.uid, babyId: selectedBaby.id });
       toast.success(`${medicine.name} dose logged`);
     } catch (error) {
+      removeMedicineLog(medicine.id, optimisticLogId);
       console.error('Error logging medicine:', error);
       toast.error('Failed to log dose');
     }
   };
 
   const handleToggleActive = async (medicine: Medicine) => {
+    const nextIsActive = !medicine.isActive;
+    updateMedicineOptimistically(medicine.id, { isActive: nextIsActive });
+
     try {
-      await updateMedicine(medicine.id, { isActive: !medicine.isActive });
+      await updateMedicine(medicine.id, { isActive: nextIsActive });
+      if (user && selectedBaby) {
+        prefetchHomeData({ userId: user.uid, babyId: selectedBaby.id });
+      }
     } catch (error) {
+      updateMedicineOptimistically(medicine.id, { isActive: medicine.isActive });
       console.error('Error toggling medicine:', error);
+      toast.error('Failed to update medicine');
     }
   };
 
@@ -407,7 +405,7 @@ export function MedicineView() {
         {selectedMedicine && (
           <MedicineDetail
             medicine={selectedMedicine}
-            onClose={() => setSelectedMedicine(null)}
+            onClose={() => setSelectedMedicineId(null)}
             onGive={() => handleGiveMedicine(selectedMedicine)}
           />
         )}
@@ -429,7 +427,7 @@ export function MedicineView() {
                     medicine={medicine}
                     onGive={() => handleGiveMedicine(medicine)}
                     onToggleActive={() => handleToggleActive(medicine)}
-                    onSelect={() => setSelectedMedicine(medicine)}
+                    onSelect={() => setSelectedMedicineId(medicine.id)}
                     canGive={canGive}
                     dosesToday={dosesToday}
                     maxDoses={maxDoses}
@@ -455,7 +453,7 @@ export function MedicineView() {
                   key={medicine.id}
                   medicine={medicine}
                   onToggleActive={() => handleToggleActive(medicine)}
-                  onSelect={() => setSelectedMedicine(medicine)}
+                  onSelect={() => setSelectedMedicineId(medicine.id)}
                   inactive
                 />
               ))}

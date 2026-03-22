@@ -7,9 +7,11 @@ import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
 import { BabyMoodSelector, MoodIndicator } from '@/components/ui/MoodSelector';
 import { DiaperChange, DiaperType, BabyMood, DIAPER_TYPE_CONFIG } from '@/types';
-import { createDiaperChange, subscribeToDiaperChanges, deleteDiaperChange, updateDiaperChange } from '@/lib/firestore';
+import { createDiaperChange, deleteDiaperChange, updateDiaperChange } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
+import { useHomeStore } from '@/stores/homeStore';
+import { prefetchHomeData } from '@/features/dashboard/homeDataSync';
 import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
 import { Droplet, Circle, Clock, Check, Edit3, Trash2, Zap, ChevronDown, ChevronUp } from 'lucide-react';
@@ -36,7 +38,10 @@ const DIAPER_ICONS: Record<DiaperType, React.ReactNode> = {
 export function DiaperView() {
   const { user } = useAuth();
   const { selectedBaby, babies } = useAppStore();
-  const [changes, setChanges] = useState<DiaperChange[]>([]);
+  const changes = useHomeStore((state) => state.diaperChanges);
+  const addOptimisticDiaperChange = useHomeStore((state) => state.addOptimisticDiaperChange);
+  const updateDiaperChangeOptimistically = useHomeStore((state) => state.updateDiaperChangeOptimistically);
+  const removeDiaperChangeFromStore = useHomeStore((state) => state.removeDiaperChange);
   const [selectedType, setSelectedType] = useState<DiaperType | null>(null);
   const [notes, setNotes] = useState('');
   const [babyMood, setBabyMood] = useState<BabyMood | null>(null);
@@ -71,33 +76,74 @@ export function DiaperView() {
     };
   }, []);
 
-  // Subscribe to changes
-  useEffect(() => {
-    if (!selectedBaby) return;
-    const unsubscribe = subscribeToDiaperChanges(selectedBaby.id, setChanges);
-    return () => unsubscribe();
-  }, [selectedBaby]);
+  const buildOptimisticChange = useCallback((change: {
+    id: string;
+    type: DiaperType;
+    timestamp: string;
+    notes: string | null;
+    babyMood: BabyMood | null;
+  }): DiaperChange | null => {
+    if (!selectedBaby || !user) {
+      return null;
+    }
 
-  const handleQuickLog = async (type: DiaperType) => {
+    return {
+      id: change.id,
+      babyId: selectedBaby.id,
+      userId: user.uid,
+      date: change.timestamp.split('T')[0],
+      type: change.type,
+      timestamp: change.timestamp,
+      notes: change.notes,
+      babyMood: change.babyMood,
+      createdAt: change.timestamp,
+      updatedAt: change.timestamp,
+    };
+  }, [selectedBaby, user]);
+
+  const handleQuickLog = useCallback(async (type: DiaperType) => {
     if (!user || !selectedBaby) return;
     const source = diaperSource;
+    const timestamp = new Date().toISOString();
+    const optimisticChange = buildOptimisticChange({
+      id: `optimistic-diaper-${Date.now()}`,
+      type,
+      timestamp,
+      notes: null,
+      babyMood: null,
+    });
+
+    if (optimisticChange) {
+      addOptimisticDiaperChange(optimisticChange);
+    }
 
     try {
       await createDiaperChange(selectedBaby.id, user.uid, {
         type,
-        timestamp: new Date().toISOString(),
+        timestamp,
         notes: null,
         babyMood: null,
       });
 
+      prefetchHomeData({ userId: user.uid, babyId: selectedBaby.id });
       toast.success(`${DIAPER_TYPE_CONFIG[type].label} diaper logged`);
       applyBagSourceAdjustment(user.uid, source);
       setDiaperSource('home');
     } catch (error) {
+      if (optimisticChange) {
+        removeDiaperChangeFromStore(optimisticChange.id);
+      }
       console.error('Error saving diaper change:', error);
       toast.error('Failed to save diaper change. Please try again.');
     }
-  };
+  }, [
+    addOptimisticDiaperChange,
+    buildOptimisticChange,
+    diaperSource,
+    removeDiaperChangeFromStore,
+    selectedBaby,
+    user,
+  ]);
 
   const handleDetailedLog = (type: DiaperType) => {
     setSelectedType(type);
@@ -107,16 +153,28 @@ export function DiaperView() {
   const handleSave = async () => {
     if (!user || !selectedBaby || !selectedType) return;
     const source = diaperSource;
+    const timestamp = new Date().toISOString();
+    const optimisticChange = buildOptimisticChange({
+      id: `optimistic-diaper-${Date.now()}`,
+      type: selectedType,
+      timestamp,
+      notes: notes || null,
+      babyMood,
+    });
 
     setSaving(true);
+    if (optimisticChange) {
+      addOptimisticDiaperChange(optimisticChange);
+    }
     try {
       await createDiaperChange(selectedBaby.id, user.uid, {
         type: selectedType,
-        timestamp: new Date().toISOString(),
+        timestamp,
         notes: notes || null,
         babyMood,
       });
 
+      prefetchHomeData({ userId: user.uid, babyId: selectedBaby.id });
       // Reset form only on success
       setSelectedType(null);
       setNotes('');
@@ -129,6 +187,9 @@ export function DiaperView() {
       saveTimeoutRef.current = window.setTimeout(() => setJustSaved(false), 1500);
       applyBagSourceAdjustment(user.uid, source);
     } catch (error) {
+      if (optimisticChange) {
+        removeDiaperChangeFromStore(optimisticChange.id);
+      }
       console.error('Error saving diaper change:', error);
       toast.error('Failed to save diaper change. Please try again.');
     } finally {
@@ -155,6 +216,17 @@ export function DiaperView() {
     }
 
     setSaving(true);
+    const optimisticChange = buildOptimisticChange({
+      id: `optimistic-diaper-${Date.now()}`,
+      type: selectedType,
+      timestamp: timestamp.toISOString(),
+      notes: notes || null,
+      babyMood,
+    });
+
+    if (optimisticChange) {
+      addOptimisticDiaperChange(optimisticChange);
+    }
     try {
       await createDiaperChange(selectedBaby.id, user.uid, {
         type: selectedType,
@@ -163,6 +235,7 @@ export function DiaperView() {
         babyMood,
       });
 
+      prefetchHomeData({ userId: user.uid, babyId: selectedBaby.id });
       // Reset form
       setSelectedType(null);
       setNotes('');
@@ -175,6 +248,9 @@ export function DiaperView() {
       toast.success(`${DIAPER_TYPE_CONFIG[selectedType].label} diaper logged`);
       applyBagSourceAdjustment(user.uid, source);
     } catch (error) {
+      if (optimisticChange) {
+        removeDiaperChangeFromStore(optimisticChange.id);
+      }
       console.error('Error saving diaper change:', error);
       toast.error('Failed to save diaper change. Please try again.');
     } finally {
@@ -222,6 +298,14 @@ export function DiaperView() {
     }
 
     setSaving(true);
+    const previousChange = editingChange;
+    updateDiaperChangeOptimistically(editingChange.id, {
+      type: selectedType,
+      timestamp: timestamp.toISOString(),
+      date: timestamp.toISOString().split('T')[0],
+      notes: notes || null,
+      babyMood,
+    });
     try {
       await updateDiaperChange(editingChange.id, {
         type: selectedType,
@@ -230,6 +314,9 @@ export function DiaperView() {
         babyMood,
       });
 
+      if (user && selectedBaby) {
+        prefetchHomeData({ userId: user.uid, babyId: selectedBaby.id });
+      }
       // Reset edit state
       setEditingChange(null);
       setSelectedType(null);
@@ -241,6 +328,7 @@ export function DiaperView() {
 
       toast.success('Diaper change updated');
     } catch (error) {
+      updateDiaperChangeOptimistically(previousChange.id, previousChange);
       console.error('Error updating diaper change:', error);
       toast.error('Failed to update diaper change. Please try again.');
     } finally {
@@ -265,6 +353,9 @@ export function DiaperView() {
     setSaving(true);
     try {
       await deleteDiaperChange(editingChange.id);
+      if (user && selectedBaby) {
+        prefetchHomeData({ userId: user.uid, babyId: selectedBaby.id });
+      }
       setEditingChange(null);
       setSelectedType(null);
       setNotes('');
@@ -302,7 +393,7 @@ export function DiaperView() {
       return;
     }
     handleQuickLog(type);
-  }, [diaperSource, user, selectedBaby]);
+  }, [handleQuickLog]);
 
   const handleTouchMove = useCallback(() => {
     // Cancel long press if user moves finger
