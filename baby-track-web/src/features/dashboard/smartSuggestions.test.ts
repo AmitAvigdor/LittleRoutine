@@ -245,6 +245,55 @@ describe('buildSmartSuggestion', () => {
     expect(suggestion?.title).toBe('Time for Bed');
     expect(suggestion?.message).toContain('bedtime');
     expect(suggestion?.actionLabel).toBe('Start Bedtime');
+    expect(suggestion?.actionKind).toBe('start-sleep');
+    expect(suggestion?.sleepType).toBe('night');
+  });
+
+  it('combines feeding and bedtime when both windows land together', () => {
+    const suggestion = buildSmartSuggestion({
+      feedingSessions: [
+        createFeedingSession({ startTime: '2026-03-23T08:00:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-23T10:33:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-23T13:06:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-23T15:39:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-23T18:12:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-24T08:00:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-24T10:33:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-24T13:06:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-24T15:39:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-24T18:12:00.000Z' }),
+      ],
+      bottleSessions: [],
+      sleepSessions: [
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-22T21:00:00.000Z',
+          endTime: '2026-03-23T06:10:00.000Z',
+          duration: 33000,
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-23T21:05:00.000Z',
+          endTime: '2026-03-24T06:05:00.000Z',
+          duration: 32400,
+        }),
+        createSleepSession({
+          startTime: '2026-03-24T18:30:00.000Z',
+          endTime: '2026-03-24T20:09:00.000Z',
+          duration: 5940,
+        }),
+      ],
+      diaperChanges: [],
+      now: new Date('2026-03-24T21:28:00.000Z'),
+    });
+
+    expect(suggestion?.kind).toBe('sleep');
+    expect(suggestion?.title).toBe('Feed, Then Bedtime');
+    expect(suggestion?.message).toContain('feeding and bedtime window');
+    expect(suggestion?.detail).toContain('next feed is likely around');
+    expect(suggestion?.actionLabel).toBe('Start Feed First');
+    expect(suggestion?.actionKind).toBe('start-feeding');
+    expect(suggestion?.sleepType).toBe('night');
   });
 
   it('prioritizes a wake-up prediction when the baby is currently asleep', () => {
@@ -334,11 +383,14 @@ describe('buildSmartSuggestion', () => {
     expect(suggestion?.detail).toContain('Afternoon naps usually last about 1 hr 18 min');
   });
 
-  it('suggests a diaper check after three hours', () => {
+  it('does not surface diaper suggestions on the home card', () => {
     const suggestion = buildSmartSuggestion({
       feedingSessions: [
         createFeedingSession({ startTime: '2026-03-23T08:00:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-23T10:00:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-23T12:00:00.000Z' }),
         createFeedingSession({ startTime: '2026-03-24T08:00:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-24T10:00:00.000Z' }),
       ],
       bottleSessions: [],
       sleepSessions: [],
@@ -347,13 +399,11 @@ describe('buildSmartSuggestion', () => {
         createDiaperChange({ timestamp: '2026-03-23T12:00:00.000Z' }),
         createDiaperChange({ timestamp: '2026-03-24T08:00:00.000Z' }),
       ],
-      now: new Date('2026-03-24T11:30:00.000Z'),
-      hasActiveFeeding: true,
+      now: new Date('2026-03-24T10:45:00.000Z'),
     });
 
-    expect(suggestion?.kind).toBe('diaper');
-    expect(suggestion?.actionKind).toBe('check-diaper');
-    expect(suggestion?.isOverdue).toBe(true);
+    expect(suggestion?.kind).not.toBe('diaper');
+    expect(suggestion?.title).toBe('Looking Ahead');
   });
 
   it('uses open-feed action for formula preference', () => {
@@ -379,7 +429,7 @@ describe('buildSmartSuggestion', () => {
     expect(suggestion?.actionKind).toBe('open-feed');
   });
 
-  it('hides the card when nothing is close yet', () => {
+  it('shows a looking-ahead card when nothing is close yet', () => {
     const suggestion = buildSmartSuggestion({
       feedingSessions: [
         createFeedingSession({ startTime: '2026-03-23T08:00:00.000Z' }),
@@ -397,6 +447,8 @@ describe('buildSmartSuggestion', () => {
       now: new Date('2026-03-24T10:45:00.000Z'),
     });
 
-    expect(suggestion).toBeNull();
+    expect(suggestion?.title).toBe('Looking Ahead');
+    expect(suggestion?.kind).toBe('feeding');
+    expect(suggestion?.message).toContain('Next likely feed');
   });
 });

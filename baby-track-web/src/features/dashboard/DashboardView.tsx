@@ -739,13 +739,13 @@ export function DashboardView() {
       case 'open-feed':
         return 'Log Bottle';
       case 'start-sleep':
-        return 'Start Nap';
+        return smartSuggestion?.sleepType === 'night' ? 'Start Bedtime' : 'Start Nap';
       case 'check-diaper':
         return 'Check Now';
       default:
         return null;
     }
-  }, [smartSuggestion?.actionKind, smartSuggestion?.actionLabel]);
+  }, [smartSuggestion?.actionKind, smartSuggestion?.actionLabel, smartSuggestion?.sleepType]);
 
   const handleSmartSuggestionAction = useCallback(async () => {
     if (!smartSuggestion?.actionKind) {
@@ -799,12 +799,17 @@ export function DashboardView() {
           breastSide: getSuggestedBreastSide(feedingSessions, pumpSessions),
         });
         removeFeedingSession(optimisticFeedingId);
-        toast.success('Feeding timer started');
+        toast.success(
+          smartSuggestion.sleepType === 'night'
+            ? 'Feeding timer started. Bedtime can come next.'
+            : 'Feeding timer started'
+        );
         navigate('/feed');
         return;
       }
 
       if (smartSuggestion.actionKind === 'start-sleep') {
+        const sleepType = smartSuggestion.sleepType === 'night' ? 'night' : 'nap';
         optimisticSleepId = `optimistic-sleep-${Date.now()}`;
         const startTime = new Date().toISOString();
         upsertSleepSession({
@@ -815,7 +820,7 @@ export function DashboardView() {
           duration: 0,
           startTime,
           endTime: null,
-          type: 'nap',
+          type: sleepType,
           isActive: true,
           notes: null,
           babyMood: null,
@@ -824,10 +829,10 @@ export function DashboardView() {
         });
         await createSleepSession(selectedBaby.id, user.uid, {
           startTime,
-          type: 'nap',
+          type: sleepType,
         });
         removeSleepSession(optimisticSleepId);
-        toast.success('Nap timer started');
+        toast.success(sleepType === 'night' ? 'Night sleep timer started' : 'Nap timer started');
         navigate('/sleep');
       }
     } catch (error) {
@@ -850,6 +855,7 @@ export function DashboardView() {
     removeSleepSession,
     selectedBaby,
     smartSuggestion?.actionKind,
+    smartSuggestion?.sleepType,
     upsertFeedingSession,
     upsertSleepSession,
     user,
