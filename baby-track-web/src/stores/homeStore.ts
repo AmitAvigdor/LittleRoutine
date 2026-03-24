@@ -28,6 +28,10 @@ interface HomeDataState {
   setPumpSessions: (sessions: PumpSession[]) => void;
   setBottleSessions: (sessions: BottleSession[]) => void;
   setSleepSessions: (sessions: SleepSession[]) => void;
+  upsertFeedingSession: (session: FeedingSession) => void;
+  removeFeedingSession: (sessionId: string) => void;
+  upsertSleepSession: (session: SleepSession) => void;
+  removeSleepSession: (sessionId: string) => void;
   setDiaperChanges: (changes: DiaperChange[]) => void;
   setMedicines: (medicines: Medicine[]) => void;
   setMedicineLogs: (medicineId: string, logs: MedicineLog[]) => void;
@@ -92,6 +96,38 @@ export const useHomeStore = create<HomeDataState>()((set) => ({
 
   setSleepSessions: (sleepSessions) =>
     set({ sleepSessions: sortByDateDesc(sleepSessions, 'startTime') }),
+
+  upsertFeedingSession: (session) =>
+    set((state) => ({
+      feedingSessions: sortByDateDesc(
+        [
+          ...state.feedingSessions.filter((existingSession) => existingSession.id !== session.id),
+          session,
+        ],
+        'startTime'
+      ),
+    })),
+
+  removeFeedingSession: (sessionId) =>
+    set((state) => ({
+      feedingSessions: state.feedingSessions.filter((session) => session.id !== sessionId),
+    })),
+
+  upsertSleepSession: (session) =>
+    set((state) => ({
+      sleepSessions: sortByDateDesc(
+        [
+          ...state.sleepSessions.filter((existingSession) => existingSession.id !== session.id),
+          session,
+        ],
+        'startTime'
+      ),
+    })),
+
+  removeSleepSession: (sessionId) =>
+    set((state) => ({
+      sleepSessions: state.sleepSessions.filter((session) => session.id !== sessionId),
+    })),
 
   setDiaperChanges: (diaperChanges) =>
     set({ diaperChanges: sortByDateDesc(diaperChanges, 'timestamp') }),

@@ -14,6 +14,7 @@ import { SleepSession, SleepType, BabyMood, SLEEP_TYPE_CONFIG, formatSleepDurati
 import { createSleepSession, endSleepSession, updateSleepSession, createCompleteSleepSession, subscribeToSleepSessions, deleteSleepSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
+import { useHomeStore } from '@/stores/homeStore';
 import { toast } from '@/stores/toastStore';
 import { Moon, Sun, Clock, Bed, Timer as TimerIcon, Edit3, Trash2, ChevronDown, ChevronUp, X } from 'lucide-react';
 
@@ -28,6 +29,8 @@ const entryModeOptions = [
 export function SleepView() {
   const { user } = useAuth();
   const { selectedBaby, babies } = useAppStore();
+  const upsertSleepSession = useHomeStore((state) => state.upsertSleepSession);
+  const removeSleepSession = useHomeStore((state) => state.removeSleepSession);
   const [sessions, setSessions] = useState<SleepSession[]>([]);
   const [sleepType, setSleepType] = useState<SleepType>('nap');
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -178,21 +181,40 @@ export function SleepView() {
 
     staleModalDismissedRef.current = false; // Reset for new timer
     setStarting(true);
+    const optimisticId = `optimistic-sleep-${Date.now()}`;
+    const startTime = new Date().toISOString();
+    upsertSleepSession({
+      id: optimisticId,
+      babyId: selectedBaby.id,
+      userId: user.uid,
+      date: startTime.split('T')[0],
+      duration: 0,
+      startTime,
+      endTime: null,
+      type: sleepType,
+      isActive: true,
+      notes: null,
+      babyMood: null,
+      createdAt: startTime,
+      updatedAt: startTime,
+    });
     try {
       const sessionId = await createSleepSession(selectedBaby.id, user.uid, {
-        startTime: new Date().toISOString(),
+        startTime,
         type: sleepType,
       });
 
+      removeSleepSession(optimisticId);
       setActiveSessionId(sessionId);
       setIsTimerRunning(true);
     } catch (error) {
+      removeSleepSession(optimisticId);
       console.error('Error starting sleep session:', error);
       toast.error('Failed to start sleep tracking. Please try again.');
     } finally {
       setStarting(false);
     }
-  }, [user, selectedBaby, sleepType, starting]);
+  }, [user, selectedBaby, sleepType, starting, upsertSleepSession, removeSleepSession]);
 
   const handleStop = useCallback(async (totalSeconds: number) => {
     setIsTimerRunning(false);
@@ -213,7 +235,6 @@ export function SleepView() {
       return;
     }
 
-    const savedSessionId = sessionIdToSave;
     const savedDuration = timerSeconds;
     const savedType = sleepType;
 

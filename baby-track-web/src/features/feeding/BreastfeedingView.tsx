@@ -10,6 +10,7 @@ import { StaleTimerModal, STALE_TIMER_THRESHOLD } from '@/components/ui/StaleTim
 import { Baby, FeedingSession, PumpSession, BreastSide, BabyMood, MomMood, BREAST_SIDE_CONFIG, formatDuration, getLastBreastActivity, getSuggestedBreastSide } from '@/types';
 import { createFeedingSession, startFeedingSession, endFeedingSession, updateFeedingSession, subscribeToFeedingSessions, subscribeToPumpSessions, deleteFeedingSession, pauseFeedingSession, resumeFeedingSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
+import { useHomeStore } from '@/stores/homeStore';
 import { toast } from '@/stores/toastStore';
 import { clsx } from 'clsx';
 import { Clock, Timer as TimerIcon, Edit3, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
@@ -27,6 +28,8 @@ interface BreastfeedingViewProps {
 
 export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
   const { user } = useAuth();
+  const upsertFeedingSession = useHomeStore((state) => state.upsertFeedingSession);
+  const removeFeedingSession = useHomeStore((state) => state.removeFeedingSession);
   const [sessions, setSessions] = useState<FeedingSession[]>([]);
   const [pumpSessions, setPumpSessions] = useState<PumpSession[]>([]);
   const [selectedSide, setSelectedSide] = useState<BreastSide>('left');
@@ -211,22 +214,46 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
     staleModalDismissedRef.current = false; // Reset for new timer
     manualSideSelectionRef.current = true;
     setStarting(true);
+    const optimisticId = `optimistic-feeding-${Date.now()}`;
+    const startTime = new Date().toISOString();
+    upsertFeedingSession({
+      id: optimisticId,
+      babyId: baby.id,
+      userId: user.uid,
+      date: startTime.split('T')[0],
+      duration: 0,
+      breastSide: selectedSide,
+      startTime,
+      endTime: null,
+      isActive: true,
+      isPaused: false,
+      pausedAt: null,
+      totalPausedDuration: 0,
+      notes: null,
+      babyMood: null,
+      momMood: null,
+      loggedBy: null,
+      createdAt: startTime,
+      updatedAt: startTime,
+    });
     try {
       const sessionId = await startFeedingSession(baby.id, user.uid, {
-        startTime: new Date().toISOString(),
+        startTime,
         breastSide: selectedSide,
       });
 
+      removeFeedingSession(optimisticId);
       setActiveSessionId(sessionId);
       setIsTimerRunning(true);
       setShowForm(false);
     } catch (error) {
+      removeFeedingSession(optimisticId);
       console.error('Error starting feeding session:', error);
       toast.error('Failed to start feeding session. Please try again.');
     } finally {
       setStarting(false);
     }
-  }, [user, baby.id, selectedSide, starting]);
+  }, [user, starting, upsertFeedingSession, baby.id, selectedSide, removeFeedingSession]);
 
   const handlePause = useCallback(async () => {
     setIsTimerRunning(false);
@@ -381,7 +408,6 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
         return;
       }
 
-      const savedSessionId = sessionIdToSave;
       const savedDuration = timerSeconds;
       const savedSide = selectedSide;
 
@@ -452,7 +478,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
       try {
         const sessionEndTime = new Date(sessionStartTime.getTime() + durationMinutes * 60 * 1000);
 
-        const sessionId = await createFeedingSession(baby.id, user.uid, {
+        await createFeedingSession(baby.id, user.uid, {
           breastSide: selectedSide,
           startTime: sessionStartTime.toISOString(),
           endTime: sessionEndTime.toISOString(),
