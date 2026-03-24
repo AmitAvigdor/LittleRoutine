@@ -176,6 +176,77 @@ describe('buildSmartSuggestion', () => {
     expect(suggestion?.title).toBe('Time for a Nap');
   });
 
+  it('switches to bedtime language when the next sleep matches recent night sleep starts', () => {
+    const suggestion = buildSmartSuggestion({
+      feedingSessions: [
+        createFeedingSession({ startTime: '2026-03-22T08:00:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-23T08:00:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-24T08:00:00.000Z' }),
+      ],
+      bottleSessions: [],
+      sleepSessions: [
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-21T20:50:00.000Z',
+          endTime: '2026-03-22T06:00:00.000Z',
+          duration: 33000,
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-22T21:00:00.000Z',
+          endTime: '2026-03-23T06:05:00.000Z',
+          duration: 32700,
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-23T20:55:00.000Z',
+          endTime: '2026-03-24T06:10:00.000Z',
+          duration: 33300,
+        }),
+        createSleepSession({
+          startTime: '2026-03-22T14:30:00.000Z',
+          endTime: '2026-03-22T15:15:00.000Z',
+          duration: 2700,
+        }),
+        createSleepSession({
+          startTime: '2026-03-22T18:00:00.000Z',
+          endTime: '2026-03-22T18:45:00.000Z',
+          duration: 2700,
+        }),
+        createSleepSession({
+          startTime: '2026-03-23T14:20:00.000Z',
+          endTime: '2026-03-23T15:05:00.000Z',
+          duration: 2700,
+        }),
+        createSleepSession({
+          startTime: '2026-03-23T17:55:00.000Z',
+          endTime: '2026-03-23T18:40:00.000Z',
+          duration: 2700,
+        }),
+        createSleepSession({
+          startTime: '2026-03-24T14:25:00.000Z',
+          endTime: '2026-03-24T15:10:00.000Z',
+          duration: 2700,
+        }),
+        createSleepSession({
+          startTime: '2026-03-24T18:05:00.000Z',
+          endTime: '2026-03-24T18:50:00.000Z',
+          duration: 2700,
+        }),
+      ],
+      diaperChanges: [
+        createDiaperChange({ timestamp: '2026-03-23T09:00:00.000Z' }),
+        createDiaperChange({ timestamp: '2026-03-24T19:30:00.000Z' }),
+      ],
+      now: new Date('2026-03-24T21:40:00.000Z'),
+    });
+
+    expect(suggestion?.kind).toBe('sleep');
+    expect(suggestion?.title).toBe('Time for Bed');
+    expect(suggestion?.message).toContain('bedtime');
+    expect(suggestion?.actionLabel).toBe('Start Bedtime');
+  });
+
   it('prioritizes a wake-up prediction when the baby is currently asleep', () => {
     const suggestion = buildSmartSuggestion({
       feedingSessions: [
@@ -308,7 +379,7 @@ describe('buildSmartSuggestion', () => {
     expect(suggestion?.actionKind).toBe('open-feed');
   });
 
-  it('shows a neutral upcoming suggestion when nothing is urgent yet', () => {
+  it('hides the card when nothing is close yet', () => {
     const suggestion = buildSmartSuggestion({
       feedingSessions: [
         createFeedingSession({ startTime: '2026-03-23T08:00:00.000Z' }),
@@ -326,7 +397,6 @@ describe('buildSmartSuggestion', () => {
       now: new Date('2026-03-24T10:45:00.000Z'),
     });
 
-    expect(suggestion?.title).toBe('Looking Ahead');
-    expect(suggestion?.message).toContain('Next likely');
+    expect(suggestion).toBeNull();
   });
 });

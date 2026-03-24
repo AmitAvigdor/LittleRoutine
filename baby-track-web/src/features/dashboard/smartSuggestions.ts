@@ -20,6 +20,7 @@ export interface SmartSuggestion {
   detail: string;
   isOverdue: boolean;
   actionKind: SmartSuggestionActionKind | null;
+  actionLabel?: string | null;
 }
 
 interface SmartSuggestionCandidate extends SmartSuggestion {
@@ -37,16 +38,8 @@ interface SmartSuggestionInput {
   now?: Date;
 }
 
-interface UpcomingSuggestionOption {
-  kind: 'feeding' | 'sleep' | 'diaper';
-  dueAt: Date;
-  title: string;
-  message: string;
-  detail: string;
-  actionKind: SmartSuggestionActionKind;
-}
-
 type NapTimeBucket = 'early-morning' | 'morning' | 'midday' | 'afternoon' | 'evening';
+const NIGHT_SLEEP_MATCH_WINDOW_MINUTES = 90;
 
 interface SleepDurationEstimate {
   minutes: number;
@@ -72,6 +65,20 @@ function formatMinutesAsDuration(totalMinutes: number): string {
   }
 
   return `${wholeHours} hr ${remainingMinutes} min`;
+}
+
+function normalizeSleepClockMinutes(date: Date): number {
+  const minutes = date.getHours() * 60 + date.getMinutes();
+  return minutes < 12 * 60 ? minutes + 24 * 60 : minutes;
+}
+
+function formatClockMinutesAsTime(totalMinutes: number): string {
+  const normalized = ((totalMinutes % (24 * 60)) + (24 * 60)) % (24 * 60);
+  const hours = Math.floor(normalized / 60);
+  const minutes = normalized % 60;
+  const date = new Date(Date.UTC(2026, 0, 1, hours, minutes));
+
+  return format(date, 'h:mm a');
 }
 
 function getNapTimeBucket(timestamp: string): NapTimeBucket {
@@ -232,6 +239,29 @@ function calculateAverageWakeWindowMinutes(
   return Math.round(wakeWindows.reduce((sum, minutes) => sum + minutes, 0) / wakeWindows.length);
 }
 
+function calculateTypicalNightSleepStartMinutes(sleepSessions: SleepSession[]): number | null {
+  const nightSleepStarts = sleepSessions
+    .filter(
+      (session) =>
+        !session.isActive &&
+        session.type === 'night' &&
+        session.endTime &&
+        session.duration >= 3 * 60 * 60 &&
+        session.duration <= 16 * 60 * 60
+    )
+    .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+    .slice(0, 7)
+    .map((session) => normalizeSleepClockMinutes(parseISO(session.startTime)));
+
+  if (nightSleepStarts.length < 2) {
+    return null;
+  }
+
+  return Math.round(
+    nightSleepStarts.reduce((sum, minutes) => sum + minutes, 0) / nightSleepStarts.length
+  );
+}
+
 function calculateAverageSleepDurationMinutes(
   sleepSessions: SleepSession[],
   sleepType: SleepSession['type'],
@@ -376,7 +406,6 @@ export function buildSmartSuggestion({
   }
 
   const candidates: SmartSuggestionCandidate[] = [];
-  const upcomingOptions: UpcomingSuggestionOption[] = [];
   const feedEvents = buildCompletedFeedingEvents(feedingSessions, bottleSessions);
   const latestFeeding = feedEvents[0];
   const averageFeedingGapMinutes = calculateAverageFeedingGapMinutes(feedEvents, sleepSessions);
@@ -398,16 +427,6 @@ export function buildSmartSuggestion({
         actionKind: feedingTypePreference === 'formula' ? 'open-feed' : 'start-feeding',
         priority: isOverdue ? 240 + (elapsedSinceLastFeed - averageFeedingGapMinutes) : 140 + elapsedSinceLastFeed,
       });
-    } else {
-      const dueAt = new Date(parseISO(latestFeeding.timestamp).getTime() + averageFeedingGapMinutes * 60 * 1000);
-      upcomingOptions.push({
-        kind: 'feeding',
-        dueAt,
-        title: 'Looking Ahead',
-        message: `Next likely feed around ${format(dueAt, 'h:mm a')}.`,
-        detail: `The recent awake feeding rhythm is about every ${formatMinutesAsDuration(averageFeedingGapMinutes)}.`,
-        actionKind: feedingTypePreference === 'formula' ? 'open-feed' : 'start-feeding',
-      });
     }
   }
 
@@ -417,29 +436,34 @@ export function buildSmartSuggestion({
   if (!hasActiveSleep && !activeSleep && latestCompletedSleep?.endTime && averageWakeWindowMinutes !== null) {
     const awakeMinutes = differenceInMinutes(now, parseISO(latestCompletedSleep.endTime));
     const shouldSuggest = awakeMinutes >= averageWakeWindowMinutes - 15;
+    const predictedSleepTime = new Date(
+      parseISO(latestCompletedSleep.endTime).getTime() + averageWakeWindowMinutes * 60 * 1000
+    );
+    const typicalNightSleepStart = calculateTypicalNightSleepStartMinutes(sleepSessions);
+    const isLikelyNightSleep =
+      typicalNightSleepStart !== null &&
+      Math.abs(normalizeSleepClockMinutes(predictedSleepTime) - typicalNightSleepStart) <=
+        NIGHT_SLEEP_MATCH_WINDOW_MINUTES;
 
     if (shouldSuggest) {
       const isOverdue = awakeMinutes >= averageWakeWindowMinutes;
       candidates.push({
         kind: 'sleep',
-        title: 'Time for a Nap',
+        title: isLikelyNightSleep ? 'Time for Bed' : 'Time for a Nap',
         message: isOverdue
-          ? 'The nap window is open right now.'
-          : 'A nap window is coming up soon.',
-        detail: `Baby has been awake for ${formatMinutesAsDuration(awakeMinutes)}. The recent 3-day wake window is about ${formatMinutesAsDuration(averageWakeWindowMinutes)}.`,
+          ? isLikelyNightSleep
+            ? 'The bedtime window is open right now.'
+            : 'The nap window is open right now.'
+          : isLikelyNightSleep
+            ? 'Bedtime is coming up soon.'
+            : 'A nap window is coming up soon.',
+        detail: isLikelyNightSleep && typicalNightSleepStart !== null
+          ? `Baby has been awake for ${formatMinutesAsDuration(awakeMinutes)}. The recent pre-bed wake window is about ${formatMinutesAsDuration(averageWakeWindowMinutes)}, and night sleep often starts around ${formatClockMinutesAsTime(typicalNightSleepStart)}.`
+          : `Baby has been awake for ${formatMinutesAsDuration(awakeMinutes)}. The recent 3-day wake window is about ${formatMinutesAsDuration(averageWakeWindowMinutes)}.`,
         isOverdue,
         actionKind: 'start-sleep',
+        actionLabel: isLikelyNightSleep ? 'Start Bedtime' : null,
         priority: isOverdue ? 300 + (awakeMinutes - averageWakeWindowMinutes) : 180 + awakeMinutes,
-      });
-    } else {
-      const dueAt = new Date(parseISO(latestCompletedSleep.endTime).getTime() + averageWakeWindowMinutes * 60 * 1000);
-      upcomingOptions.push({
-        kind: 'sleep',
-        dueAt,
-        title: 'Looking Ahead',
-        message: `Next likely nap window around ${format(dueAt, 'h:mm a')}.`,
-        detail: `The recent 3-day wake window is about ${formatMinutesAsDuration(averageWakeWindowMinutes)}.`,
-        actionKind: 'start-sleep',
       });
     }
   }
@@ -459,43 +483,11 @@ export function buildSmartSuggestion({
         actionKind: 'check-diaper',
         priority: 120 + (minutesSinceDiaper - 180),
       });
-    } else {
-      const dueAt = new Date(parseISO(latestDiaper.timestamp).getTime() + 180 * 60 * 1000);
-      upcomingOptions.push({
-        kind: 'diaper',
-        dueAt,
-        title: 'Looking Ahead',
-        message: `Next diaper check around ${format(dueAt, 'h:mm a')}.`,
-        detail: `It has been ${formatMinutesAsDuration(minutesSinceDiaper)} since the last change.`,
-        actionKind: 'check-diaper',
-      });
     }
   }
 
   if (candidates.length === 0) {
-    const nextUpcoming = upcomingOptions
-      .filter((option) => option.dueAt.getTime() > now.getTime())
-      .sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime())[0];
-
-    if (nextUpcoming) {
-      return {
-        kind: nextUpcoming.kind,
-        title: nextUpcoming.title,
-        message: nextUpcoming.message,
-        detail: nextUpcoming.detail,
-        isOverdue: false,
-        actionKind: nextUpcoming.actionKind,
-      };
-    }
-
-    return {
-      kind: 'learning',
-      title: 'Learning your patterns...',
-      message: 'We are watching for the next routine signal.',
-      detail: 'Keep logging feeding, sleep, and diaper changes and this card will become more specific.',
-      isOverdue: false,
-      actionKind: null,
-    };
+    return null;
   }
 
   candidates.sort((a, b) => b.priority - a.priority);
@@ -508,5 +500,6 @@ export function buildSmartSuggestion({
     detail: bestCandidate.detail,
     isOverdue: bestCandidate.isOverdue,
     actionKind: bestCandidate.actionKind,
+    actionLabel: bestCandidate.actionLabel ?? null,
   };
 }

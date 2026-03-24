@@ -729,6 +729,10 @@ export function DashboardView() {
   );
 
   const smartSuggestionActionLabel = useMemo(() => {
+    if (smartSuggestion?.actionLabel) {
+      return smartSuggestion.actionLabel;
+    }
+
     switch (smartSuggestion?.actionKind) {
       case 'start-feeding':
         return 'Start Feed';
@@ -741,7 +745,7 @@ export function DashboardView() {
       default:
         return null;
     }
-  }, [smartSuggestion?.actionKind]);
+  }, [smartSuggestion?.actionKind, smartSuggestion?.actionLabel]);
 
   const handleSmartSuggestionAction = useCallback(async () => {
     if (!smartSuggestion?.actionKind) {

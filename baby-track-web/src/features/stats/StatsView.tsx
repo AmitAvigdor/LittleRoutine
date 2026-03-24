@@ -101,6 +101,11 @@ interface AverageCardPresentation {
   surfaceClassName: string;
 }
 
+interface TimelineWindowPresentation {
+  label: string;
+  strengthLabel: string;
+}
+
 function renderHistoryIcon(icon: HistoryIcon, color: string) {
   const iconClass = 'w-5 h-5';
 
@@ -446,6 +451,40 @@ function formatMinutesUntil(targetIso: string | null, nowMs: number): string {
   return minutes === 0 ? `Next nap in ${hours} hr` : `Next nap in ${hours} hr ${minutes} min`;
 }
 
+function formatMinutesUntilLabel(targetIso: string | null, nowMs: number, label: string): string {
+  if (!targetIso) {
+    return `Learning ${label.toLowerCase()}`;
+  }
+
+  const targetMs = parseISO(targetIso).getTime();
+  const diffMinutes = Math.round((targetMs - nowMs) / (1000 * 60));
+
+  if (diffMinutes <= 0) {
+    return `${label} is open now`;
+  }
+
+  if (diffMinutes < 60) {
+    return `${label} in ${diffMinutes} min`;
+  }
+
+  const hours = Math.floor(diffMinutes / 60);
+  const minutes = diffMinutes % 60;
+
+  return minutes === 0 ? `${label} in ${hours} hr` : `${label} in ${hours} hr ${minutes} min`;
+}
+
+function formatSuggestionWindow(startIso: string, endIso: string): string {
+  const start = parseISO(startIso);
+  const end = parseISO(endIso);
+  const diffMinutes = Math.abs(end.getTime() - start.getTime()) / (1000 * 60);
+
+  if (diffMinutes <= 10) {
+    return format(start, 'h:mm a');
+  }
+
+  return `${format(start, 'h:mm a')} to ${format(end, 'h:mm a')}`;
+}
+
 function getPatternCardStyles(card: InsightPatternCard) {
   switch (card.tone) {
     case 'indigo':
@@ -505,33 +544,90 @@ function InsightTrendCard({ card }: { card: WeeklyCardPresentation }) {
   );
 }
 
+function formatHourChipLabel(hour: number): string {
+  return format(parseISO(`2026-01-01T${hour.toString().padStart(2, '0')}:00:00.000Z`), 'h a');
+}
+
+function formatTimelineWindowLabel(startHour: number, endHour: number): string {
+  const normalizedEndHour = endHour >= 24 ? endHour - 24 : endHour;
+  return `${formatHourChipLabel(startHour)}-${formatHourChipLabel(normalizedEndHour)}`;
+}
+
+function getTimelineStrengthLabel(peakIntensity: number): string {
+  if (peakIntensity >= 0.75) {
+    return 'strong';
+  }
+
+  if (peakIntensity >= 0.45) {
+    return 'steady';
+  }
+
+  return 'light';
+}
+
+function buildTimelineWindowChips(lane: TimelineLane): TimelineWindowPresentation[] {
+  const threshold = 0.18;
+  const windows: Array<{ startHour: number; endHour: number; peakIntensity: number }> = [];
+  let currentStart: number | null = null;
+  let currentPeak = 0;
+
+  lane.hourlyIntensity.forEach((intensity, hour) => {
+    if (intensity >= threshold) {
+      if (currentStart === null) {
+        currentStart = hour;
+        currentPeak = intensity;
+      } else {
+        currentPeak = Math.max(currentPeak, intensity);
+      }
+      return;
+    }
+
+    if (currentStart !== null) {
+      windows.push({ startHour: currentStart, endHour: hour, peakIntensity: currentPeak });
+      currentStart = null;
+      currentPeak = 0;
+    }
+  });
+
+  if (currentStart !== null) {
+    windows.push({ startHour: currentStart, endHour: 24, peakIntensity: currentPeak });
+  }
+
+  if (windows.length === 0) {
+    return [];
+  }
+
+  return windows.slice(0, 4).map((window) => ({
+    label: formatTimelineWindowLabel(window.startHour, window.endHour),
+    strengthLabel: getTimelineStrengthLabel(window.peakIntensity),
+  }));
+}
+
 function InsightTimelineLane({ lane }: { lane: TimelineLane }) {
   const isSleep = lane.id === 'sleep';
   const activeColor = isSleep ? '#8ea8ff' : '#f4b37d';
   const baseColor = isSleep ? 'rgba(142, 168, 255, 0.10)' : 'rgba(244, 179, 125, 0.10)';
+  const windowChips = buildTimelineWindowChips(lane);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div>
         <p className="text-sm font-semibold text-gray-900">{lane.title}</p>
         <p className="text-xs text-gray-500">{lane.subtitle}</p>
       </div>
 
-      <div className="flex gap-1.5">
+      <div className="grid grid-cols-24 gap-1.5 items-end rounded-3xl border border-slate-100 bg-white/80 p-3">
         {lane.hourlyIntensity.map((intensity, index) => (
           <div
             key={`${lane.id}-${index}`}
-            className={clsx(
-              'flex-1 rounded-xl border transition-all',
-              lane.peakHours.includes(index) ? 'border-gray-300' : 'border-transparent'
-            )}
+            className="rounded-2xl transition-all"
             style={{
-              height: '38px',
+              height: `${18 + intensity * 56}px`,
               backgroundColor: intensity > 0 ? activeColor : baseColor,
-              opacity: intensity > 0 ? 0.22 + intensity * 0.78 : 1,
-              boxShadow: intensity > 0 ? `inset 0 -${6 + intensity * 18}px 0 rgba(255,255,255,0.22)` : 'none',
+              opacity: intensity > 0 ? 0.25 + intensity * 0.75 : 1,
+              boxShadow: intensity > 0 ? 'inset 0 -8px 0 rgba(255,255,255,0.18)' : 'none',
             }}
-            title={`${index % 12 || 12}${index >= 12 ? 'PM' : 'AM'}${lane.peakHours.includes(index) ? ' • peak window' : ''}`}
+            title={`${index % 12 || 12}${index >= 12 ? 'PM' : 'AM'}${intensity > 0 ? ` • intensity ${Math.round(intensity * 100)}%` : ''}`}
           />
         ))}
       </div>
@@ -543,6 +639,20 @@ function InsightTimelineLane({ lane }: { lane: TimelineLane }) {
         <span>6P</span>
         <span>11P</span>
       </div>
+
+      {windowChips.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {windowChips.map((chip) => (
+            <div
+              key={`${lane.id}-${chip.label}`}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-gray-600"
+            >
+              <span className="font-semibold text-gray-800">{chip.label}</span>
+              <span className="capitalize text-gray-400">{chip.strengthLabel}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -676,9 +786,35 @@ export function StatsView() {
   );
 
   const sweetSpotCountdown = useMemo(
-    () => (insights ? formatMinutesUntil(insights.sweetSpot.recommendedTime, countdownNowMs) : 'Learning next nap window'),
+    () => {
+      if (!insights) {
+        return 'Learning next nap window';
+      }
+
+      if (insights.sweetSpot.sleepType === 'night') {
+        return formatMinutesUntilLabel(insights.sweetSpot.recommendedTime, countdownNowMs, 'Bedtime');
+      }
+
+      return formatMinutesUntil(insights.sweetSpot.recommendedTime, countdownNowMs);
+    },
     [countdownNowMs, insights]
   );
+
+  const heroCountdown = useMemo(() => {
+    if (!insights) {
+      return 'Learning next nap window';
+    }
+
+    if (insights.combinedSweetSpot) {
+      return formatMinutesUntilLabel(
+        insights.combinedSweetSpot.recommendedStartTime,
+        countdownNowMs,
+        `Feed and ${insights.sweetSpot.sleepType === 'night' ? 'bedtime' : 'nap'} window`
+      );
+    }
+
+    return sweetSpotCountdown;
+  }, [countdownNowMs, insights, sweetSpotCountdown]);
 
   useEffect(() => {
     if (viewMode !== 'insights') {
@@ -921,7 +1057,9 @@ export function StatsView() {
                         <Moon className="w-3.5 h-3.5" />
                         Predictive Insight
                       </div>
-                      <h3 className="text-2xl font-bold mt-3 text-gray-900">Sweet Spot</h3>
+                      <h3 className="text-2xl font-bold mt-3 text-gray-900">
+                        {insights.combinedSweetSpot ? 'Coming Up Soon' : 'Sweet Spot'}
+                      </h3>
                       <p className="text-sm text-gray-600 mt-2 max-w-md">{insights.headline}</p>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center flex-shrink-0 shadow-sm border border-indigo-100">
@@ -931,18 +1069,52 @@ export function StatsView() {
 
                   <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
                     <div className="rounded-3xl bg-white/90 border border-white shadow-sm p-5">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Next nap forecast</p>
-                      <p className="text-3xl font-bold text-gray-900 mt-2">{sweetSpotCountdown}</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
+                        {insights.combinedSweetSpot
+                          ? `Feed + ${insights.sweetSpot.sleepType === 'night' ? 'bedtime' : 'nap'} forecast`
+                          : insights.sweetSpot.sleepType === 'night'
+                            ? 'Bedtime forecast'
+                            : 'Next nap forecast'}
+                      </p>
+                      <p className="text-3xl font-bold text-gray-900 mt-2">{heroCountdown}</p>
                       <p className="text-sm text-gray-600 mt-2">
-                        {insights.sweetSpot.recommendedTime
-                          ? `Suggested around ${format(parseISO(insights.sweetSpot.recommendedTime), 'h:mm a')}`
+                        {insights.combinedSweetSpot
+                          ? `Likely feed and ${insights.sweetSpot.sleepType === 'night' ? 'bedtime' : 'nap'} window around ${formatSuggestionWindow(
+                              insights.combinedSweetSpot.recommendedStartTime,
+                              insights.combinedSweetSpot.recommendedEndTime
+                            )}`
+                          : insights.sweetSpot.recommendedTime
+                          ? `${insights.sweetSpot.sleepType === 'night' ? 'Bedtime around' : 'Suggested around'} ${format(parseISO(insights.sweetSpot.recommendedTime), 'h:mm a')}`
                           : 'Needs a few more completed sleep sessions'}
                       </p>
                       <p className="text-sm text-gray-500 mt-4">
-                        {insights.sweetSpot.averageWakeWindowHours !== null
-                          ? `Average wake window: ${formatHoursAsFriendlyDuration(insights.sweetSpot.averageWakeWindowHours)}`
+                        {insights.combinedSweetSpot
+                          ? insights.sweetSpot.averageWakeWindowHours !== null && insights.feedingSweetSpot.averageGapHours !== null
+                            ? `Usually feeds about every ${formatHoursAsFriendlyDuration(insights.feedingSweetSpot.averageGapHours)} and ${insights.sweetSpot.sleepType === 'night' ? 'bedtime usually lands' : 'gets sleepy'} after ${formatHoursAsFriendlyDuration(insights.sweetSpot.averageWakeWindowHours)} awake.`
+                            : 'Feedings and naps are landing in the same routine window.'
+                          : insights.sweetSpot.averageWakeWindowHours !== null
+                          ? `${insights.sweetSpot.sleepType === 'night' ? 'Average pre-bed wake window' : 'Average wake window'}: ${formatHoursAsFriendlyDuration(insights.sweetSpot.averageWakeWindowHours)}`
                           : 'We are still learning wake windows'}
                       </p>
+                      {insights.sweetSpot.sleepType === 'night' && insights.sweetSpot.predictedWakeTime && (
+                        <p className="text-sm text-indigo-700 mt-3 font-medium">
+                          Likely final wake around {format(parseISO(insights.sweetSpot.predictedWakeTime), 'h:mm a')}
+                          based on recent overnights.
+                        </p>
+                      )}
+                      {insights.sweetSpot.sleepType === 'nap' && insights.sweetSpot.predictedWakeTime && (
+                        <p className="text-sm text-indigo-700 mt-3 font-medium">
+                          Likely awake around {format(parseISO(insights.sweetSpot.predictedWakeTime), 'h:mm a')}
+                          {insights.sweetSpot.wakePredictionBasis
+                            ? ` based on ${insights.sweetSpot.wakePredictionBasis}.`
+                            : '.'}
+                        </p>
+                      )}
+                      {insights.sweetSpot.sleepType === 'night' && insights.sweetSpot.predictedFeedWakeTime && (
+                        <p className="text-sm text-indigo-600 mt-2">
+                          Likely early-morning feed around {format(parseISO(insights.sweetSpot.predictedFeedWakeTime), 'h:mm a')}, then back to sleep.
+                        </p>
+                      )}
                       {insights.sweetSpot.lastWakeTime && (
                         <p className="text-xs text-gray-500 mt-3">
                           Last wake-up: {format(parseISO(insights.sweetSpot.lastWakeTime), 'h:mm a')}
@@ -966,35 +1138,37 @@ export function StatsView() {
                   </div>
                 </Card>
 
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Card className="border border-cyan-100 bg-gradient-to-br from-cyan-50 via-white to-blue-50 shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">Feeding Sweet Spot</p>
-                        <p className="text-xs text-gray-500 mt-0.5">Suggested next feeding time from average awake gap</p>
+                <div className={clsx('grid gap-3', insights.combinedSweetSpot ? 'md:grid-cols-1' : 'md:grid-cols-2')}>
+                  {!insights.combinedSweetSpot && (
+                    <Card className="border border-cyan-100 bg-gradient-to-br from-cyan-50 via-white to-blue-50 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">Feeding Sweet Spot</p>
+                          <p className="text-xs text-gray-500 mt-0.5">Suggested next feeding time from average awake gap</p>
+                        </div>
+                        <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-cyan-100">
+                          <Milk className="w-5 h-5 text-cyan-600" />
+                        </div>
                       </div>
-                      <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-cyan-100">
-                        <Milk className="w-5 h-5 text-cyan-600" />
-                      </div>
-                    </div>
-                    <div className="mt-5">
-                      <p className="text-3xl font-bold text-gray-900">
-                        {insights.feedingSweetSpot.recommendedTime
-                          ? format(parseISO(insights.feedingSweetSpot.recommendedTime), 'h:mm a')
-                          : 'Tracking...'}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {insights.feedingSweetSpot.averageGapHours !== null
-                          ? `Average awake feeding gap: ${formatHoursAsFriendlyDuration(insights.feedingSweetSpot.averageGapHours)}`
-                          : 'Needs a few more daytime feeding patterns'}
-                      </p>
-                      {insights.feedingSweetSpot.lastFeedingTime && (
-                        <p className="text-xs text-gray-500 mt-3">
-                          Last feeding: {format(parseISO(insights.feedingSweetSpot.lastFeedingTime), 'h:mm a')}
+                      <div className="mt-5">
+                        <p className="text-3xl font-bold text-gray-900">
+                          {insights.feedingSweetSpot.recommendedTime
+                            ? format(parseISO(insights.feedingSweetSpot.recommendedTime), 'h:mm a')
+                            : 'Tracking...'}
                         </p>
-                      )}
-                    </div>
-                  </Card>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {insights.feedingSweetSpot.averageGapHours !== null
+                            ? `Average awake feeding gap: ${formatHoursAsFriendlyDuration(insights.feedingSweetSpot.averageGapHours)}`
+                            : 'Needs a few more daytime feeding patterns'}
+                        </p>
+                        {insights.feedingSweetSpot.lastFeedingTime && (
+                          <p className="text-xs text-gray-500 mt-3">
+                            Last feeding: {format(parseISO(insights.feedingSweetSpot.lastFeedingTime), 'h:mm a')}
+                          </p>
+                        )}
+                      </div>
+                    </Card>
+                  )}
 
                   <Card className="border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-lime-50 shadow-sm">
                     <div className="flex items-start justify-between gap-3">
@@ -1014,8 +1188,8 @@ export function StatsView() {
                   <div className="flex items-center gap-2 mb-4">
                     <span className="text-base">⏰</span>
                     <div>
-                      <h3 className="text-sm font-bold text-gray-800">Day Heatmap</h3>
-                      <p className="text-xs text-gray-500 mt-0.5">A softer view of when routines cluster across the day</p>
+                      <h3 className="text-sm font-bold text-gray-800">Day Timeline</h3>
+                      <p className="text-xs text-gray-500 mt-0.5">A clearer hour-by-hour view of when sleep and feeding activity build through the day</p>
                     </div>
                   </div>
                   <div className="space-y-5">

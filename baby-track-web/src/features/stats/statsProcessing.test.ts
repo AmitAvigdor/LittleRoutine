@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { parseISO } from 'date-fns';
 import type {
   BottleSession,
   DiaperChange,
@@ -355,6 +356,315 @@ describe('statsProcessing', () => {
     expect(insights.sweetSpot.recommendedTime).toBe('2026-03-21T11:00:00.000Z');
   });
 
+  it('classifies the next sleep as night sleep when it lines up with recent bedtimes', () => {
+    const snapshot = createSnapshot({
+      sleepSessions: [
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-21T20:50:00.000Z',
+          endTime: '2026-03-22T06:00:00.000Z',
+          duration: 33000,
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-22T21:00:00.000Z',
+          endTime: '2026-03-23T06:05:00.000Z',
+          duration: 32700,
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-23T20:55:00.000Z',
+          endTime: '2026-03-24T06:10:00.000Z',
+          duration: 33300,
+        }),
+        createSleepSession({
+          startTime: '2026-03-22T14:30:00.000Z',
+          endTime: '2026-03-22T15:15:00.000Z',
+          duration: 2700,
+        }),
+        createSleepSession({
+          startTime: '2026-03-22T18:00:00.000Z',
+          endTime: '2026-03-22T18:45:00.000Z',
+          duration: 2700,
+        }),
+        createSleepSession({
+          startTime: '2026-03-23T14:20:00.000Z',
+          endTime: '2026-03-23T15:05:00.000Z',
+          duration: 2700,
+        }),
+        createSleepSession({
+          startTime: '2026-03-23T17:55:00.000Z',
+          endTime: '2026-03-23T18:40:00.000Z',
+          duration: 2700,
+        }),
+        createSleepSession({
+          startTime: '2026-03-24T14:25:00.000Z',
+          endTime: '2026-03-24T15:10:00.000Z',
+          duration: 2700,
+        }),
+        createSleepSession({
+          startTime: '2026-03-24T18:05:00.000Z',
+          endTime: '2026-03-24T18:50:00.000Z',
+          duration: 2700,
+        }),
+      ],
+      feedingSessions: Array.from({ length: 5 }, (_, index) =>
+        createFeedingSession({
+          startTime: `2026-03-${20 + index}T07:00:00.000Z`,
+          endTime: `2026-03-${20 + index}T07:20:00.000Z`,
+        })
+      ),
+    });
+
+    const insights = buildInsights(snapshot, new Date('2026-03-24T21:20:00.000Z'));
+
+    expect(insights.sweetSpot.sleepType).toBe('night');
+    expect(insights.sweetSpot.predictedWakeTime).not.toBeNull();
+    expect(insights.routineSummary.some((item) => item.includes('Bedtime lands around'))).toBe(true);
+    expect(insights.routineSummary.some((item) => item.includes('Likely awake around'))).toBe(true);
+  });
+
+  it('falls back to the usual bedtime clock time when pre-bed wake history is sparse', () => {
+    const snapshot = createSnapshot({
+      sleepSessions: [
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-22T20:50:00.000Z',
+          endTime: '2026-03-23T06:00:00.000Z',
+          duration: 33000,
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-23T21:00:00.000Z',
+          endTime: '2026-03-24T06:05:00.000Z',
+          duration: 32700,
+        }),
+        createSleepSession({
+          startTime: '2026-03-24T18:10:00.000Z',
+          endTime: '2026-03-24T18:50:00.000Z',
+          duration: 2400,
+        }),
+      ],
+      feedingSessions: Array.from({ length: 5 }, (_, index) =>
+        createFeedingSession({
+          startTime: `2026-03-${20 + index}T07:00:00.000Z`,
+          endTime: `2026-03-${20 + index}T07:20:00.000Z`,
+        })
+      ),
+    });
+
+    const insights = buildInsights(snapshot, new Date('2026-03-24T20:10:00.000Z'));
+
+    expect(insights.sweetSpot.sleepType).toBe('night');
+    expect(insights.sweetSpot.recommendedTime).toBe('2026-03-24T20:55:00.000Z');
+  });
+
+  it('treats a late-evening sleep prediction as bedtime when night history exists', () => {
+    const snapshot = createSnapshot({
+      sleepSessions: [
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-22T21:10:00.000Z',
+          endTime: '2026-03-23T06:10:00.000Z',
+          duration: 32400,
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-23T21:00:00.000Z',
+          endTime: '2026-03-24T06:00:00.000Z',
+          duration: 32400,
+        }),
+        createSleepSession({
+          startTime: '2026-03-24T15:00:00.000Z',
+          endTime: '2026-03-24T15:35:00.000Z',
+          duration: 2100,
+        }),
+        createSleepSession({
+          startTime: '2026-03-24T18:34:00.000Z',
+          endTime: '2026-03-24T20:09:00.000Z',
+          duration: 5700,
+        }),
+        createSleepSession({
+          startTime: '2026-03-23T15:05:00.000Z',
+          endTime: '2026-03-23T15:45:00.000Z',
+          duration: 2400,
+        }),
+        createSleepSession({
+          startTime: '2026-03-23T16:55:00.000Z',
+          endTime: '2026-03-23T17:35:00.000Z',
+          duration: 2400,
+        }),
+        createSleepSession({
+          startTime: '2026-03-23T19:15:00.000Z',
+          endTime: '2026-03-23T20:05:00.000Z',
+          duration: 3000,
+        }),
+      ],
+      feedingSessions: Array.from({ length: 5 }, (_, index) =>
+        createFeedingSession({
+          startTime: `2026-03-${20 + index}T07:00:00.000Z`,
+          endTime: `2026-03-${20 + index}T07:20:00.000Z`,
+        })
+      ),
+      bottleSessions: [
+        createBottleSession({ timestamp: '2026-03-24T19:00:00.000Z' }),
+      ],
+    });
+
+    const insights = buildInsights(snapshot, new Date('2026-03-24T20:34:00.000Z'));
+
+    expect(insights.sweetSpot.sleepType).toBe('night');
+    expect(insights.routineSummary.some((item) => item.includes('Bedtime'))).toBe(true);
+  });
+
+  it('predicts an early-morning feed wake when night sleep is usually logged in two parts', () => {
+    const snapshot = createSnapshot({
+      sleepSessions: [
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-22T21:00:00.000Z',
+          endTime: '2026-03-23T02:30:00.000Z',
+          duration: 19800,
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-23T03:00:00.000Z',
+          endTime: '2026-03-23T06:45:00.000Z',
+          duration: 13500,
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-23T21:10:00.000Z',
+          endTime: '2026-03-24T02:40:00.000Z',
+          duration: 19800,
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-24T03:10:00.000Z',
+          endTime: '2026-03-24T06:50:00.000Z',
+          duration: 13200,
+        }),
+        createSleepSession({
+          startTime: '2026-03-24T17:30:00.000Z',
+          endTime: '2026-03-24T18:15:00.000Z',
+          duration: 2700,
+        }),
+      ],
+      feedingSessions: [
+        createFeedingSession({ startTime: '2026-03-23T02:40:00.000Z', endTime: '2026-03-23T03:00:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-24T02:45:00.000Z', endTime: '2026-03-24T03:05:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-20T07:00:00.000Z', endTime: '2026-03-20T07:20:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-21T07:00:00.000Z', endTime: '2026-03-21T07:20:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-22T07:00:00.000Z', endTime: '2026-03-22T07:20:00.000Z' }),
+      ],
+    });
+
+    const insights = buildInsights(snapshot, new Date('2026-03-24T20:30:00.000Z'));
+
+    expect(insights.sweetSpot.sleepType).toBe('night');
+    expect(insights.sweetSpot.predictedFeedWakeTime).not.toBeNull();
+    expect(insights.sweetSpot.predictedWakeTime).not.toBeNull();
+    expect(insights.sweetSpot.predictedFeedWakeTime).toBe('2026-03-25T02:35:00.000Z');
+    expect(insights.sweetSpot.predictedWakeTime).toBe('2026-03-25T06:48:00.000Z');
+    expect(insights.routineSummary.some((item) => item.includes('early feed around'))).toBe(true);
+  });
+
+  it('predicts nap wake-up time from previous naps in the same part of the day', () => {
+    const snapshot = createSnapshot({
+      sleepSessions: [
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-20T23:50:00.000Z',
+          endTime: '2026-03-21T06:20:00.000Z',
+          duration: 23400,
+        }),
+        createSleepSession({
+          startTime: '2026-03-21T08:00:00.000Z',
+          endTime: '2026-03-21T08:40:00.000Z',
+          duration: 2400,
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-21T23:55:00.000Z',
+          endTime: '2026-03-22T06:35:00.000Z',
+          duration: 24000,
+        }),
+        createSleepSession({
+          startTime: '2026-03-22T08:15:00.000Z',
+          endTime: '2026-03-22T08:55:00.000Z',
+          duration: 2400,
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-22T23:50:00.000Z',
+          endTime: '2026-03-23T06:30:00.000Z',
+          duration: 24000,
+        }),
+        createSleepSession({
+          startTime: '2026-03-23T08:10:00.000Z',
+          endTime: '2026-03-23T08:50:00.000Z',
+          duration: 2400,
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-23T23:55:00.000Z',
+          endTime: '2026-03-24T06:30:00.000Z',
+          duration: 23700,
+        }),
+      ],
+      feedingSessions: Array.from({ length: 5 }, (_, index) =>
+        createFeedingSession({
+          startTime: `2026-03-${20 + index}T07:00:00.000Z`,
+          endTime: `2026-03-${20 + index}T07:20:00.000Z`,
+        })
+      ),
+    });
+
+    const morningInsights = buildInsights(snapshot, new Date('2026-03-24T07:30:00.000Z'));
+
+    expect(morningInsights.sweetSpot.sleepType).toBe('nap');
+    expect(morningInsights.sweetSpot.recommendedTime).toBe('2026-03-24T08:10:00.000Z');
+    expect(morningInsights.sweetSpot.predictedWakeTime).toBe('2026-03-24T08:50:00.000Z');
+    expect(morningInsights.sweetSpot.wakePredictionBasis).toBe('morning naps');
+  });
+
+  it('builds the sleep heatmap from full sleep coverage across the day', () => {
+    const snapshot = createSnapshot({
+      sleepSessions: [
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-23T22:30:00.000Z',
+          endTime: '2026-03-24T06:30:00.000Z',
+          duration: 28800,
+        }),
+        createSleepSession({
+          startTime: '2026-03-24T12:00:00.000Z',
+          endTime: '2026-03-24T13:30:00.000Z',
+          duration: 5400,
+        }),
+      ],
+      feedingSessions: Array.from({ length: 5 }, (_, index) =>
+        createFeedingSession({
+          startTime: `2026-03-${20 + index}T07:00:00.000Z`,
+          endTime: `2026-03-${20 + index}T07:20:00.000Z`,
+        })
+      ),
+    });
+
+    const insights = buildInsights(snapshot, new Date('2026-03-24T12:00:00.000Z'));
+    const nightStartHour = parseISO('2026-03-23T22:30:00.000Z').getHours();
+    const nightMorningHour = parseISO('2026-03-24T05:30:00.000Z').getHours();
+    const napStartHour = parseISO('2026-03-24T12:00:00.000Z').getHours();
+    const napNextHour = parseISO('2026-03-24T13:00:00.000Z').getHours();
+    const emptyHour = parseISO('2026-03-24T09:00:00.000Z').getHours();
+
+    expect(insights.timeline.sleep.hourlyIntensity[nightStartHour]).toBeGreaterThan(0);
+    expect(insights.timeline.sleep.hourlyIntensity[nightMorningHour]).toBeGreaterThan(0);
+    expect(insights.timeline.sleep.hourlyIntensity[napStartHour]).toBeGreaterThan(0);
+    expect(insights.timeline.sleep.hourlyIntensity[napNextHour]).toBeGreaterThan(0);
+    expect(insights.timeline.sleep.hourlyIntensity[emptyHour]).toBe(0);
+  });
+
   it('calculates a feeding sweet spot recommendation from the average awake feeding gap', () => {
     const snapshot = createSnapshot({
       feedingSessions: [
@@ -371,6 +681,58 @@ describe('statsProcessing', () => {
     expect(insights.feedingSweetSpot.averageGapHours).toBe(2);
     expect(insights.feedingSweetSpot.recommendedTime).toBe('2026-03-20T18:00:00.000Z');
     expect(insights.feedingSweetSpot.lastFeedingTime).toBe('2026-03-20T16:00:00.000Z');
+  });
+
+  it('merges feeding and nap sweet spots into one routine window when they land close together', () => {
+    const snapshot = createSnapshot({
+      sleepSessions: [
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-20T02:00:00.000Z',
+          endTime: '2026-03-20T06:00:00.000Z',
+          duration: 14400,
+        }),
+        createSleepSession({
+          startTime: '2026-03-20T08:00:00.000Z',
+          endTime: '2026-03-20T09:00:00.000Z',
+          duration: 3600,
+        }),
+        createSleepSession({
+          startTime: '2026-03-20T11:00:00.000Z',
+          endTime: '2026-03-20T12:00:00.000Z',
+          duration: 3600,
+        }),
+        createSleepSession({
+          startTime: '2026-03-20T14:00:00.000Z',
+          endTime: '2026-03-20T15:00:00.000Z',
+          duration: 3600,
+        }),
+        createSleepSession({
+          startTime: '2026-03-21T08:00:00.000Z',
+          endTime: '2026-03-21T09:00:00.000Z',
+          duration: 3600,
+        }),
+      ],
+      feedingSessions: [
+        createFeedingSession({ startTime: '2026-03-20T08:00:00.000Z', endTime: '2026-03-20T08:20:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-20T10:00:00.000Z', endTime: '2026-03-20T10:20:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-20T12:00:00.000Z', endTime: '2026-03-20T12:20:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-20T14:00:00.000Z', endTime: '2026-03-20T14:20:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-20T16:00:00.000Z', endTime: '2026-03-20T16:20:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-21T09:05:00.000Z', endTime: '2026-03-21T09:25:00.000Z' }),
+      ],
+    });
+
+    const insights = buildInsights(snapshot, new Date('2026-03-21T10:00:00.000Z'));
+
+    expect(insights.sweetSpot.recommendedTime).toBe('2026-03-21T11:00:00.000Z');
+    expect(insights.feedingSweetSpot.recommendedTime).toBe('2026-03-21T11:05:00.000Z');
+    expect(insights.combinedSweetSpot).toEqual({
+      recommendedStartTime: '2026-03-21T11:00:00.000Z',
+      recommendedEndTime: '2026-03-21T11:05:00.000Z',
+      status: 'soon',
+    });
+    expect(insights.routineSummary.some((item) => item.includes('Feed and nap usually line up around'))).toBe(true);
   });
 
   it('returns a high consistency score for a steady week', () => {
