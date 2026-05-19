@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { isToday, parseISO } from 'date-fns';
 import { Header } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -11,55 +10,65 @@ import { prefetchHomeData } from '@/features/dashboard/homeDataSync';
 import { createMedicine, createMedicineLog, subscribeToMedicineLogs, updateMedicine } from '@/lib/firestore';
 import type { Medicine, MedicineLog } from '@/types';
 import { MedicationFrequency, MEDICATION_FREQUENCY_CONFIG } from '@/types/enums';
-import { Pill, Plus, X, Check, History, AlertTriangle } from 'lucide-react';
+import {
+  AlertTriangle,
+  Check,
+  Clock,
+  History,
+  Pill,
+  Plus,
+  ShieldCheck,
+  X,
+} from 'lucide-react';
 import { clsx } from 'clsx';
 import { toast } from '@/stores/toastStore';
+import {
+  getMedicationTrackerStatus,
+  type MedicationTrackerStatus,
+} from './medicationTracker';
 
-// Get max doses per day based on frequency
-function getMaxDosesPerDay(frequency: MedicationFrequency): number | null {
-  switch (frequency) {
-    case 'onceDaily':
-      return 1;
-    case 'twiceDaily':
-      return 2;
-    case 'threeTimesDaily':
-      return 3;
-    case 'fourTimesDaily':
-      return 4;
-    case 'asNeeded':
-    case 'everyHours':
-      return null; // No daily limit
-    default:
-      return null;
+function formatMinutesAsDuration(totalMinutes: number): string {
+  const minutes = Math.max(0, Math.ceil(totalMinutes));
+  if (minutes <= 0) return '0m';
+  if (minutes < 60) return `${minutes}m`;
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (remainingMinutes === 0) return `${hours}h`;
+  return `${hours}h ${remainingMinutes}m`;
+}
+
+function formatIntervalHours(hours: number): string {
+  return Number.isInteger(hours) ? `${hours}h` : `${hours.toFixed(1)}h`;
+}
+
+function formatDoseDateTime(timestamp: string): string {
+  return new Date(timestamp).toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function getBlockedDoseMessage(status: MedicationTrackerStatus): string {
+  if (status.reason === 'dailyLimit') {
+    return 'Maximum doses for today already given';
   }
-}
 
-// Check if enough time has passed for everyHours frequency
-function canGiveEveryHoursMedicine(logs: MedicineLog[], hoursInterval: number | null | undefined): boolean {
-  // Guard against invalid hoursInterval
-  if (!hoursInterval || isNaN(hoursInterval) || hoursInterval <= 0) return true;
-  if (logs.length === 0) return true;
+  if (status.reason === 'interval') {
+    return `Wait ${formatMinutesAsDuration(status.remainingMinutes)} before the next dose`;
+  }
 
-  const lastLog = logs[0]; // Logs are sorted newest first
-  const lastDoseTime = new Date(lastLog.timestamp);
-  const now = new Date();
-  const hoursSinceLastDose = (now.getTime() - lastDoseTime.getTime()) / (1000 * 60 * 60);
+  if (status.reason === 'missingInterval') {
+    return 'Add a valid hours interval before logging this medicine';
+  }
 
-  return hoursSinceLastDose >= hoursInterval;
-}
+  if (status.reason === 'inactive') {
+    return 'Activate this medicine before logging a dose';
+  }
 
-// Get hours until next dose for everyHours frequency
-function getHoursUntilNextDose(logs: MedicineLog[], hoursInterval: number | null | undefined): number {
-  // Guard against invalid hoursInterval
-  if (!hoursInterval || isNaN(hoursInterval) || hoursInterval <= 0) return 0;
-  if (logs.length === 0) return 0;
-
-  const lastLog = logs[0];
-  const lastDoseTime = new Date(lastLog.timestamp);
-  const now = new Date();
-  const hoursSinceLastDose = (now.getTime() - lastDoseTime.getTime()) / (1000 * 60 * 60);
-
-  return Math.max(0, hoursInterval - hoursSinceLastDose);
+  return 'This dose cannot be logged yet';
 }
 
 export function MedicineView() {
@@ -73,6 +82,7 @@ export function MedicineView() {
   const [showForm, setShowForm] = useState(false);
   const [selectedMedicineId, setSelectedMedicineId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [now, setNow] = useState(() => new Date());
 
   // Reminder modal state
   const [showReminder, setShowReminder] = useState(false);
@@ -95,31 +105,29 @@ export function MedicineView() {
     ? medicines.find((medicine) => medicine.id === selectedMedicineId) || null
     : null;
 
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setNow(new Date());
+    }, 30 * 1000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const getTrackerStatus = useCallback((medicine: Medicine) => {
+    return getMedicationTrackerStatus(medicine, medicineLogs[medicine.id] || [], now);
+  }, [medicineLogs, now]);
+
   // Helper to get medicines that still need doses today
   const getMissedMedicines = useCallback((): Medicine[] => {
     const activeMeds = medicines.filter(m => m.isActive && m.frequency !== 'asNeeded');
     const missed: Medicine[] = [];
-    const now = new Date();
+    const reminderCheckTime = new Date();
 
     activeMeds.forEach((medicine) => {
       const logs = medicineLogs[medicine.id] || [];
-      const todayLogs = logs.filter((log) => isToday(parseISO(log.timestamp)));
-      const maxDoses = getMaxDosesPerDay(medicine.frequency);
-
-      if (maxDoses !== null && todayLogs.length < maxDoses) {
+      const status = getMedicationTrackerStatus(medicine, logs, reminderCheckTime);
+      if (status.canGive) {
         missed.push(medicine);
-      } else if (medicine.frequency === 'everyHours' && medicine.hoursInterval) {
-        // For everyHours, check if next dose is overdue
-        if (todayLogs.length === 0) {
-          missed.push(medicine);
-        } else {
-          const lastDose = todayLogs[0];
-          const lastDoseTime = new Date(lastDose.timestamp);
-          const hoursSinceLastDose = (now.getTime() - lastDoseTime.getTime()) / (1000 * 60 * 60);
-          if (hoursSinceLastDose >= medicine.hoursInterval) {
-            missed.push(medicine);
-          }
-        }
       }
     });
 
@@ -168,28 +176,12 @@ export function MedicineView() {
 
   // Helper to check if a medicine can receive a dose
   const canGiveDose = useCallback((medicine: Medicine): boolean => {
-    const logs = medicineLogs[medicine.id] || [];
+    return getTrackerStatus(medicine).canGive;
+  }, [getTrackerStatus]);
 
-    if (medicine.frequency === 'asNeeded') {
-      return true;
-    }
-
-    if (medicine.frequency === 'everyHours' && medicine.hoursInterval) {
-      return canGiveEveryHoursMedicine(logs, medicine.hoursInterval);
-    }
-
-    const maxDoses = getMaxDosesPerDay(medicine.frequency);
-    if (maxDoses === null) return true;
-
-    const todayLogs = logs.filter((log) => isToday(parseISO(log.timestamp)));
-    return todayLogs.length < maxDoses;
-  }, [medicineLogs]);
-
-  // Get doses given today for a medicine
-  const getDosesToday = useCallback((medicine: Medicine): number => {
-    const logs = medicineLogs[medicine.id] || [];
-    return logs.filter((log) => isToday(parseISO(log.timestamp))).length;
-  }, [medicineLogs]);
+  const everyHoursIntervalInvalid =
+    frequency === 'everyHours' &&
+    (!hoursInterval || Number.isNaN(Number(hoursInterval)) || Number(hoursInterval) <= 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,7 +189,7 @@ export function MedicineView() {
 
     // Validate hoursInterval for everyHours frequency
     if (frequency === 'everyHours') {
-      const parsedInterval = parseInt(hoursInterval);
+      const parsedInterval = Number(hoursInterval);
       if (!hoursInterval || isNaN(parsedInterval) || parsedInterval <= 0) {
         toast.error('Please enter a valid hours interval (e.g., 4, 6, 8)');
         return;
@@ -207,7 +199,7 @@ export function MedicineView() {
     setLoading(true);
     try {
       // Safely parse hoursInterval with NaN check
-      const parsedHoursInterval = hoursInterval ? parseInt(hoursInterval) : null;
+      const parsedHoursInterval = hoursInterval ? Number(hoursInterval) : null;
       const validHoursInterval = parsedHoursInterval !== null && !isNaN(parsedHoursInterval) && parsedHoursInterval > 0
         ? parsedHoursInterval
         : null;
@@ -239,20 +231,14 @@ export function MedicineView() {
     if (!user || !selectedBaby) return;
 
     // Check if dose can be given
-    if (!canGiveDose(medicine)) {
-      if (medicine.frequency === 'everyHours' && medicine.hoursInterval) {
-        const logs = medicineLogs[medicine.id] || [];
-        const hoursLeft = getHoursUntilNextDose(logs, medicine.hoursInterval);
-        const hours = Math.floor(hoursLeft);
-        const minutes = Math.round((hoursLeft - hours) * 60);
-        toast.error(`Wait ${hours > 0 ? `${hours}h ` : ''}${minutes}m before next dose`);
-      } else {
-        toast.error('Maximum doses for today already given');
-      }
+    const doseTime = new Date();
+    const status = getMedicationTrackerStatus(medicine, medicineLogs[medicine.id] || [], doseTime);
+    if (!status.canGive) {
+      toast.error(getBlockedDoseMessage(status));
       return;
     }
 
-    const timestamp = new Date().toISOString();
+    const timestamp = doseTime.toISOString();
     const optimisticLogId = `optimistic-medicine-log-${medicine.id}-${Date.now()}`;
 
     addOptimisticMedicineLog(medicine.id, {
@@ -376,10 +362,13 @@ export function MedicineView() {
               {frequency === 'everyHours' && (
                 <Input
                   type="number"
+                  min="1"
+                  step="0.5"
                   label="Hours Interval"
                   placeholder="e.g., 4, 6, 8"
                   value={hoursInterval}
                   onChange={(e) => setHoursInterval(e.target.value)}
+                  error={everyHoursIntervalInvalid ? 'Enter the minimum safe gap between doses.' : undefined}
                 />
               )}
 
@@ -393,7 +382,7 @@ export function MedicineView() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={loading || !name.trim() || (frequency === 'everyHours' && !hoursInterval)}
+                disabled={loading || !name.trim() || everyHoursIntervalInvalid}
               >
                 {loading ? 'Saving...' : 'Add Medicine'}
               </Button>
@@ -405,6 +394,7 @@ export function MedicineView() {
         {selectedMedicine && (
           <MedicineDetail
             medicine={selectedMedicine}
+            now={now}
             onClose={() => setSelectedMedicineId(null)}
             onGive={() => handleGiveMedicine(selectedMedicine)}
           />
@@ -416,10 +406,7 @@ export function MedicineView() {
             <h3 className="font-semibold text-gray-900 mb-2">Active ({activeMedicines.length})</h3>
             <div className="space-y-2">
               {activeMedicines.map((medicine) => {
-                const canGive = canGiveDose(medicine);
-                const dosesToday = getDosesToday(medicine);
-                const maxDoses = getMaxDosesPerDay(medicine.frequency);
-                const logs = medicineLogs[medicine.id] || [];
+                const trackerStatus = getTrackerStatus(medicine);
 
                 return (
                   <MedicineCard
@@ -428,14 +415,7 @@ export function MedicineView() {
                     onGive={() => handleGiveMedicine(medicine)}
                     onToggleActive={() => handleToggleActive(medicine)}
                     onSelect={() => setSelectedMedicineId(medicine.id)}
-                    canGive={canGive}
-                    dosesToday={dosesToday}
-                    maxDoses={maxDoses}
-                    hoursUntilNext={
-                      medicine.frequency === 'everyHours' && medicine.hoursInterval
-                        ? getHoursUntilNextDose(logs, medicine.hoursInterval)
-                        : undefined
-                    }
+                    trackerStatus={trackerStatus}
                   />
                 );
               })}
@@ -473,8 +453,7 @@ export function MedicineView() {
         {showReminder && currentMissedMedicines.length > 0 && (
           <MedicineReminderModal
             medicines={currentMissedMedicines}
-            canGiveDose={canGiveDose}
-            getDosesToday={getDosesToday}
+            getTrackerStatus={getTrackerStatus}
             onDismiss={() => setShowReminder(false)}
             onAddMedicine={() => {
               setShowReminder(false);
@@ -501,36 +480,23 @@ function MedicineCard({
   onToggleActive,
   onSelect,
   inactive,
-  canGive = true,
-  dosesToday = 0,
-  maxDoses,
-  hoursUntilNext,
+  trackerStatus,
 }: {
   medicine: Medicine;
   onGive?: () => void;
   onToggleActive: () => void;
   onSelect: () => void;
   inactive?: boolean;
-  canGive?: boolean;
-  dosesToday?: number;
-  maxDoses?: number | null;
-  hoursUntilNext?: number;
+  trackerStatus?: MedicationTrackerStatus;
 }) {
   const freqConfig = MEDICATION_FREQUENCY_CONFIG[medicine.frequency];
-
-  // Format wait time for everyHours
-  const formatWaitTime = (hours: number) => {
-    const h = Math.floor(hours);
-    const m = Math.round((hours - h) * 60);
-    if (h > 0 && m > 0) return `${h}h ${m}m`;
-    if (h > 0) return `${h}h`;
-    return `${m}m`;
-  };
+  const canGive = trackerStatus?.canGive ?? true;
+  const buttonLabel = canGive ? 'Give' : trackerStatus?.reason === 'dailyLimit' ? 'Done' : 'Wait';
 
   return (
     <Card className={clsx('py-3', inactive && 'opacity-60')}>
-      <div className="flex items-center gap-3">
-        <div className="flex-1" onClick={onSelect}>
+      <div className="flex items-start gap-3">
+        <button type="button" className="flex-1 text-left min-w-0" onClick={onSelect}>
           <p className="font-medium text-gray-900">{medicine.name}</p>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             {medicine.dosage && (
@@ -539,27 +505,35 @@ function MedicineCard({
             <span className="text-xs px-2 py-0.5 bg-gray-100 rounded-full text-gray-600">
               {freqConfig.label}
             </span>
-            {/* Show dose progress for scheduled medicines */}
-            {!inactive && maxDoses != null && (
+            {!inactive && trackerStatus?.intervalHours !== null && trackerStatus?.intervalHours !== undefined && (
+              <span className="text-xs px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full">
+                Every {formatIntervalHours(trackerStatus.intervalHours)}
+              </span>
+            )}
+            {!inactive && trackerStatus?.maxDosesToday != null && (
               <span
                 className={clsx(
                   'text-xs px-2 py-0.5 rounded-full',
-                  dosesToday >= maxDoses
+                  trackerStatus.dosesToday >= trackerStatus.maxDosesToday
                     ? 'bg-green-100 text-green-700'
                     : 'bg-blue-100 text-blue-700'
                 )}
               >
-                {dosesToday}/{maxDoses} today
+                {trackerStatus.dosesToday}/{trackerStatus.maxDosesToday} today
               </span>
             )}
-            {/* Show wait time for everyHours */}
-            {!inactive && medicine.frequency === 'everyHours' && hoursUntilNext !== undefined && hoursUntilNext > 0 && (
+            {!inactive && trackerStatus?.reason === 'interval' && (
               <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
-                Wait {formatWaitTime(hoursUntilNext)}
+                Wait {formatMinutesAsDuration(trackerStatus.remainingMinutes)}
+              </span>
+            )}
+            {!inactive && trackerStatus?.reason === 'missingInterval' && (
+              <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full">
+                Interval needed
               </span>
             )}
           </div>
-        </div>
+        </button>
         <div className="flex items-center gap-2">
           {!inactive && onGive && (
             <Button
@@ -569,7 +543,7 @@ function MedicineCard({
               className={clsx(!canGive && 'opacity-50 cursor-not-allowed')}
             >
               <Check className="w-4 h-4 mr-1" />
-              {canGive ? 'Give' : 'Done'}
+              {buttonLabel}
             </Button>
           )}
           <button
@@ -580,21 +554,65 @@ function MedicineCard({
           </button>
         </div>
       </div>
+      {!inactive && trackerStatus && (
+        <button
+          type="button"
+          onClick={onSelect}
+          className="mt-3 grid w-full grid-cols-2 gap-2 text-left"
+        >
+          <div className="rounded-xl bg-gray-50 px-3 py-2">
+            <p className="text-[11px] font-semibold uppercase text-gray-400">Last dose</p>
+            <p className="mt-0.5 truncate text-sm font-semibold text-gray-800">
+              {trackerStatus.lastDoseAt ? formatDoseDateTime(trackerStatus.lastDoseAt) : 'None logged'}
+            </p>
+          </div>
+          <div
+            className={clsx(
+              'rounded-xl px-3 py-2',
+              trackerStatus.canGive
+                ? 'bg-green-50'
+                : trackerStatus.reason === 'dailyLimit'
+                  ? 'bg-blue-50'
+                  : 'bg-amber-50'
+            )}
+          >
+            <p
+              className={clsx(
+                'text-[11px] font-semibold uppercase',
+                trackerStatus.canGive
+                  ? 'text-green-600'
+                  : trackerStatus.reason === 'dailyLimit'
+                    ? 'text-blue-600'
+                    : 'text-amber-600'
+              )}
+            >
+              {trackerStatus.canGive ? 'Safe now' : 'Next safe'}
+            </p>
+            <p className="mt-0.5 truncate text-sm font-semibold text-gray-800">
+              {trackerStatus.canGive
+                ? 'Ready to give'
+                : trackerStatus.nextDoseAt
+                  ? formatDoseDateTime(trackerStatus.nextDoseAt)
+                  : trackerStatus.reason === 'dailyLimit'
+                    ? 'Tomorrow'
+                    : 'Interval needed'}
+            </p>
+          </div>
+        </button>
+      )}
     </Card>
   );
 }
 
 function MedicineReminderModal({
   medicines,
-  canGiveDose,
-  getDosesToday,
+  getTrackerStatus,
   onDismiss,
   onGive,
   onAddMedicine,
 }: {
   medicines: Medicine[];
-  canGiveDose: (medicine: Medicine) => boolean;
-  getDosesToday: (medicine: Medicine) => number;
+  getTrackerStatus: (medicine: Medicine) => MedicationTrackerStatus;
   onDismiss: () => void;
   onGive: (medicine: Medicine) => void;
   onAddMedicine: () => void;
@@ -617,9 +635,8 @@ function MedicineReminderModal({
         <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
           {medicines.map((medicine) => {
             const freqConfig = MEDICATION_FREQUENCY_CONFIG[medicine.frequency];
-            const canGive = canGiveDose(medicine);
-            const dosesToday = getDosesToday(medicine);
-            const maxDoses = getMaxDosesPerDay(medicine.frequency);
+            const trackerStatus = getTrackerStatus(medicine);
+            const canGive = trackerStatus.canGive;
 
             return (
               <div
@@ -633,12 +650,17 @@ function MedicineReminderModal({
                       <span className="text-xs text-gray-500">{medicine.dosage}</span>
                     )}
                     <span className="text-xs text-gray-400">{freqConfig.label}</span>
-                    {maxDoses !== null && (
+                    {trackerStatus.maxDosesToday !== null && (
                       <span className={clsx(
                         'text-xs px-1.5 py-0.5 rounded',
-                        dosesToday >= maxDoses ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                        trackerStatus.dosesToday >= trackerStatus.maxDosesToday ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
                       )}>
-                        {dosesToday}/{maxDoses}
+                        {trackerStatus.dosesToday}/{trackerStatus.maxDosesToday}
+                      </span>
+                    )}
+                    {trackerStatus.reason === 'interval' && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">
+                        Wait {formatMinutesAsDuration(trackerStatus.remainingMinutes)}
                       </span>
                     )}
                   </div>
@@ -650,7 +672,7 @@ function MedicineReminderModal({
                   className={clsx(!canGive && 'opacity-50 cursor-not-allowed')}
                 >
                   <Check className="w-4 h-4 mr-1" />
-                  {canGive ? 'Give' : 'Done'}
+                  {canGive ? 'Give' : trackerStatus.reason === 'dailyLimit' ? 'Done' : 'Wait'}
                 </Button>
               </div>
             );
@@ -674,10 +696,12 @@ function MedicineReminderModal({
 
 function MedicineDetail({
   medicine,
+  now,
   onClose,
   onGive,
 }: {
   medicine: Medicine;
+  now: Date;
   onClose: () => void;
   onGive: () => void;
 }) {
@@ -692,33 +716,8 @@ function MedicineDetail({
   }, [medicine.id]);
 
   const freqConfig = MEDICATION_FREQUENCY_CONFIG[medicine.frequency];
-
-  // Calculate dose status
-  const todayLogs = logs.filter((log) => isToday(parseISO(log.timestamp)));
-  const maxDoses = getMaxDosesPerDay(medicine.frequency);
-
-  const canGive = (() => {
-    if (medicine.frequency === 'asNeeded') return true;
-    if (medicine.frequency === 'everyHours' && medicine.hoursInterval) {
-      return canGiveEveryHoursMedicine(logs, medicine.hoursInterval);
-    }
-    if (maxDoses !== null) {
-      return todayLogs.length < maxDoses;
-    }
-    return true;
-  })();
-
-  const hoursUntilNext = medicine.frequency === 'everyHours' && medicine.hoursInterval
-    ? getHoursUntilNextDose(logs, medicine.hoursInterval)
-    : 0;
-
-  const formatWaitTime = (hours: number) => {
-    const h = Math.floor(hours);
-    const m = Math.round((hours - h) * 60);
-    if (h > 0 && m > 0) return `${h}h ${m}m`;
-    if (h > 0) return `${h}h`;
-    return `${m}m`;
-  };
+  const trackerStatus = getMedicationTrackerStatus(medicine, logs, now);
+  const canGive = trackerStatus.canGive;
 
   return (
     <Card>
@@ -740,16 +739,22 @@ function MedicineDetail({
           <span className="text-gray-500">Frequency</span>
           <span className="font-medium">{freqConfig.label}</span>
         </div>
-        {maxDoses !== null && (
+        {trackerStatus.intervalHours !== null && (
+          <div className="flex justify-between">
+            <span className="text-gray-500">Required gap</span>
+            <span className="font-medium">{formatIntervalHours(trackerStatus.intervalHours)}</span>
+          </div>
+        )}
+        {trackerStatus.maxDosesToday !== null && (
           <div className="flex justify-between">
             <span className="text-gray-500">Today</span>
             <span
               className={clsx(
                 'font-medium',
-                todayLogs.length >= maxDoses ? 'text-green-600' : 'text-blue-600'
+                trackerStatus.dosesToday >= trackerStatus.maxDosesToday ? 'text-green-600' : 'text-blue-600'
               )}
             >
-              {todayLogs.length}/{maxDoses} doses
+              {trackerStatus.dosesToday}/{trackerStatus.maxDosesToday} doses
             </span>
           </div>
         )}
@@ -761,18 +766,89 @@ function MedicineDetail({
         )}
       </div>
 
-      {!canGive && medicine.frequency === 'everyHours' && hoursUntilNext > 0 && (
+      <div className="mb-4 grid grid-cols-2 gap-2">
+        <div className="rounded-xl bg-gray-50 p-3">
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase text-gray-400">
+            <Clock className="w-3.5 h-3.5" />
+            Last dose
+          </div>
+          <p className="mt-1 text-sm font-semibold text-gray-900">
+            {trackerStatus.lastDoseAt ? formatDoseDateTime(trackerStatus.lastDoseAt) : 'None logged'}
+          </p>
+        </div>
+        <div className="rounded-xl bg-gray-50 p-3">
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase text-gray-400">
+            <Clock className="w-3.5 h-3.5" />
+            Time elapsed
+          </div>
+          <p className="mt-1 text-sm font-semibold text-gray-900">
+            {trackerStatus.elapsedMinutes !== null
+              ? formatMinutesAsDuration(trackerStatus.elapsedMinutes)
+              : 'No dose yet'}
+          </p>
+        </div>
+        <div
+          className={clsx(
+            'rounded-xl p-3',
+            trackerStatus.canGive ? 'bg-green-50' : 'bg-amber-50'
+          )}
+        >
+          <div
+            className={clsx(
+              'flex items-center gap-1.5 text-[11px] font-semibold uppercase',
+              trackerStatus.canGive ? 'text-green-600' : 'text-amber-600'
+            )}
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Status
+          </div>
+          <p className="mt-1 text-sm font-semibold text-gray-900">
+            {trackerStatus.canGive
+              ? 'Safe to give'
+              : trackerStatus.reason === 'dailyLimit'
+                ? 'Done today'
+                : trackerStatus.reason === 'missingInterval'
+                  ? 'Interval needed'
+                  : `Wait ${formatMinutesAsDuration(trackerStatus.remainingMinutes)}`}
+          </p>
+        </div>
+        <div className="rounded-xl bg-gray-50 p-3">
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase text-gray-400">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Next safe
+          </div>
+          <p className="mt-1 text-sm font-semibold text-gray-900">
+            {trackerStatus.canGive
+              ? 'Now'
+              : trackerStatus.nextDoseAt
+                ? formatDoseDateTime(trackerStatus.nextDoseAt)
+                : trackerStatus.reason === 'dailyLimit'
+                  ? 'Tomorrow'
+                  : 'Set interval'}
+          </p>
+        </div>
+      </div>
+
+      {!canGive && trackerStatus.reason === 'interval' && (
         <div className="mb-4 p-3 bg-amber-50 rounded-lg text-center">
           <p className="text-sm text-amber-700">
-            Wait {formatWaitTime(hoursUntilNext)} before next dose
+            Next dose is safe at {trackerStatus.nextDoseAt ? formatDoseDateTime(trackerStatus.nextDoseAt) : 'the scheduled time'}.
           </p>
         </div>
       )}
 
-      {!canGive && maxDoses !== null && todayLogs.length >= maxDoses && (
+      {!canGive && trackerStatus.reason === 'dailyLimit' && (
         <div className="mb-4 p-3 bg-green-50 rounded-lg text-center">
           <p className="text-sm text-green-700">
             All doses for today have been given
+          </p>
+        </div>
+      )}
+
+      {!canGive && trackerStatus.reason === 'missingInterval' && (
+        <div className="mb-4 p-3 bg-red-50 rounded-lg text-center">
+          <p className="text-sm text-red-700">
+            This medicine needs a valid hours interval before the tracker can verify the next safe dose.
           </p>
         </div>
       )}
@@ -783,7 +859,7 @@ function MedicineDetail({
         disabled={!canGive}
       >
         <Check className="w-4 h-4 mr-2" />
-        {canGive ? 'Give Now' : 'Complete'}
+        {canGive ? 'Give Now' : trackerStatus.reason === 'dailyLimit' ? 'Complete' : 'Wait'}
       </Button>
 
       <div>
@@ -798,9 +874,9 @@ function MedicineDetail({
             {logs.map((log) => (
               <div key={log.id} className="flex justify-between text-sm py-1 border-b border-gray-100">
                 <span className="text-gray-500">
-                  {new Date(log.timestamp).toLocaleString()}
+                  {formatDoseDateTime(log.timestamp)}
                 </span>
-                {log.givenBy && <span>{log.givenBy}</span>}
+                {log.givenBy && <span className="text-gray-700">{log.givenBy}</span>}
               </div>
             ))}
           </div>
