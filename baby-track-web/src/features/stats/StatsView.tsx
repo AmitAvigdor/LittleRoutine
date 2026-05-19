@@ -49,6 +49,7 @@ import {
   type InsightsSummary,
   type TimeFilter,
   type TimelineLane,
+  type TypicalSleepWindow,
   type WeeklyInsightMetric,
 } from './statsProcessing';
 import { useStatsData } from './useStatsData';
@@ -104,6 +105,16 @@ interface AverageCardPresentation {
 interface TimelineWindowPresentation {
   label: string;
   strengthLabel: string;
+}
+
+interface SleepWakeMetricCardPresentation {
+  id: string;
+  title: string;
+  value: string;
+  description: string;
+  icon: ReactNode;
+  surfaceClassName: string;
+  iconClassName: string;
 }
 
 function renderHistoryIcon(icon: HistoryIcon, color: string) {
@@ -423,6 +434,73 @@ function buildAverageCards(insights: InsightsSummary): AverageCardPresentation[]
   return cards.filter((card) => card.rawValue > 0);
 }
 
+function buildSleepWakeMetricCards(insights: InsightsSummary): SleepWakeMetricCardPresentation[] {
+  const metrics = insights.sleepWake;
+  const cards: Array<SleepWakeMetricCardPresentation & { rawValue: number | null }> = [
+    {
+      id: 'daytime-awake-window',
+      title: 'Daytime Awake Window',
+      value:
+        metrics.averageDaytimeAwakeWindowHours !== null
+          ? formatHoursAsFriendlyDuration(metrics.averageDaytimeAwakeWindowHours)
+          : 'Learning',
+      rawValue: metrics.averageDaytimeAwakeWindowHours,
+      description: 'Average gap between daytime naps',
+      icon: <Sun className="w-4 h-4" />,
+      surfaceClassName: 'bg-amber-50 border-amber-100',
+      iconClassName: 'bg-white text-amber-600 border-amber-100',
+    },
+    {
+      id: 'daytime-sleep',
+      title: 'Daytime Sleep',
+      value:
+        metrics.averageDaytimeSleepHours !== null
+          ? formatHoursAsFriendlyDuration(metrics.averageDaytimeSleepHours)
+          : 'Learning',
+      rawValue: metrics.averageDaytimeSleepHours,
+      description: 'Average cumulative nap sleep per day',
+      icon: <Moon className="w-4 h-4" />,
+      surfaceClassName: 'bg-sky-50 border-sky-100',
+      iconClassName: 'bg-white text-sky-600 border-sky-100',
+    },
+    {
+      id: 'nighttime-sleep',
+      title: 'Nighttime Sleep',
+      value:
+        metrics.averageNighttimeSleepHours !== null
+          ? formatHoursAsFriendlyDuration(metrics.averageNighttimeSleepHours)
+          : 'Learning',
+      rawValue: metrics.averageNighttimeSleepHours,
+      description: 'Average total overnight sleep',
+      icon: <Moon className="w-4 h-4" />,
+      surfaceClassName: 'bg-indigo-50 border-indigo-100',
+      iconClassName: 'bg-white text-indigo-600 border-indigo-100',
+    },
+    {
+      id: 'daily-awake-time',
+      title: 'Daily Awake Time',
+      value:
+        metrics.averageDailyAwakeHours !== null
+          ? formatHoursAsFriendlyDuration(metrics.averageDailyAwakeHours)
+          : 'Learning',
+      rawValue: metrics.averageDailyAwakeHours,
+      description: 'Average awake time in a 24-hour day',
+      icon: <Clock className="w-4 h-4" />,
+      surfaceClassName: 'bg-emerald-50 border-emerald-100',
+      iconClassName: 'bg-white text-emerald-600 border-emerald-100',
+    },
+  ];
+
+  const visibleCards: SleepWakeMetricCardPresentation[] = [];
+  cards.forEach(({ rawValue, ...card }) => {
+    if (rawValue !== null) {
+      visibleCards.push(card);
+    }
+  });
+
+  return visibleCards;
+}
+
 function buildTimelineLanes(insights: InsightsSummary): TimelineLane[] {
   return [insights.timeline.sleep, insights.timeline.feeding].filter((lane) =>
     lane.hourlyIntensity.some((intensity) => intensity > 0)
@@ -705,6 +783,39 @@ function ConsistencyRing({ score, label }: { score: number; label: string }) {
   );
 }
 
+function TypicalSleepWindowList({ windows }: { windows: TypicalSleepWindow[] }) {
+  if (windows.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-white p-3">
+      <div className="flex items-center gap-2 mb-3">
+        <Clock className="w-4 h-4 text-slate-500" />
+        <p className="text-sm font-semibold text-gray-900">Typical Sleep Windows</p>
+      </div>
+      <div className="space-y-2">
+        {windows.map((window) => (
+          <div key={window.id} className="flex items-center gap-3">
+            <div className="w-24 flex-shrink-0 text-sm font-semibold text-gray-800">
+              {window.label}
+            </div>
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full bg-indigo-400"
+                style={{ width: `${Math.max(12, Math.round(window.strength * 100))}%` }}
+              />
+            </div>
+            <div className="w-14 flex-shrink-0 text-right text-xs text-gray-500">
+              {window.averageMinutes}m/day
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function StatsView() {
   useAuth();
   const { selectedBaby, babies, settings } = useAppStore();
@@ -777,6 +888,11 @@ export function StatsView() {
 
   const averageCards = useMemo(
     () => (insights ? buildAverageCards(insights) : []),
+    [insights]
+  );
+
+  const sleepWakeMetricCards = useMemo(
+    () => (insights ? buildSleepWakeMetricCards(insights) : []),
     [insights]
   );
 
@@ -1182,6 +1298,49 @@ export function StatsView() {
                     </div>
                   </Card>
                 </div>
+
+                {(sleepWakeMetricCards.length > 0 || insights.sleepWake.typicalSleepWindows.length > 0) && (
+                  <Card className="border border-indigo-100 bg-gradient-to-br from-white to-indigo-50 shadow-sm">
+                    <div className="mb-4 flex items-center gap-2">
+                      <Moon className="w-5 h-5 text-indigo-600" />
+                      <div>
+                        <h3 className="font-semibold text-gray-900">Sleep & Wakefulness</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Based on completed sleep logs across tracked days
+                        </p>
+                      </div>
+                    </div>
+
+                    {sleepWakeMetricCards.length > 0 && (
+                      <div className="grid grid-cols-2 gap-3">
+                        {sleepWakeMetricCards.map((card) => (
+                          <div
+                            key={card.id}
+                            className={clsx('rounded-2xl border p-3', card.surfaceClassName)}
+                          >
+                            <div
+                              className={clsx(
+                                'mb-3 flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm',
+                                card.iconClassName
+                              )}
+                            >
+                              {card.icon}
+                            </div>
+                            <p className="text-xs font-medium text-gray-500">{card.title}</p>
+                            <p className="mt-1 text-xl font-bold text-gray-900">{card.value}</p>
+                            <p className="mt-1 text-xs text-gray-500 leading-snug">{card.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {insights.sleepWake.typicalSleepWindows.length > 0 && (
+                      <div className={sleepWakeMetricCards.length > 0 ? 'mt-3' : 'mt-0'}>
+                        <TypicalSleepWindowList windows={insights.sleepWake.typicalSleepWindows} />
+                      </div>
+                    )}
+                  </Card>
+                )}
 
                 {timelineLanes.length > 0 && (
                   <Card className="border border-slate-100 bg-gradient-to-br from-white to-slate-50 shadow-sm">

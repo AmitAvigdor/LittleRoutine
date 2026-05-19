@@ -201,6 +201,65 @@ describe('statsProcessing', () => {
     expect(insights.averages.bottlePerDay).toBe(1);
   });
 
+  it('calculates sleep and wakefulness metrics from sleep start time and duration', () => {
+    const snapshot = createSnapshot({
+      sleepSessions: [
+        createSleepSession({
+          startTime: '2026-03-20T09:00:00.000',
+          endTime: null,
+          duration: 3600,
+        }),
+        createSleepSession({
+          startTime: '2026-03-20T12:00:00.000',
+          endTime: null,
+          duration: 3600,
+        }),
+        createSleepSession({
+          startTime: '2026-03-20T15:00:00.000',
+          endTime: null,
+          duration: 3600,
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-20T20:00:00.000',
+          endTime: null,
+          duration: 10 * 60 * 60,
+        }),
+        createSleepSession({
+          startTime: '2026-03-21T09:30:00.000',
+          endTime: null,
+          duration: 3600,
+        }),
+        createSleepSession({
+          startTime: '2026-03-21T12:30:00.000',
+          endTime: null,
+          duration: 3600,
+        }),
+        createSleepSession({
+          startTime: '2026-03-21T15:30:00.000',
+          endTime: null,
+          duration: 30 * 60,
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-21T20:30:00.000',
+          endTime: null,
+          duration: 9 * 60 * 60,
+        }),
+      ],
+    });
+
+    const insights = buildInsights(snapshot, new Date('2026-03-22T12:00:00.000'));
+
+    expect(insights.sleepWake.averageDaytimeAwakeWindowHours).toBeCloseTo(2);
+    expect(insights.sleepWake.averageDaytimeSleepHours).toBeCloseTo(2.75);
+    expect(insights.sleepWake.averageNighttimeSleepHours).toBeCloseTo(9.5);
+    expect(insights.sleepWake.averageDailyAwakeHours).toBeCloseTo(11.75);
+    expect(insights.sleepWake.trackedSleepDays).toBe(2);
+    expect(insights.sleepWake.typicalSleepWindows.length).toBeGreaterThan(0);
+    expect(insights.sleepWake.typicalSleepWindows[0].averageMinutes).toBeGreaterThan(0);
+  });
+
   it('ignores tiny bottle and nursing outliers in feeding patterns', () => {
     const snapshot = createSnapshot({
       feedingSessions: [

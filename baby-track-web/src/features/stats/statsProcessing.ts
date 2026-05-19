@@ -125,6 +125,24 @@ export interface TimelineLane {
   hourlyIntensity: number[];
 }
 
+export interface TypicalSleepWindow {
+  id: string;
+  label: string;
+  startHour: number;
+  endHour: number;
+  averageMinutes: number;
+  strength: number;
+}
+
+export interface SleepWakeMetrics {
+  averageDaytimeAwakeWindowHours: number | null;
+  averageDaytimeSleepHours: number | null;
+  typicalSleepWindows: TypicalSleepWindow[];
+  averageNighttimeSleepHours: number | null;
+  averageDailyAwakeHours: number | null;
+  trackedSleepDays: number;
+}
+
 export interface InsightsSummary {
   hasEnoughData: boolean;
   readinessCount: number;
@@ -177,6 +195,7 @@ export interface InsightsSummary {
     sleep: TimelineLane;
     feeding: TimelineLane;
   };
+  sleepWake: SleepWakeMetrics;
   routineSummary: string[];
   patternCards: InsightPatternCard[];
 }
@@ -243,11 +262,11 @@ function filterByRange<T extends { startTime?: string; timestamp?: string }>(
 
 function filterCompletedSleepSessionsByRange(sessions: SleepSession[], range: DateRange): SleepSession[] {
   return sessions.filter((session) => {
-    if (session.isActive || !session.endTime) {
+    if (!isCompletedSleepSession(session)) {
       return false;
     }
 
-    const relevantTimestamp = session.type === 'nap' ? session.startTime : session.endTime;
+    const relevantTimestamp = session.type === 'nap' ? session.startTime : getSleepWakeTime(session);
     return isWithinInterval(parseISO(relevantTimestamp), range);
   });
 }
@@ -538,14 +557,26 @@ function getHourDistribution(items: { timestamp: string }[]): Record<number, num
   return hours;
 }
 
+function isCompletedSleepSession(session: SleepSession): boolean {
+  return !session.isActive && session.duration > 0 && !!session.startTime;
+}
+
+function getSleepWakeTime(session: SleepSession): string {
+  return new Date(parseISO(session.startTime).getTime() + session.duration * 1000).toISOString();
+}
+
+function getSleepWakeMs(session: SleepSession): number {
+  return parseISO(session.startTime).getTime() + session.duration * 1000;
+}
+
 function getSleepCoverageDistribution(sessions: SleepSession[]): Record<number, number> {
   const hours: Record<number, number> = {};
 
   sessions
-    .filter((session) => !session.isActive && session.endTime)
+    .filter(isCompletedSleepSession)
     .forEach((session) => {
       let cursor = parseISO(session.startTime).getTime();
-      const end = parseISO(session.endTime || session.startTime).getTime();
+      const end = getSleepWakeMs(session);
 
       while (cursor < end) {
         const current = new Date(cursor);
@@ -611,6 +642,11 @@ function formatHour(hour: number): string {
   return `${displayHour}${suffix}`;
 }
 
+function formatHourRange(startHour: number, endHour: number): string {
+  const normalizedEndHour = endHour >= 24 ? endHour - 24 : endHour;
+  return `${formatHour(startHour)}-${formatHour(normalizedEndHour)}`;
+}
+
 export function formatHoursAsFriendlyDuration(hours: number): string {
   const totalMinutes = Math.max(0, Math.round(hours * 60));
 
@@ -667,9 +703,8 @@ function buildNightSleepBlocks(
   const completedNightSessions = sessions
     .filter(
       (session) =>
-        !session.isActive &&
+        isCompletedSleepSession(session) &&
         session.type === 'night' &&
-        session.endTime &&
         session.duration >= 20 * 60 &&
         session.duration <= 16 * 60 * 60
     )
@@ -682,7 +717,7 @@ function buildNightSleepBlocks(
   const blocks: NightSleepBlock[] = [];
   let currentBlock: NightSleepBlock = {
     startTime: completedNightSessions[0].startTime,
-    endTime: completedNightSessions[0].endTime || completedNightSessions[0].startTime,
+    endTime: getSleepWakeTime(completedNightSessions[0]),
     firstWakeTime: null,
   };
 
@@ -700,14 +735,14 @@ function buildNightSleepBlocks(
       if (!currentBlock.firstWakeTime) {
         currentBlock.firstWakeTime = currentBlock.endTime;
       }
-      currentBlock.endTime = session.endTime || session.startTime;
+      currentBlock.endTime = getSleepWakeTime(session);
       continue;
     }
 
     blocks.push(currentBlock);
     currentBlock = {
       startTime: session.startTime,
-      endTime: session.endTime || session.startTime,
+      endTime: getSleepWakeTime(session),
       firstWakeTime: null,
     };
   }
@@ -757,7 +792,7 @@ function calculateTypicalNightSleepStartMinutes(blocks: NightSleepBlock[]): numb
 
 function countCompletedNightSleeps(sessions: SleepSession[]): number {
   return sessions.filter(
-    (session) => !session.isActive && session.type === 'night' && session.endTime
+    (session) => isCompletedSleepSession(session) && session.type === 'night'
   ).length;
 }
 
@@ -867,10 +902,10 @@ function calculateAverageFeedingGapHours(
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
   const completedNightSleep = sleepSessions
-    .filter((session) => !session.isActive && session.type === 'night' && session.endTime)
+    .filter((session) => isCompletedSleepSession(session) && session.type === 'night')
     .map((session) => ({
       start: new Date(session.startTime).getTime(),
-      end: new Date(session.endTime || session.startTime).getTime(),
+      end: getSleepWakeMs(session),
     }));
 
   let totalGap = 0;
@@ -899,11 +934,11 @@ function calculateAverageFeedingGapHours(
 
 function calculateAverageWakeWindowHours(sessions: SleepSession[]): number | null {
   const completedSleep = sessions
-    .filter((session) => !session.isActive && session.endTime)
+    .filter(isCompletedSleepSession)
     .sort(
       (a, b) =>
-        new Date((a.endTime || a.startTime)).getTime() -
-        new Date((b.endTime || b.startTime)).getTime()
+        getSleepWakeMs(a) -
+        getSleepWakeMs(b)
     );
 
   const napSessions = completedSleep
@@ -917,10 +952,10 @@ function calculateAverageWakeWindowHours(sessions: SleepSession[]): number | nul
   napSessions.forEach((nap) => {
     while (
       pointer < completedSleep.length &&
-      new Date(completedSleep[pointer].endTime || completedSleep[pointer].startTime).getTime() <
+      getSleepWakeMs(completedSleep[pointer]) <
         new Date(nap.startTime).getTime()
     ) {
-      latestWakeTime = completedSleep[pointer].endTime || completedSleep[pointer].startTime;
+      latestWakeTime = getSleepWakeTime(completedSleep[pointer]);
       pointer += 1;
     }
 
@@ -944,13 +979,172 @@ function calculateAverageWakeWindowHours(sessions: SleepSession[]): number | nul
   return wakeWindows.reduce((sum, hours) => sum + hours, 0) / wakeWindows.length;
 }
 
+function getCompletedSleepSessions(sessions: SleepSession[]): SleepSession[] {
+  return sessions.filter(isCompletedSleepSession);
+}
+
+function calculateAverageDaytimeAwakeWindowHours(sessions: SleepSession[]): number | null {
+  const napsByDay = new Map<string, SleepSession[]>();
+
+  getCompletedSleepSessions(sessions)
+    .filter((session) => session.type === 'nap')
+    .forEach((session) => {
+      const dayKey = format(parseISO(session.startTime), 'yyyy-MM-dd');
+      napsByDay.set(dayKey, [...(napsByDay.get(dayKey) || []), session]);
+    });
+
+  const wakeWindows: number[] = [];
+
+  napsByDay.forEach((naps) => {
+    const sortedNaps = [...naps].sort(
+      (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+    );
+
+    for (let index = 1; index < sortedNaps.length; index += 1) {
+      const previousNap = sortedNaps[index - 1];
+      const currentNap = sortedNaps[index];
+
+      const wakeWindowHours =
+        (new Date(currentNap.startTime).getTime() - getSleepWakeMs(previousNap)) /
+        (1000 * 60 * 60);
+
+      if (wakeWindowHours >= 0.25 && wakeWindowHours <= 8) {
+        wakeWindows.push(wakeWindowHours);
+      }
+    }
+  });
+
+  if (wakeWindows.length === 0) {
+    return null;
+  }
+
+  return wakeWindows.reduce((sum, hours) => sum + hours, 0) / wakeWindows.length;
+}
+
+function calculateAverageDailySleepHours(
+  sessions: SleepSession[],
+  sleepType?: SleepSession['type']
+): { averageHours: number | null; trackedDays: number } {
+  const sleepByDay = new Map<string, number>();
+
+  getCompletedSleepSessions(sessions)
+    .filter((session) => !sleepType || session.type === sleepType)
+    .forEach((session) => {
+      const dayKey = format(parseISO(session.startTime), 'yyyy-MM-dd');
+      sleepByDay.set(dayKey, (sleepByDay.get(dayKey) || 0) + session.duration / (60 * 60));
+    });
+
+  const dailyTotals = [...sleepByDay.values()];
+  if (dailyTotals.length === 0) {
+    return { averageHours: null, trackedDays: 0 };
+  }
+
+  return {
+    averageHours: dailyTotals.reduce((sum, hours) => sum + hours, 0) / dailyTotals.length,
+    trackedDays: dailyTotals.length,
+  };
+}
+
+function calculateAverageNighttimeSleepMetricHours(blocks: NightSleepBlock[]): number | null {
+  if (blocks.length === 0) {
+    return null;
+  }
+
+  const durations = blocks.map(
+    (block) => (new Date(block.endTime).getTime() - new Date(block.startTime).getTime()) / (1000 * 60 * 60)
+  );
+
+  return durations.reduce((sum, hours) => sum + hours, 0) / durations.length;
+}
+
+function buildTypicalSleepWindows(sessions: SleepSession[]): TypicalSleepWindow[] {
+  const daytimeSleeps = getCompletedSleepSessions(sessions)
+    .filter(
+      (session) =>
+        session.type === 'nap' &&
+        session.duration >= MIN_PATTERN_NAP_SECONDS &&
+        session.duration <= MAX_PATTERN_NAP_SECONDS
+    );
+
+  if (daytimeSleeps.length === 0) {
+    return [];
+  }
+
+  const distribution = getSleepCoverageDistribution(daytimeSleeps);
+  const maxMinutes = Math.max(0, ...Object.values(distribution));
+  if (maxMinutes === 0) {
+    return [];
+  }
+
+  const threshold = maxMinutes * 0.35;
+  const windows: Array<{ startHour: number; endHour: number; totalMinutes: number }> = [];
+  let currentStart: number | null = null;
+  let currentTotal = 0;
+
+  for (let hour = 0; hour < 24; hour += 1) {
+    const minutes = distribution[hour] || 0;
+    if (minutes >= threshold) {
+      if (currentStart === null) {
+        currentStart = hour;
+        currentTotal = 0;
+      }
+      currentTotal += minutes;
+      continue;
+    }
+
+    if (currentStart !== null) {
+      windows.push({ startHour: currentStart, endHour: hour, totalMinutes: currentTotal });
+      currentStart = null;
+      currentTotal = 0;
+    }
+  }
+
+  if (currentStart !== null) {
+    windows.push({ startHour: currentStart, endHour: 24, totalMinutes: currentTotal });
+  }
+
+  const trackedNapDays = Math.max(1, countUniqueDays(daytimeSleeps.map((session) => session.startTime)));
+  const strongestWindowTotal = Math.max(0, ...windows.map((window) => window.totalMinutes));
+
+  return windows
+    .sort((a, b) => b.totalMinutes - a.totalMinutes || a.startHour - b.startHour)
+    .slice(0, 3)
+    .map((window) => ({
+      id: `sleep-window-${window.startHour}-${window.endHour}`,
+      label: formatHourRange(window.startHour, window.endHour),
+      startHour: window.startHour,
+      endHour: window.endHour,
+      averageMinutes: Math.round(window.totalMinutes / trackedNapDays),
+      strength: strongestWindowTotal > 0 ? window.totalMinutes / strongestWindowTotal : 0,
+    }));
+}
+
+function buildSleepWakeMetrics(
+  sessions: SleepSession[],
+  nightSleepBlocks: NightSleepBlock[]
+): SleepWakeMetrics {
+  const daytimeSleep = calculateAverageDailySleepHours(sessions, 'nap');
+  const totalSleep = calculateAverageDailySleepHours(sessions);
+  const averageDailyAwakeHours =
+    totalSleep.averageHours !== null ? Math.max(0, 24 - totalSleep.averageHours) : null;
+
+  return {
+    averageDaytimeAwakeWindowHours: calculateAverageDaytimeAwakeWindowHours(sessions),
+    averageDaytimeSleepHours: daytimeSleep.averageHours,
+    typicalSleepWindows: buildTypicalSleepWindows(sessions),
+    averageNighttimeSleepHours: calculateAverageNighttimeSleepMetricHours(nightSleepBlocks),
+    averageDailyAwakeHours,
+    trackedSleepDays: totalSleep.trackedDays,
+  };
+}
+
 function calculateAveragePreBedWakeWindowHours(sessions: SleepSession[]): number | null {
   const completedSleep = sessions
-    .filter((session) => !session.isActive && session.endTime)
+    .filter(isCompletedSleepSession)
     .sort(
       (a, b) =>
-        new Date(a.endTime || a.startTime).getTime() -
-        new Date(b.endTime || b.startTime).getTime()
+        getSleepWakeMs(a) -
+        getSleepWakeMs(b)
     );
 
   const recentNightSessions = completedSleep
@@ -963,21 +1157,21 @@ function calculateAveragePreBedWakeWindowHours(sessions: SleepSession[]): number
       const previousSleep = [...completedSleep]
         .filter(
           (session) =>
-            (session.endTime || session.startTime) < nightSession.startTime &&
+            getSleepWakeTime(session) < nightSession.startTime &&
             session.id !== nightSession.id
         )
         .sort(
           (a, b) =>
-            new Date(b.endTime || b.startTime).getTime() -
-            new Date(a.endTime || a.startTime).getTime()
+            getSleepWakeMs(b) -
+            getSleepWakeMs(a)
         )[0];
 
-      if (!previousSleep?.endTime) {
+      if (!previousSleep) {
         return null;
       }
 
       const wakeWindowHours =
-        (new Date(nightSession.startTime).getTime() - new Date(previousSleep.endTime).getTime()) /
+        (new Date(nightSession.startTime).getTime() - getSleepWakeMs(previousSleep)) /
         (1000 * 60 * 60);
 
       return wakeWindowHours >= 1 && wakeWindowHours <= 8 ? wakeWindowHours : null;
@@ -1017,9 +1211,8 @@ function calculatePredictedNapWakeTime(
   const completedNaps = sessions
     .filter(
       (session) =>
-        !session.isActive &&
+        isCompletedSleepSession(session) &&
         session.type === 'nap' &&
-        session.endTime &&
         session.duration >= MIN_PATTERN_NAP_SECONDS &&
         session.duration <= MAX_PATTERN_NAP_SECONDS
     )
@@ -1268,7 +1461,7 @@ export function buildInsights(data: StatsDataSnapshot, now: Date = new Date()): 
     ...thisWeek.playSessions.map((session) => session.startTime),
     ...thisWeek.walkSessions.map((session) => session.startTime),
     ...thisWeek.sleepSessions.map((session) =>
-      session.type === 'nap' ? session.startTime : session.endTime || session.startTime
+      session.type === 'nap' ? session.startTime : getSleepWakeTime(session)
     ),
   ]);
 
@@ -1297,6 +1490,7 @@ export function buildInsights(data: StatsDataSnapshot, now: Date = new Date()): 
       .map((session) => ({ timestamp: session.timestamp, source: 'bottle' as const })),
   ];
   const nightSleepBlocks = buildNightSleepBlocks(data.sleepSessions, allFeedingEvents);
+  const sleepWakeMetrics = buildSleepWakeMetrics(data.sleepSessions, nightSleepBlocks);
 
   const sleepDistribution = getHourDistribution(
     patternNaps.map((session) => ({ timestamp: session.startTime }))
@@ -1324,12 +1518,13 @@ export function buildInsights(data: StatsDataSnapshot, now: Date = new Date()): 
       ? Math.round(patternNaps.reduce((sum, session) => sum + session.duration, 0) / patternNaps.length / 60)
       : null;
   const latestWakeTime = data.sleepSessions
-    .filter((session) => !session.isActive && session.endTime)
+    .filter(isCompletedSleepSession)
     .sort(
       (a, b) =>
-        new Date(b.endTime || b.startTime).getTime() -
-        new Date(a.endTime || a.startTime).getTime()
-    )[0]?.endTime || null;
+        getSleepWakeMs(b) -
+        getSleepWakeMs(a)
+    )
+    .map(getSleepWakeTime)[0] || null;
   const recommendedNapTime =
     latestWakeTime && averageWakeWindowHours !== null
       ? new Date(
@@ -1580,6 +1775,7 @@ export function buildInsights(data: StatsDataSnapshot, now: Date = new Date()): 
         hourlyIntensity: normalizeDistribution(timelineFeedingDistribution),
       },
     },
+    sleepWake: sleepWakeMetrics,
     routineSummary,
     patternCards,
   };
