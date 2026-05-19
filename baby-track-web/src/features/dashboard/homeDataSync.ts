@@ -6,6 +6,7 @@ import {
   subscribeToFeedingSessions,
   subscribeToMedicines,
   subscribeToMedicineLogs,
+  migrateMilkStashToBaby,
   subscribeToMilkStash,
   subscribeToPumpSessions,
   subscribeToSleepSessions,
@@ -63,6 +64,9 @@ function syncMedicineLogs(medicines: Medicine[]) {
 function startSubscriptions({ userId, babyId }: HomeSyncContext) {
   const store = useHomeStore.getState();
   store.setContext(userId, babyId);
+  migrateMilkStashToBaby(userId, babyId).catch((error) => {
+    console.error('Error migrating milk stash:', error);
+  });
 
   rootUnsubscribes = [
     subscribeToFeedingSessions(babyId, (sessions) => {
@@ -90,7 +94,7 @@ function startSubscriptions({ userId, babyId }: HomeSyncContext) {
       syncMedicineLogs(medicines);
       store.markRefreshed();
     }),
-    subscribeToMilkStash(userId, (stash) => {
+    subscribeToMilkStash(babyId, (stash) => {
       store.setMilkStash(stash);
       store.markRefreshed();
     }),

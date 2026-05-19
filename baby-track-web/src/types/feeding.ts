@@ -96,6 +96,7 @@ export interface CreateBottleSessionInput {
 // Milk Stash
 export interface MilkStash {
   id: string;
+  babyId: string;
   userId: string;
   date: string;
   volume: number;

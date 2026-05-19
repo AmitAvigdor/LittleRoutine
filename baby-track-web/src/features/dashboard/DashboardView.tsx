@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { parseISO, differenceInMinutes } from 'date-fns';
+import { format, parseISO, differenceInMinutes } from 'date-fns';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { useAppStore } from '@/stores/appStore';
 import { useHomeStore } from '@/stores/homeStore';
@@ -111,6 +111,10 @@ function getUrgencyColor(timestamp: string, normalMinutes: number, warningMinute
   if (minutes <= normalMinutes) return 'text-green-600';
   if (minutes <= warningMinutes) return 'text-yellow-600';
   return 'text-red-600';
+}
+
+function getSleepWakeTime(session: { startTime: string; duration: number }): string {
+  return new Date(parseISO(session.startTime).getTime() + session.duration * 1000).toISOString();
 }
 
 function formatMinutesAsShortDuration(totalMinutes: number): string {
@@ -637,15 +641,18 @@ export function DashboardView() {
     }
 
     // Get the most recent completed sleep
-    const completedSleep = sleepSessions.filter((s) => !s.isActive);
+    const completedSleep = sleepSessions
+      .filter((s) => !s.isActive && s.duration > 0)
+      .sort((a, b) => new Date(getSleepWakeTime(b)).getTime() - new Date(getSleepWakeTime(a)).getTime());
     if (completedSleep.length === 0) return null;
 
     const latest = completedSleep[0];
+    const wakeTime = getSleepWakeTime(latest);
     return {
       isAsleep: false,
-      timestamp: latest.endTime || latest.startTime,
+      timestamp: wakeTime,
       type: latest.type,
-      details: `Woke from ${SLEEP_TYPE_CONFIG[latest.type].label.toLowerCase()}`,
+      details: `Woke at ${format(parseISO(wakeTime), 'h:mm a')} from ${SLEEP_TYPE_CONFIG[latest.type].label.toLowerCase()}`,
     };
   }, [sleepSessions]);
 

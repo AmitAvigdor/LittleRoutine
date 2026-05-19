@@ -7,17 +7,21 @@ import type { MilkStash } from '@/types';
 
 let milkStashCallback: ((stash: MilkStash[]) => void) | null = null;
 
+const mockCreateMilkStash = vi.fn();
+const mockMigrateMilkStashToBaby = vi.fn();
+const mockSubscribeToMilkStash = vi.fn((_: string, callback: (stash: MilkStash[]) => void) => {
+  milkStashCallback = callback;
+  callback([]);
+  return vi.fn();
+});
 const mockDeleteMilkStashEntry = vi.fn();
 const mockDeleteMilkStashEntries = vi.fn();
 const mockUpdateMilkStashVolume = vi.fn();
 
 vi.mock('@/lib/firestore', () => ({
-  createMilkStash: vi.fn(),
-  subscribeToMilkStash: vi.fn((_: string, callback: (stash: MilkStash[]) => void) => {
-    milkStashCallback = callback;
-    callback([]);
-    return vi.fn();
-  }),
+  createMilkStash: (...args: unknown[]) => mockCreateMilkStash(...args),
+  migrateMilkStashToBaby: (...args: unknown[]) => mockMigrateMilkStashToBaby(...args),
+  subscribeToMilkStash: (...args: [string, (stash: MilkStash[]) => void]) => mockSubscribeToMilkStash(...args),
   markMilkStashInUse: vi.fn(),
   markMilkStashUsed: vi.fn(),
   updateMilkStashVolume: (...args: unknown[]) => mockUpdateMilkStashVolume(...args),
@@ -50,6 +54,7 @@ const renderMilkStashView = () => render(
 
 const makeStashItem = (overrides: Partial<MilkStash> = {}): MilkStash => ({
   id: 'stash-1',
+  babyId: mockBaby.id,
   userId: mockUser.uid,
   date: '2024-01-15',
   volume: 4,
@@ -70,12 +75,45 @@ const makeStashItem = (overrides: Partial<MilkStash> = {}): MilkStash => ({
 describe('MilkStashView', () => {
   beforeEach(() => {
     milkStashCallback = null;
+    mockCreateMilkStash.mockReset();
+    mockCreateMilkStash.mockResolvedValue('stash-1');
+    mockMigrateMilkStashToBaby.mockReset();
+    mockMigrateMilkStashToBaby.mockResolvedValue(undefined);
+    mockSubscribeToMilkStash.mockClear();
     mockDeleteMilkStashEntry.mockReset();
     mockDeleteMilkStashEntry.mockResolvedValue(undefined);
     mockDeleteMilkStashEntries.mockReset();
     mockDeleteMilkStashEntries.mockResolvedValue(undefined);
     mockUpdateMilkStashVolume.mockReset();
     mockUpdateMilkStashVolume.mockResolvedValue(undefined);
+  });
+
+  it('subscribes to milk stash by selected baby id', () => {
+    renderMilkStashView();
+
+    expect(mockMigrateMilkStashToBaby).toHaveBeenCalledWith(mockUser.uid, mockBaby.id);
+    expect(mockSubscribeToMilkStash).toHaveBeenCalledWith(mockBaby.id, expect.any(Function));
+  });
+
+  it('creates new stash entries under the selected baby profile', async () => {
+    const user = userEvent.setup();
+    renderMilkStashView();
+
+    await user.click(screen.getByRole('button', { name: 'Add' }));
+    await user.type(screen.getByPlaceholderText('Enter volume'), '4');
+    await user.click(screen.getByRole('button', { name: 'Add to Stash' }));
+
+    await waitFor(() => {
+      expect(mockCreateMilkStash).toHaveBeenCalledWith(
+        mockBaby.id,
+        mockUser.uid,
+        expect.objectContaining({
+          volume: 4,
+          volumeUnit: 'oz',
+          location: 'fridge',
+        })
+      );
+    });
   });
 
   it('edits a stash entry volume and updates totals after refresh', async () => {

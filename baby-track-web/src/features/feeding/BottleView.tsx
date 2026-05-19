@@ -6,7 +6,7 @@ import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
 import { BabyMoodSelector } from '@/components/ui/MoodSelector';
 import { Baby, BottleSession, BottleContentType, BabyMood, MilkStash, VolumeUnit, BOTTLE_CONTENT_CONFIG, convertVolume } from '@/types';
-import { createBottleSession, createBottleSessionFromMilkStash, subscribeToBottleSessions, subscribeToMilkStash } from '@/lib/firestore';
+import { createBottleSession, createBottleSessionFromMilkStash, subscribeToBottleSessions, subscribeToMilkStash, migrateMilkStashToBaby } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { toast } from '@/stores/toastStore';
@@ -69,9 +69,13 @@ export function BottleView({ baby }: BottleViewProps) {
       return;
     }
 
-    const unsubscribe = subscribeToMilkStash(user.uid, setMilkStash);
+    migrateMilkStashToBaby(user.uid, baby.id).catch((error) => {
+      console.error('Error migrating milk stash:', error);
+    });
+
+    const unsubscribe = subscribeToMilkStash(baby.id, setMilkStash);
     return () => unsubscribe();
-  }, [user]);
+  }, [user, baby.id]);
 
   useEffect(() => {
     if (settings?.preferredVolumeUnit) {
@@ -146,12 +150,14 @@ export function BottleView({ baby }: BottleViewProps) {
         babyMood,
       };
 
-      const sessionId = selectedMilkStash && contentType === 'breastMilk'
-        ? await createBottleSessionFromMilkStash(baby.id, user.uid, {
+      if (selectedMilkStash && contentType === 'breastMilk') {
+        await createBottleSessionFromMilkStash(baby.id, user.uid, {
           ...bottleInput,
           milkStashId: selectedMilkStash.id,
-        })
-        : await createBottleSession(baby.id, user.uid, bottleInput);
+        });
+      } else {
+        await createBottleSession(baby.id, user.uid, bottleInput);
+      }
 
       // Reset form only on success
       setVolume('');

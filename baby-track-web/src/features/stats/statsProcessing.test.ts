@@ -10,6 +10,7 @@ import type {
   WalkSession,
 } from '@/types';
 import {
+  buildHistoryItems,
   buildInsights,
   buildStatsSummary,
   formatHoursAsFriendlyDuration,
@@ -258,6 +259,23 @@ describe('statsProcessing', () => {
     expect(insights.sleepWake.trackedSleepDays).toBe(2);
     expect(insights.sleepWake.typicalSleepWindows.length).toBeGreaterThan(0);
     expect(insights.sleepWake.typicalSleepWindows[0].averageMinutes).toBeGreaterThan(0);
+  });
+
+  it('shows derived wake time in sleep history details', () => {
+    const snapshot = createSnapshot({
+      sleepSessions: [
+        createSleepSession({
+          startTime: '2026-03-24T08:00:00.000',
+          endTime: null,
+          duration: 3600,
+        }),
+      ],
+    });
+
+    const sleepHistory = buildHistoryItems(snapshot, 'sleep');
+
+    expect(sleepHistory[0].subDetails).toContain('1h 0m');
+    expect(sleepHistory[0].subDetails).toContain('Wake 9:00 AM');
   });
 
   it('ignores tiny bottle and nursing outliers in feeding patterns', () => {

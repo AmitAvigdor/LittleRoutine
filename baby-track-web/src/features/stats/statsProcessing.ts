@@ -450,15 +450,16 @@ export function buildHistoryItems(
 
   if (historyFilter === 'all' || historyFilter === 'sleep') {
     data.sleepSessions
-      .filter((session) => !session.isActive)
+      .filter(isCompletedSleepSession)
       .forEach((session) => {
+        const wakeTime = getSleepWakeTime(session);
         items.push({
           id: `sleep-${session.id}`,
           type: 'sleep',
           timestamp: session.startTime,
           duration: session.duration,
           details: SLEEP_TYPE_CONFIG[session.type].label,
-          subDetails: formatSleepDuration(session.duration),
+          subDetails: `${formatSleepDuration(session.duration)} - Wake ${format(parseISO(wakeTime), 'h:mm a')}`,
           color: SLEEP_TYPE_CONFIG[session.type].color,
           icon: session.type === 'nap' ? 'sun' : 'moon',
         });

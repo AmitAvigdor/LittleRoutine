@@ -4,25 +4,26 @@ import userEvent from '@testing-library/user-event';
 import { mockBaby, mockSettings, mockUser } from '@/test/mocks';
 import type { BottleSession, MilkStash } from '@/types';
 
-let bottleCallback: ((sessions: BottleSession[]) => void) | null = null;
 let milkStashCallback: ((stash: MilkStash[]) => void) | null = null;
 
 const mockCreateBottleSession = vi.fn();
 const mockCreateBottleSessionFromMilkStash = vi.fn();
+const mockMigrateMilkStashToBaby = vi.fn();
+const mockSubscribeToMilkStash = vi.fn((_: string, callback: (stash: MilkStash[]) => void) => {
+  milkStashCallback = callback;
+  callback([]);
+  return vi.fn();
+});
 
 vi.mock('@/lib/firestore', () => ({
   createBottleSession: (...args: unknown[]) => mockCreateBottleSession(...args),
   createBottleSessionFromMilkStash: (...args: unknown[]) => mockCreateBottleSessionFromMilkStash(...args),
+  migrateMilkStashToBaby: (...args: unknown[]) => mockMigrateMilkStashToBaby(...args),
   subscribeToBottleSessions: vi.fn((_: string, callback: (sessions: BottleSession[]) => void) => {
-    bottleCallback = callback;
     callback([]);
     return vi.fn();
   }),
-  subscribeToMilkStash: vi.fn((_: string, callback: (stash: MilkStash[]) => void) => {
-    milkStashCallback = callback;
-    callback([]);
-    return vi.fn();
-  }),
+  subscribeToMilkStash: (...args: [string, (stash: MilkStash[]) => void]) => mockSubscribeToMilkStash(...args),
 }));
 
 vi.mock('@/features/auth/AuthContext', () => ({
@@ -41,20 +42,26 @@ import { BottleView } from './BottleView';
 
 describe('BottleView', () => {
   beforeEach(() => {
-    bottleCallback = null;
     milkStashCallback = null;
     mockCreateBottleSession.mockReset();
     mockCreateBottleSession.mockResolvedValue('bottle-1');
     mockCreateBottleSessionFromMilkStash.mockReset();
     mockCreateBottleSessionFromMilkStash.mockResolvedValue('bottle-1');
+    mockMigrateMilkStashToBaby.mockReset();
+    mockMigrateMilkStashToBaby.mockResolvedValue(undefined);
+    mockSubscribeToMilkStash.mockClear();
   });
 
   it('links a selected fridge bottle when logging a breast milk feeding', async () => {
     const user = userEvent.setup();
     const { container } = render(<BottleView baby={mockBaby} />);
 
+    expect(mockMigrateMilkStashToBaby).toHaveBeenCalledWith(mockUser.uid, mockBaby.id);
+    expect(mockSubscribeToMilkStash).toHaveBeenCalledWith(mockBaby.id, expect.any(Function));
+
     const stashItem: MilkStash = {
       id: 'stash-1',
+      babyId: mockBaby.id,
       userId: mockUser.uid,
       date: '2024-01-15',
       volume: 4,

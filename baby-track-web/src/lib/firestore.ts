@@ -11,9 +11,7 @@ import {
   onSnapshot,
   Timestamp,
   arrayUnion,
-  or,
   writeBatch,
-  limit as firestoreLimit,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { useAppStore } from '@/stores/appStore';
@@ -685,6 +683,9 @@ export async function createBottleSessionFromMilkStash(
   if (stash.isUsed) {
     throw new Error('Selected milk bottle has already been used.');
   }
+  if (stash.babyId !== babyId) {
+    throw new Error('Selected milk bottle does not belong to this baby profile.');
+  }
 
   const usedVolumeInStashUnit = convertVolume(input.volume, input.volumeUnit, stash.volumeUnit);
   const remainingVolume = stash.volume - usedVolumeInStashUnit;
@@ -744,13 +745,18 @@ export function subscribeToBottleSessions(
 }
 
 // ============ MILK STASH ============
-export async function createMilkStash(userId: string, input: CreateMilkStashInput): Promise<string> {
+export async function createMilkStash(
+  babyId: string,
+  userId: string,
+  input: CreateMilkStashInput
+): Promise<string> {
   markPendingWrite();
   const now = new Date().toISOString();
   const expirationDate = calculateMilkExpiration(input.pumpedDate, input.location);
 
   const docRef = await addDoc(collection(db, 'milkStash'), {
     ...input,
+    babyId,
     userId,
     date: getLocalDateString(new Date()),
     expirationDate,
@@ -762,6 +768,43 @@ export async function createMilkStash(userId: string, input: CreateMilkStashInpu
     updatedAt: now,
   });
   return docRef.id;
+}
+
+export async function migrateMilkStashToBaby(userId: string, babyId: string): Promise<void> {
+  const snapshot = await getDocs(query(
+    collection(db, 'milkStash'),
+    where('userId', '==', userId)
+  ));
+  if (snapshot.empty) return;
+
+  const now = new Date().toISOString();
+  let batch = writeBatch(db);
+  let pendingWrites = 0;
+
+  const commitBatch = async () => {
+    if (pendingWrites === 0) return;
+    markPendingWrite();
+    await batch.commit();
+    batch = writeBatch(db);
+    pendingWrites = 0;
+  };
+
+  for (const docSnap of snapshot.docs) {
+    const data = docSnap.data() as Partial<MilkStash>;
+    if (data.babyId) continue;
+
+    batch.update(docSnap.ref, {
+      babyId,
+      updatedAt: now,
+    });
+    pendingWrites += 1;
+
+    if (pendingWrites >= 450) {
+      await commitBatch();
+    }
+  }
+
+  await commitBatch();
 }
 
 export async function markMilkStashInUse(stashId: string, inUse: boolean): Promise<void> {
@@ -803,13 +846,13 @@ export async function deleteMilkStashEntries(stashIds: string[]): Promise<void> 
 }
 
 export function subscribeToMilkStash(
-  userId: string,
+  babyId: string,
   callback: (stash: MilkStash[]) => void
 ): () => void {
   // Custom query with two where clauses, sort client-side
   const q = query(
     collection(db, 'milkStash'),
-    where('userId', '==', userId),
+    where('babyId', '==', babyId),
     where('isUsed', '==', false)
   );
   return onSnapshot(q, (snapshot) => {

@@ -518,7 +518,7 @@ export function PumpView({ baby }: PumpViewProps) {
       if (destination === 'fridge' || destination === 'freezer') {
         // Create milk stash entry
         const location: MilkStorageLocation = destination === 'fridge' ? 'fridge' : 'freezer';
-        await createMilkStash(user.uid, {
+        await createMilkStash(baby.id, user.uid, {
           volume: savedSessionData.volume,
           volumeUnit: savedSessionData.volumeUnit,
           location,
@@ -527,7 +527,7 @@ export function PumpView({ baby }: PumpViewProps) {
         });
       } else if (destination === 'takeWithMe') {
         // Create milk stash entry and immediately mark as "in use" (starts 4-hour room temp countdown)
-        const stashId = await createMilkStash(user.uid, {
+        const stashId = await createMilkStash(baby.id, user.uid, {
           volume: savedSessionData.volume,
           volumeUnit: savedSessionData.volumeUnit,
           location: 'fridge', // Store as fridge location but mark in use

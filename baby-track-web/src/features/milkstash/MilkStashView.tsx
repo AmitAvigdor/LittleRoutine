@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
-import { createMilkStash, subscribeToMilkStash, markMilkStashInUse, markMilkStashUsed, updateMilkStashVolume, createBottleSession, deleteMilkStashEntry, deleteMilkStashEntries } from '@/lib/firestore';
+import { createMilkStash, subscribeToMilkStash, migrateMilkStashToBaby, markMilkStashInUse, markMilkStashUsed, updateMilkStashVolume, createBottleSession, deleteMilkStashEntry, deleteMilkStashEntries } from '@/lib/firestore';
 import type { MilkStash, Baby } from '@/types';
 import { MilkStorageLocation, MILK_STORAGE_CONFIG } from '@/types/enums';
 import { Milk, Plus, X, Clock, Check, AlertTriangle, Trash2, Pencil } from 'lucide-react';
@@ -14,6 +14,8 @@ import { clsx } from 'clsx';
 export function MilkStashView() {
   const { user } = useAuth();
   const { settings, babies, selectedBaby } = useAppStore();
+  const activeBaby = selectedBaby || babies[0] || null;
+  const activeBabyId = activeBaby?.id ?? null;
   const [stash, setStash] = useState<MilkStash[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -40,22 +42,29 @@ export function MilkStashView() {
   const volumeUnit = settings?.preferredVolumeUnit || 'oz';
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !activeBabyId) {
+      setStash([]);
+      return;
+    }
 
-    const unsubscribe = subscribeToMilkStash(user.uid, (data) => {
+    migrateMilkStashToBaby(user.uid, activeBabyId).catch((error) => {
+      console.error('Error migrating milk stash:', error);
+    });
+
+    const unsubscribe = subscribeToMilkStash(activeBabyId, (data) => {
       setStash(data);
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, activeBabyId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !volume) return;
+    if (!user || !activeBabyId || !volume) return;
 
     setLoading(true);
     try {
-      await createMilkStash(user.uid, {
+      await createMilkStash(activeBabyId, user.uid, {
         pumpedDate,
         volume: parseFloat(volume),
         volumeUnit,

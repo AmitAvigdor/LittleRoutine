@@ -25,6 +25,7 @@ import {
   subscribeToBottleSessions,
   subscribeToMedicines,
   subscribeToMedicineLogs,
+  migrateMilkStashToBaby,
   subscribeToMilkStash,
 } from '@/lib/firestore';
 import type { FeedingSession, BottleSession, DiaperChange, Medicine, MedicineLog, MilkStash } from '@/types';
@@ -295,6 +296,11 @@ export function useNotifications() {
     if (!selectedBaby) return;
 
     const unsubscribers: (() => void)[] = [];
+    if (userId) {
+      migrateMilkStashToBaby(userId, selectedBaby.id).catch((error) => {
+        console.error('Error migrating milk stash:', error);
+      });
+    }
 
     // Subscribe to feeding sessions
     unsubscribers.push(
@@ -331,21 +337,17 @@ export function useNotifications() {
       })
     );
 
+    // Subscribe to milk stash for the selected shared baby profile
+    unsubscribers.push(
+      subscribeToMilkStash(selectedBaby.id, (stash) => {
+        milkStashRef.current = stash;
+      })
+    );
+
     return () => {
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [selectedBaby]);
-
-  // Subscribe to milk stash (user-based, not baby-based)
-  useEffect(() => {
-    if (!userId) return;
-
-    const unsubscribe = subscribeToMilkStash(userId, (stash) => {
-      milkStashRef.current = stash;
-    });
-
-    return () => unsubscribe();
-  }, [userId]);
+  }, [selectedBaby, userId]);
 
   // Set up interval to check reminders
   useEffect(() => {
