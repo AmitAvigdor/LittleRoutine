@@ -169,6 +169,14 @@ export function convertVolume(value: number, from: VolumeUnit, to: VolumeUnit): 
   return value;
 }
 
+export function calculateMilkStashRemainingVolume(
+  currentStashVolume: number,
+  previousConsumedVolume: number,
+  nextConsumedVolume: number
+): number {
+  return currentStashVolume - (nextConsumedVolume - previousConsumedVolume);
+}
+
 export function getLastBreastActivity(
   feedingSessions: FeedingSession[],
   pumpSessions: PumpSession[]

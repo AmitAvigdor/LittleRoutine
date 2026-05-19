@@ -325,6 +325,7 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
       onClose();
     } catch (error) {
       console.error('Error updating session:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to update session. Please try again.');
     } finally {
       setSaving(false);
     }

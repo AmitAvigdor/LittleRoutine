@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { FeedingSession, PumpSession } from './feeding';
-import { formatDuration, convertVolume, calculateMilkExpiration, getRoomTempExpirationMinutes, getLastBreastActivity, getSuggestedBreastSide } from './feeding';
+import { formatDuration, convertVolume, calculateMilkExpiration, calculateMilkStashRemainingVolume, getRoomTempExpirationMinutes, getLastBreastActivity, getSuggestedBreastSide } from './feeding';
 
 describe('formatDuration', () => {
   it('formats seconds only', () => {
@@ -84,6 +84,20 @@ describe('convertVolume', () => {
   it('handles very large values', () => {
     const result = convertVolume(1000, 'ml', 'oz');
     expect(result).toBeCloseTo(33.814, 2);
+  });
+});
+
+describe('calculateMilkStashRemainingVolume', () => {
+  it('deducts the extra consumed amount when a bottle feeding is edited upward', () => {
+    expect(calculateMilkStashRemainingVolume(96, 14, 40)).toBe(70);
+  });
+
+  it('adds milk back when a bottle feeding is edited downward', () => {
+    expect(calculateMilkStashRemainingVolume(70, 40, 14)).toBe(96);
+  });
+
+  it('returns a negative value when the edit exceeds the available bottle volume', () => {
+    expect(calculateMilkStashRemainingVolume(20, 10, 40)).toBe(-10);
   });
 });
 

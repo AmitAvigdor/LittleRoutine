@@ -9,6 +9,7 @@ import {
   query,
   where,
   onSnapshot,
+  runTransaction,
   Timestamp,
   arrayUnion,
   writeBatch,
@@ -52,7 +53,7 @@ import type {
   BabyMood,
   MomMood,
 } from '@/types';
-import { DEFAULT_SETTINGS, calculateMilkExpiration, convertVolume } from '@/types';
+import { DEFAULT_SETTINGS, calculateMilkExpiration, calculateMilkStashRemainingVolume, convertVolume } from '@/types';
 
 // Helper to convert Firestore timestamps
 function convertTimestamps<T extends object>(data: T): T {
@@ -1557,13 +1558,119 @@ export async function updateBottleSession(
     babyMood?: BabyMood | null;
   }
 ): Promise<void> {
-  const timestamp = updates.timestamp ? new Date(updates.timestamp) : undefined;
-  const dateUpdate = timestamp ? { date: getLocalDateString(timestamp) } : {};
+  const sessionRef = doc(db, 'bottleSessions', sessionId);
+  const now = new Date().toISOString();
+  const volumeTolerance = 0.0001;
 
-  await updateDoc(doc(db, 'bottleSessions', sessionId), {
-    ...updates,
-    ...dateUpdate,
-    updatedAt: new Date().toISOString(),
+  await runTransaction(db, async (transaction) => {
+    const sessionSnap = await transaction.get(sessionRef);
+    if (!sessionSnap.exists()) {
+      throw new Error(`Bottle session ${sessionId} not found`);
+    }
+
+    const currentSession = convertTimestamps(sessionSnap.data()) as BottleSession;
+    const nextTimestamp = updates.timestamp ?? currentSession.timestamp;
+    const nextVolume = updates.volume ?? currentSession.volume;
+    const nextVolumeUnit = updates.volumeUnit ?? currentSession.volumeUnit;
+    const nextContentType = updates.contentType ?? currentSession.contentType;
+    const originalStashId = currentSession.milkStashId ?? null;
+    const requestedStashId = Object.prototype.hasOwnProperty.call(updates, 'milkStashId')
+      ? updates.milkStashId ?? null
+      : originalStashId;
+    const nextStashId = nextContentType === 'breastMilk' ? requestedStashId : null;
+    const linkedStashIds = Array.from(new Set([originalStashId, nextStashId].filter(Boolean))) as string[];
+    const stashDocs = new Map<string, { ref: ReturnType<typeof doc>; data: MilkStash }>();
+
+    for (const stashId of linkedStashIds) {
+      const stashRef = doc(db, 'milkStash', stashId);
+      const stashSnap = await transaction.get(stashRef);
+      if (!stashSnap.exists()) {
+        throw new Error('Selected milk bottle was not found.');
+      }
+
+      const stash = convertTimestamps(stashSnap.data()) as MilkStash;
+      if (stash.babyId !== currentSession.babyId) {
+        throw new Error('Selected milk bottle does not belong to this baby profile.');
+      }
+
+      stashDocs.set(stashId, { ref: stashRef, data: stash });
+    }
+
+    const adjustments = new Map<string, { previousConsumedVolume: number; nextConsumedVolume: number }>();
+    const getAdjustment = (stashId: string) => {
+      const existing = adjustments.get(stashId);
+      if (existing) return existing;
+      const created = { previousConsumedVolume: 0, nextConsumedVolume: 0 };
+      adjustments.set(stashId, created);
+      return created;
+    };
+
+    if (originalStashId) {
+      const stash = stashDocs.get(originalStashId);
+      if (stash) {
+        getAdjustment(originalStashId).previousConsumedVolume = convertVolume(
+          currentSession.volume,
+          currentSession.volumeUnit,
+          stash.data.volumeUnit
+        );
+      }
+    }
+
+    if (nextStashId) {
+      const stash = stashDocs.get(nextStashId);
+      if (stash) {
+        getAdjustment(nextStashId).nextConsumedVolume = convertVolume(
+          nextVolume,
+          nextVolumeUnit,
+          stash.data.volumeUnit
+        );
+      }
+    }
+
+    adjustments.forEach((adjustment, stashId) => {
+      const stash = stashDocs.get(stashId);
+      if (!stash) return;
+
+      const remainingVolume = calculateMilkStashRemainingVolume(
+        stash.data.volume,
+        adjustment.previousConsumedVolume,
+        adjustment.nextConsumedVolume
+      );
+      if (remainingVolume < -volumeTolerance) {
+        const availableVolume = stash.data.volume + adjustment.previousConsumedVolume;
+        throw new Error(`Selected bottle only has ${availableVolume.toFixed(1)} ${stash.data.volumeUnit} available.`);
+      }
+
+      const nextStashVolume = remainingVolume <= volumeTolerance ? 0 : remainingVolume;
+      const stashUpdate: Record<string, unknown> = {
+        volume: nextStashVolume,
+        updatedAt: now,
+      };
+
+      if (nextStashVolume === 0) {
+        stashUpdate.isUsed = true;
+        stashUpdate.usedDate = now;
+        stashUpdate.isInUse = false;
+        stashUpdate.inUseStartDate = null;
+      } else if (stash.data.isUsed) {
+        stashUpdate.isUsed = false;
+        stashUpdate.usedDate = null;
+      }
+
+      transaction.update(stash.ref, stashUpdate);
+    });
+
+    const nextDate = updates.timestamp ? { date: getLocalDateString(new Date(nextTimestamp)) } : {};
+    const shouldUpdateMilkStashLink =
+      originalStashId !== nextStashId ||
+      Object.prototype.hasOwnProperty.call(updates, 'milkStashId');
+
+    transaction.update(sessionRef, {
+      ...updates,
+      ...nextDate,
+      ...(shouldUpdateMilkStashLink ? { milkStashId: nextStashId } : {}),
+      updatedAt: now,
+    });
   });
 }
 
