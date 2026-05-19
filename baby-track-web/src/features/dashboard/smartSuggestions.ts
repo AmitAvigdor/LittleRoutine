@@ -1,6 +1,5 @@
 import {
   differenceInMinutes,
-  endOfDay,
   format,
   isWithinInterval,
   parseISO,
@@ -86,7 +85,7 @@ function formatClockMinutesAsTime(totalMinutes: number): string {
   const normalized = ((totalMinutes % (24 * 60)) + (24 * 60)) % (24 * 60);
   const hours = Math.floor(normalized / 60);
   const minutes = normalized % 60;
-  const date = new Date(Date.UTC(2026, 0, 1, hours, minutes));
+  const date = new Date(2026, 0, 1, hours, minutes);
 
   return format(date, 'h:mm a');
 }
@@ -118,6 +117,22 @@ function getNapTimeBucketLabel(bucket: NapTimeBucket): string {
   }
 }
 
+function isCompletedSleepSession(session: SleepSession): boolean {
+  return !session.isActive && session.duration > 0 && !!session.startTime;
+}
+
+function getSleepWakeTime(session: SleepSession): string {
+  return new Date(parseISO(session.startTime).getTime() + session.duration * 1000).toISOString();
+}
+
+function getSleepWakeMs(session: SleepSession): number {
+  return parseISO(session.startTime).getTime() + session.duration * 1000;
+}
+
+function isAtOrBefore(timestamp: string, now: Date): boolean {
+  return parseISO(timestamp).getTime() <= now.getTime();
+}
+
 function buildCompletedFeedingEvents(
   feedingSessions: FeedingSession[],
   bottleSessions: BottleSession[]
@@ -132,21 +147,18 @@ function buildCompletedFeedingEvents(
 
 function buildNightSleepRanges(sleepSessions: SleepSession[]) {
   return sleepSessions
-    .filter((session) => !session.isActive && session.type === 'night' && session.endTime)
+    .filter((session) => isCompletedSleepSession(session) && session.type === 'night')
     .map((session) => ({
       start: new Date(session.startTime).getTime(),
-      end: new Date(session.endTime || session.startTime).getTime(),
+      end: getSleepWakeMs(session),
     }));
 }
 
-function getLatestCompletedSleep(sleepSessions: SleepSession[]): SleepSession | null {
+function getLatestCompletedSleep(sleepSessions: SleepSession[], now: Date): SleepSession | null {
   const completedSessions = sleepSessions
-    .filter((session) => !session.isActive && !!session.endTime)
-    .sort(
-      (a, b) =>
-        new Date(b.endTime || b.startTime).getTime() -
-        new Date(a.endTime || a.startTime).getTime()
-    );
+    .filter(isCompletedSleepSession)
+    .filter((session) => getSleepWakeMs(session) <= now.getTime())
+    .sort((a, b) => getSleepWakeMs(b) - getSleepWakeMs(a));
 
   return completedSessions[0] || null;
 }
@@ -189,16 +201,13 @@ function calculateAverageWakeWindowMinutes(
 ): number | null {
   const threeDayWindow = {
     start: startOfDay(subDays(now, 2)),
-    end: endOfDay(now),
+    end: now,
   };
 
   const completedSleep = sleepSessions
-    .filter((session) => !session.isActive && session.endTime)
-    .sort(
-      (a, b) =>
-        new Date(a.endTime || a.startTime).getTime() -
-        new Date(b.endTime || b.startTime).getTime()
-    );
+    .filter(isCompletedSleepSession)
+    .filter((session) => getSleepWakeMs(session) <= now.getTime())
+    .sort((a, b) => getSleepWakeMs(a) - getSleepWakeMs(b));
 
   const recentNaps = completedSleep
     .filter(
@@ -215,10 +224,9 @@ function calculateAverageWakeWindowMinutes(
   recentNaps.forEach((nap) => {
     while (
       pointer < completedSleep.length &&
-      new Date(completedSleep[pointer].endTime || completedSleep[pointer].startTime).getTime() <
-        new Date(nap.startTime).getTime()
+      getSleepWakeMs(completedSleep[pointer]) < new Date(nap.startTime).getTime()
     ) {
-      latestWakeTime = completedSleep[pointer].endTime || completedSleep[pointer].startTime;
+      latestWakeTime = getSleepWakeTime(completedSleep[pointer]);
       pointer += 1;
     }
 
@@ -241,13 +249,13 @@ function calculateAverageWakeWindowMinutes(
   return Math.round(wakeWindows.reduce((sum, minutes) => sum + minutes, 0) / wakeWindows.length);
 }
 
-function calculateTypicalNightSleepStartMinutes(sleepSessions: SleepSession[]): number | null {
+function calculateTypicalNightSleepStartMinutes(sleepSessions: SleepSession[], now: Date): number | null {
   const nightSleepStarts = sleepSessions
     .filter(
       (session) =>
-        !session.isActive &&
+        isCompletedSleepSession(session) &&
+        getSleepWakeMs(session) <= now.getTime() &&
         session.type === 'night' &&
-        session.endTime &&
         session.duration >= 3 * 60 * 60 &&
         session.duration <= 16 * 60 * 60
     )
@@ -264,14 +272,11 @@ function calculateTypicalNightSleepStartMinutes(sleepSessions: SleepSession[]): 
   );
 }
 
-function calculateAveragePreBedWakeWindowMinutes(sleepSessions: SleepSession[]): number | null {
+function calculateAveragePreBedWakeWindowMinutes(sleepSessions: SleepSession[], now: Date): number | null {
   const completedSleep = sleepSessions
-    .filter((session) => !session.isActive && session.endTime)
-    .sort(
-      (a, b) =>
-        new Date(a.endTime || a.startTime).getTime() -
-        new Date(b.endTime || b.startTime).getTime()
-    );
+    .filter(isCompletedSleepSession)
+    .filter((session) => getSleepWakeMs(session) <= now.getTime())
+    .sort((a, b) => getSleepWakeMs(a) - getSleepWakeMs(b));
 
   const recentNightSessions = completedSleep
     .filter((session) => session.type === 'night')
@@ -283,21 +288,17 @@ function calculateAveragePreBedWakeWindowMinutes(sleepSessions: SleepSession[]):
       const previousSleep = [...completedSleep]
         .filter(
           (session) =>
-            (session.endTime || session.startTime) < nightSession.startTime &&
+            getSleepWakeMs(session) < new Date(nightSession.startTime).getTime() &&
             session.id !== nightSession.id
         )
-        .sort(
-          (a, b) =>
-            new Date(b.endTime || b.startTime).getTime() -
-            new Date(a.endTime || a.startTime).getTime()
-        )[0];
+        .sort((a, b) => getSleepWakeMs(b) - getSleepWakeMs(a))[0];
 
-      if (!previousSleep?.endTime) {
+      if (!previousSleep) {
         return null;
       }
 
       const wakeWindowMinutes =
-        (new Date(nightSession.startTime).getTime() - new Date(previousSleep.endTime).getTime()) /
+        (new Date(nightSession.startTime).getTime() - getSleepWakeMs(previousSleep)) /
         (1000 * 60);
 
       return wakeWindowMinutes >= 60 && wakeWindowMinutes <= 8 * 60 ? wakeWindowMinutes : null;
@@ -345,12 +346,12 @@ function buildTypicalNightSleepTargetTime(
   return targetDate;
 }
 
-function countCompletedNightSleeps(sleepSessions: SleepSession[]): number {
+function countCompletedNightSleeps(sleepSessions: SleepSession[], now: Date): number {
   return sleepSessions.filter(
     (session) =>
-      !session.isActive &&
+      isCompletedSleepSession(session) &&
+      getSleepWakeMs(session) <= now.getTime() &&
       session.type === 'night' &&
-      session.endTime &&
       session.duration >= 3 * 60 * 60 &&
       session.duration <= 16 * 60 * 60
   ).length;
@@ -359,14 +360,43 @@ function countCompletedNightSleeps(sleepSessions: SleepSession[]): number {
 function shouldUseEveningBedtimeFallback(
   latestWakeTime: string,
   predictedSleepTime: Date,
-  sleepSessions: SleepSession[]
+  sleepSessions: SleepSession[],
+  now: Date
 ): boolean {
-  if (countCompletedNightSleeps(sleepSessions) === 0) {
+  if (countCompletedNightSleeps(sleepSessions, now) === 0) {
     return false;
   }
 
   const latestWake = parseISO(latestWakeTime);
   return latestWake.getHours() >= EVENING_BEDTIME_WAKE_HOUR && predictedSleepTime.getHours() >= EVENING_BEDTIME_PREDICTION_HOUR;
+}
+
+function choosePredictedSleepTime(
+  isLikelyNightSleep: boolean,
+  preBedPredictedSleepTime: Date | null,
+  bedtimeClockTarget: Date | null,
+  genericPredictedSleepTime: Date | null,
+  now: Date
+): Date | null {
+  if (!isLikelyNightSleep) {
+    return genericPredictedSleepTime;
+  }
+
+  const predictionOptions = [
+    preBedPredictedSleepTime,
+    bedtimeClockTarget,
+    genericPredictedSleepTime,
+  ].filter((prediction): prediction is Date => prediction !== null);
+
+  const futureOrRecentlyPassedOptions = predictionOptions.filter(
+    (prediction) => differenceInMinutes(now, prediction) <= 60
+  );
+  const viableOptions =
+    futureOrRecentlyPassedOptions.length > 0 ? futureOrRecentlyPassedOptions : predictionOptions;
+
+  return [...viableOptions].sort(
+    (a, b) => Math.abs(a.getTime() - now.getTime()) - Math.abs(b.getTime() - now.getTime())
+  )[0] ?? null;
 }
 
 function calculateAverageSleepDurationMinutes(
@@ -382,11 +412,11 @@ function calculateAverageSleepDurationMinutes(
     .filter(
       (session) =>
         !session.isActive &&
+        isCompletedSleepSession(session) &&
         session.type === sleepType &&
-        session.endTime &&
-        isWithinInterval(parseISO(session.endTime || session.startTime), {
+        isWithinInterval(parseISO(getSleepWakeTime(session)), {
           start: lookbackStart,
-          end: endOfDay(now),
+          end: now,
         })
     )
     .filter((session) => {
@@ -396,11 +426,7 @@ function calculateAverageSleepDurationMinutes(
 
       return session.duration >= 20 * 60 && session.duration <= 4 * 60 * 60;
     })
-    .sort(
-      (a, b) =>
-        new Date(b.endTime || b.startTime).getTime() -
-        new Date(a.endTime || a.startTime).getTime()
-    )
+    .sort((a, b) => getSleepWakeMs(b) - getSleepWakeMs(a))
     .slice(0, 5);
 
   if (completedSessions.length === 0) {
@@ -481,11 +507,17 @@ export function buildSmartSuggestion({
   }
 
   const trackedDays = countUniqueDays([
-    ...feedingSessions.filter((session) => !session.isActive).map((session) => session.startTime),
-    ...bottleSessions.map((session) => session.timestamp),
-    ...sleepSessions
+    ...feedingSessions
       .filter((session) => !session.isActive)
-      .map((session) => session.endTime || session.startTime),
+      .map((session) => session.startTime)
+      .filter((timestamp) => isAtOrBefore(timestamp, now)),
+    ...bottleSessions
+      .map((session) => session.timestamp)
+      .filter((timestamp) => isAtOrBefore(timestamp, now)),
+    ...sleepSessions
+      .filter(isCompletedSleepSession)
+      .map(getSleepWakeTime)
+      .filter((timestamp) => isAtOrBefore(timestamp, now)),
   ]);
 
   if (trackedDays < 2) {
@@ -502,7 +534,9 @@ export function buildSmartSuggestion({
 
   const candidates: SmartSuggestionCandidate[] = [];
   const upcomingOptions: UpcomingSuggestionOption[] = [];
-  const feedEvents = buildCompletedFeedingEvents(feedingSessions, bottleSessions);
+  const feedEvents = buildCompletedFeedingEvents(feedingSessions, bottleSessions).filter(
+    (event) => parseISO(event.timestamp).getTime() <= now.getTime()
+  );
   const latestFeeding = feedEvents[0];
   const averageFeedingGapMinutes = calculateAverageFeedingGapMinutes(feedEvents, sleepSessions);
   const feedingDueAt =
@@ -545,28 +579,29 @@ export function buildSmartSuggestion({
     }
   }
 
-  const latestCompletedSleep = getLatestCompletedSleep(sleepSessions);
+  const latestCompletedSleep = getLatestCompletedSleep(sleepSessions, now);
   const averageWakeWindowMinutes = calculateAverageWakeWindowMinutes(sleepSessions, now);
 
-  if (!hasActiveSleep && !activeSleep && latestCompletedSleep?.endTime) {
-    const awakeMinutes = differenceInMinutes(now, parseISO(latestCompletedSleep.endTime));
-    const typicalNightSleepStart = calculateTypicalNightSleepStartMinutes(sleepSessions);
-    const averagePreBedWakeWindowMinutes = calculateAveragePreBedWakeWindowMinutes(sleepSessions);
+  if (!hasActiveSleep && !activeSleep && latestCompletedSleep) {
+    const latestWakeTime = getSleepWakeTime(latestCompletedSleep);
+    const awakeMinutes = differenceInMinutes(now, parseISO(latestWakeTime));
+    const typicalNightSleepStart = calculateTypicalNightSleepStartMinutes(sleepSessions, now);
+    const averagePreBedWakeWindowMinutes = calculateAveragePreBedWakeWindowMinutes(sleepSessions, now);
     const genericPredictedSleepTime =
       averageWakeWindowMinutes !== null
         ? new Date(
-            parseISO(latestCompletedSleep.endTime).getTime() + averageWakeWindowMinutes * 60 * 1000
+            parseISO(latestWakeTime).getTime() + averageWakeWindowMinutes * 60 * 1000
           )
         : null;
     const preBedPredictedSleepTime =
       averagePreBedWakeWindowMinutes !== null
         ? new Date(
-            parseISO(latestCompletedSleep.endTime).getTime() +
+            parseISO(latestWakeTime).getTime() +
               averagePreBedWakeWindowMinutes * 60 * 1000
           )
         : null;
     const bedtimeClockTarget = buildTypicalNightSleepTargetTime(
-      latestCompletedSleep.endTime,
+      latestWakeTime,
       typicalNightSleepStart,
       now
     );
@@ -580,16 +615,20 @@ export function buildSmartSuggestion({
       bedtimeClockTarget !== null ||
       (preBedPredictedSleepTime !== null &&
         (now.getHours() >= EVENING_BEDTIME_WAKE_HOUR ||
-          parseISO(latestCompletedSleep.endTime).getHours() >= EVENING_BEDTIME_WAKE_HOUR)) ||
+          parseISO(latestWakeTime).getHours() >= EVENING_BEDTIME_WAKE_HOUR)) ||
       shouldUseEveningBedtimeFallback(
-        latestCompletedSleep.endTime,
+        latestWakeTime,
         genericPredictedSleepTime ?? preBedPredictedSleepTime ?? bedtimeClockTarget ?? new Date(),
-        sleepSessions
+        sleepSessions,
+        now
       );
-    const predictedSleepTime =
-      (isLikelyNightSleep && preBedPredictedSleepTime) ||
-      (isLikelyNightSleep && bedtimeClockTarget) ||
-      genericPredictedSleepTime;
+    const predictedSleepTime = choosePredictedSleepTime(
+      isLikelyNightSleep,
+      preBedPredictedSleepTime,
+      bedtimeClockTarget,
+      genericPredictedSleepTime,
+      now
+    );
     if (!predictedSleepTime) {
       return upcomingOptions[0]?.suggestion ?? {
         kind: 'learning',
@@ -604,7 +643,7 @@ export function buildSmartSuggestion({
       isLikelyNightSleep && averagePreBedWakeWindowMinutes !== null
         ? averagePreBedWakeWindowMinutes
         : averageWakeWindowMinutes ??
-          Math.max(15, differenceInMinutes(predictedSleepTime, parseISO(latestCompletedSleep.endTime)));
+          Math.max(15, differenceInMinutes(predictedSleepTime, parseISO(latestWakeTime)));
     const minutesUntilPredictedSleep = differenceInMinutes(predictedSleepTime, now);
     const shouldSuggest =
       awakeMinutes >= referenceWakeWindowMinutes - 15 ||

@@ -79,6 +79,14 @@ function createDiaperChange(overrides: Partial<DiaperChange> = {}): DiaperChange
   };
 }
 
+function localIso(year: number, month: number, day: number, hour: number, minute = 0): string {
+  return new Date(year, month - 1, day, hour, minute).toISOString();
+}
+
+function durationSeconds(startTime: string, endTime: string): number {
+  return Math.floor((new Date(endTime).getTime() - new Date(startTime).getTime()) / 1000);
+}
+
 describe('buildSmartSuggestion', () => {
   it('shows learning state when there is less than two days of data', () => {
     const suggestion = buildSmartSuggestion({
@@ -138,6 +146,31 @@ describe('buildSmartSuggestion', () => {
     expect(suggestion?.actionKind).toBe('start-feeding');
   });
 
+  it('ignores future feeding logs when deciding the latest feeding window', () => {
+    const suggestion = buildSmartSuggestion({
+      feedingSessions: [
+        createFeedingSession({ startTime: '2026-03-23T08:00:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-23T10:00:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-23T12:00:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-23T14:00:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-24T08:00:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-24T10:00:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-24T16:00:00.000Z' }),
+      ],
+      bottleSessions: [],
+      sleepSessions: [],
+      diaperChanges: [
+        createDiaperChange({ timestamp: '2026-03-23T09:00:00.000Z' }),
+        createDiaperChange({ timestamp: '2026-03-24T10:30:00.000Z' }),
+      ],
+      now: new Date('2026-03-24T11:40:00.000Z'),
+    });
+
+    expect(suggestion?.kind).toBe('feeding');
+    expect(suggestion?.title).toBe('Hungry Soon');
+    expect(suggestion?.detail).toContain('Last feeding was 1 hr 40 min ago');
+  });
+
   it('suggests a nap based on the recent three-day wake window', () => {
     const suggestion = buildSmartSuggestion({
       feedingSessions: [
@@ -159,10 +192,12 @@ describe('buildSmartSuggestion', () => {
         createSleepSession({
           startTime: '2026-03-23T08:15:00.000Z',
           endTime: '2026-03-23T09:00:00.000Z',
+          duration: 2700,
         }),
         createSleepSession({
           startTime: '2026-03-24T08:10:00.000Z',
           endTime: '2026-03-24T09:00:00.000Z',
+          duration: 3000,
         }),
       ],
       diaperChanges: [
@@ -174,6 +209,48 @@ describe('buildSmartSuggestion', () => {
 
     expect(suggestion?.kind).toBe('sleep');
     expect(suggestion?.title).toBe('Time for a Nap');
+  });
+
+  it('derives wake time from sleep duration when completed sleep has no endTime', () => {
+    const suggestion = buildSmartSuggestion({
+      feedingSessions: [
+        createFeedingSession({ startTime: '2026-03-23T08:00:00.000Z' }),
+        createFeedingSession({ startTime: '2026-03-24T08:00:00.000Z' }),
+      ],
+      bottleSessions: [],
+      sleepSessions: [
+        createSleepSession({
+          type: 'night',
+          startTime: '2026-03-22T00:00:00.000Z',
+          endTime: null,
+          duration: 21600,
+        }),
+        createSleepSession({
+          startTime: '2026-03-22T08:00:00.000Z',
+          endTime: null,
+          duration: 3600,
+        }),
+        createSleepSession({
+          startTime: '2026-03-23T08:15:00.000Z',
+          endTime: null,
+          duration: 2700,
+        }),
+        createSleepSession({
+          startTime: '2026-03-24T08:10:00.000Z',
+          endTime: null,
+          duration: 3000,
+        }),
+      ],
+      diaperChanges: [
+        createDiaperChange({ timestamp: '2026-03-23T09:00:00.000Z' }),
+        createDiaperChange({ timestamp: '2026-03-24T09:00:00.000Z' }),
+      ],
+      now: new Date('2026-03-24T10:50:00.000Z'),
+    });
+
+    expect(suggestion?.kind).toBe('sleep');
+    expect(suggestion?.title).toBe('Time for a Nap');
+    expect(suggestion?.detail).toContain('Baby has been awake for 1 hr 50 min');
   });
 
   it('switches to bedtime language when the next sleep matches recent night sleep starts', () => {
@@ -247,6 +324,129 @@ describe('buildSmartSuggestion', () => {
     expect(suggestion?.actionLabel).toBe('Start Bedtime');
     expect(suggestion?.actionKind).toBe('start-sleep');
     expect(suggestion?.sleepType).toBe('night');
+  });
+
+  it('formats typical bedtime using the local clock time instead of shifting through UTC', () => {
+    const firstNightStart = localIso(2026, 3, 21, 21);
+    const firstNightEnd = localIso(2026, 3, 22, 6);
+    const secondNightStart = localIso(2026, 3, 22, 21);
+    const secondNightEnd = localIso(2026, 3, 23, 6);
+    const firstNapStart = localIso(2026, 3, 21, 18);
+    const firstNapEnd = localIso(2026, 3, 21, 18, 45);
+    const secondNapStart = localIso(2026, 3, 22, 18);
+    const secondNapEnd = localIso(2026, 3, 22, 18, 45);
+    const todayNapStart = localIso(2026, 3, 23, 18);
+    const todayNapEnd = localIso(2026, 3, 23, 18, 45);
+
+    const suggestion = buildSmartSuggestion({
+      feedingSessions: [
+        createFeedingSession({ startTime: localIso(2026, 3, 22, 8) }),
+        createFeedingSession({ startTime: localIso(2026, 3, 23, 8) }),
+      ],
+      bottleSessions: [],
+      sleepSessions: [
+        createSleepSession({
+          type: 'night',
+          startTime: firstNightStart,
+          endTime: firstNightEnd,
+          duration: durationSeconds(firstNightStart, firstNightEnd),
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: secondNightStart,
+          endTime: secondNightEnd,
+          duration: durationSeconds(secondNightStart, secondNightEnd),
+        }),
+        createSleepSession({
+          startTime: firstNapStart,
+          endTime: firstNapEnd,
+          duration: durationSeconds(firstNapStart, firstNapEnd),
+        }),
+        createSleepSession({
+          startTime: secondNapStart,
+          endTime: secondNapEnd,
+          duration: durationSeconds(secondNapStart, secondNapEnd),
+        }),
+        createSleepSession({
+          startTime: todayNapStart,
+          endTime: todayNapEnd,
+          duration: durationSeconds(todayNapStart, todayNapEnd),
+        }),
+      ],
+      diaperChanges: [
+        createDiaperChange({ timestamp: localIso(2026, 3, 22, 9) }),
+        createDiaperChange({ timestamp: localIso(2026, 3, 23, 9) }),
+      ],
+      now: new Date(localIso(2026, 3, 23, 21, 5)),
+    });
+
+    expect(suggestion?.kind).toBe('sleep');
+    expect(suggestion?.title).toBe('Time for Bed');
+    expect(suggestion?.detail).toContain('night sleep often starts around 9:00 PM');
+  });
+
+  it('uses the bedtime clock target when the pre-bed wake window prediction is stale', () => {
+    const firstNightStart = localIso(2026, 3, 21, 21);
+    const firstNightEnd = localIso(2026, 3, 22, 6);
+    const secondNightStart = localIso(2026, 3, 22, 21);
+    const secondNightEnd = localIso(2026, 3, 23, 6);
+    const firstNapStart = localIso(2026, 3, 21, 17);
+    const firstNapEnd = localIso(2026, 3, 21, 18);
+    const secondNapStart = localIso(2026, 3, 22, 17);
+    const secondNapEnd = localIso(2026, 3, 22, 18);
+    const todayNapStart = localIso(2026, 3, 23, 14);
+    const todayNapEnd = localIso(2026, 3, 23, 15);
+
+    const suggestion = buildSmartSuggestion({
+      feedingSessions: [
+        createFeedingSession({ startTime: localIso(2026, 3, 22, 13, 30) }),
+        createFeedingSession({ startTime: localIso(2026, 3, 22, 16) }),
+        createFeedingSession({ startTime: localIso(2026, 3, 22, 18, 30) }),
+        createFeedingSession({ startTime: localIso(2026, 3, 23, 13, 30) }),
+        createFeedingSession({ startTime: localIso(2026, 3, 23, 16) }),
+        createFeedingSession({ startTime: localIso(2026, 3, 23, 18, 30) }),
+      ],
+      bottleSessions: [],
+      sleepSessions: [
+        createSleepSession({
+          type: 'night',
+          startTime: firstNightStart,
+          endTime: firstNightEnd,
+          duration: durationSeconds(firstNightStart, firstNightEnd),
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: secondNightStart,
+          endTime: secondNightEnd,
+          duration: durationSeconds(secondNightStart, secondNightEnd),
+        }),
+        createSleepSession({
+          startTime: firstNapStart,
+          endTime: firstNapEnd,
+          duration: durationSeconds(firstNapStart, firstNapEnd),
+        }),
+        createSleepSession({
+          startTime: secondNapStart,
+          endTime: secondNapEnd,
+          duration: durationSeconds(secondNapStart, secondNapEnd),
+        }),
+        createSleepSession({
+          startTime: todayNapStart,
+          endTime: todayNapEnd,
+          duration: durationSeconds(todayNapStart, todayNapEnd),
+        }),
+      ],
+      diaperChanges: [
+        createDiaperChange({ timestamp: localIso(2026, 3, 22, 9) }),
+        createDiaperChange({ timestamp: localIso(2026, 3, 23, 9) }),
+      ],
+      now: new Date(localIso(2026, 3, 23, 20, 30)),
+    });
+
+    expect(suggestion?.kind).toBe('sleep');
+    expect(suggestion?.title).toBe('Feed, Then Bedtime');
+    expect(suggestion?.detail).toContain('bedtime usually follows around 9:00 PM');
+    expect(suggestion?.actionKind).toBe('start-feeding');
   });
 
   it('combines feeding and bedtime when both windows land together', () => {
