@@ -47,6 +47,7 @@ import {
   type HistoryIcon,
   type InsightPatternCard,
   type InsightsSummary,
+  type SleepDurationByTimeOfDay,
   type TimeFilter,
   type TimelineLane,
   type TypicalSleepWindow,
@@ -816,6 +817,42 @@ function TypicalSleepWindowList({ windows }: { windows: TypicalSleepWindow[] }) 
   );
 }
 
+function SleepDurationByTimeOfDayList({ periods }: { periods: SleepDurationByTimeOfDay[] }) {
+  const hasData = periods.some((period) => period.averageMinutes !== null);
+  if (!hasData) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-white p-3">
+      <div className="flex items-center gap-2 mb-3">
+        <Sun className="w-4 h-4 text-amber-500" />
+        <div>
+          <p className="text-sm font-semibold text-gray-900">Sleep Duration by Time of Day</p>
+          <p className="text-xs text-gray-500">Average nap length from the last 3 days</p>
+        </div>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-3">
+        {periods.map((period) => (
+          <div key={period.id} className="rounded-xl bg-slate-50 px-3 py-2">
+            <p className="text-xs font-semibold uppercase text-slate-500">{period.label}</p>
+            <p className="mt-1 text-lg font-bold text-gray-900">
+              {period.averageMinutes !== null
+                ? formatHoursAsFriendlyDuration(period.averageMinutes / 60)
+                : 'Learning'}
+            </p>
+            <p className="mt-0.5 text-xs text-gray-500">
+              {period.sleepCount > 0
+                ? `${period.sleepCount} sleep${period.sleepCount === 1 ? '' : 's'}`
+                : 'No recent sleeps'}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function StatsView() {
   useAuth();
   const { selectedBaby, babies, settings } = useAppStore();
@@ -893,6 +930,11 @@ export function StatsView() {
 
   const sleepWakeMetricCards = useMemo(
     () => (insights ? buildSleepWakeMetricCards(insights) : []),
+    [insights]
+  );
+
+  const hasSleepDurationByTimeOfDay = useMemo(
+    () => insights?.sleepWake.sleepDurationByTimeOfDay.some((period) => period.averageMinutes !== null) ?? false,
     [insights]
   );
 
@@ -1209,7 +1251,7 @@ export function StatsView() {
                             ? `Usually feeds about every ${formatHoursAsFriendlyDuration(insights.feedingSweetSpot.averageGapHours)} and ${insights.sweetSpot.sleepType === 'night' ? 'bedtime usually lands' : 'gets sleepy'} after ${formatHoursAsFriendlyDuration(insights.sweetSpot.averageWakeWindowHours)} awake.`
                             : 'Feedings and naps are landing in the same routine window.'
                           : insights.sweetSpot.averageWakeWindowHours !== null
-                          ? `${insights.sweetSpot.sleepType === 'night' ? 'Average pre-bed wake window' : 'Average wake window'}: ${formatHoursAsFriendlyDuration(insights.sweetSpot.averageWakeWindowHours)}`
+                          ? `${insights.sweetSpot.sleepType === 'night' ? 'Average pre-bed wake window' : insights.sweetSpot.wakeWindowBasis ?? 'Average wake window'}: ${formatHoursAsFriendlyDuration(insights.sweetSpot.averageWakeWindowHours)}`
                           : 'We are still learning wake windows'}
                       </p>
                       {insights.sweetSpot.sleepType === 'night' && insights.sweetSpot.predictedWakeTime && (
@@ -1299,7 +1341,7 @@ export function StatsView() {
                   </Card>
                 </div>
 
-                {(sleepWakeMetricCards.length > 0 || insights.sleepWake.typicalSleepWindows.length > 0) && (
+                {(sleepWakeMetricCards.length > 0 || hasSleepDurationByTimeOfDay || insights.sleepWake.typicalSleepWindows.length > 0) && (
                   <Card className="border border-indigo-100 bg-gradient-to-br from-white to-indigo-50 shadow-sm">
                     <div className="mb-4 flex items-center gap-2">
                       <Moon className="w-5 h-5 text-indigo-600" />
@@ -1334,8 +1376,14 @@ export function StatsView() {
                       </div>
                     )}
 
-                    {insights.sleepWake.typicalSleepWindows.length > 0 && (
+                    {hasSleepDurationByTimeOfDay && (
                       <div className={sleepWakeMetricCards.length > 0 ? 'mt-3' : 'mt-0'}>
+                        <SleepDurationByTimeOfDayList periods={insights.sleepWake.sleepDurationByTimeOfDay} />
+                      </div>
+                    )}
+
+                    {insights.sleepWake.typicalSleepWindows.length > 0 && (
+                      <div className={sleepWakeMetricCards.length > 0 || hasSleepDurationByTimeOfDay ? 'mt-3' : 'mt-0'}>
                         <TypicalSleepWindowList windows={insights.sleepWake.typicalSleepWindows} />
                       </div>
                     )}

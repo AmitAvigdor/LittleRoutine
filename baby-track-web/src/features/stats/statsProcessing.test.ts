@@ -93,6 +93,14 @@ function createSnapshot(overrides: Partial<StatsDataSnapshot> = {}): StatsDataSn
   };
 }
 
+function localIso(year: number, month: number, day: number, hour: number, minute = 0): string {
+  return new Date(year, month - 1, day, hour, minute).toISOString();
+}
+
+function durationSeconds(startTime: string, endTime: string): number {
+  return Math.floor((new Date(endTime).getTime() - new Date(startTime).getTime()) / 1000);
+}
+
 describe('statsProcessing', () => {
   it('formats decimal hours into a friendlier duration', () => {
     expect(formatHoursAsFriendlyDuration(1.7)).toBe('1 hr 42 min');
@@ -259,6 +267,11 @@ describe('statsProcessing', () => {
     expect(insights.sleepWake.trackedSleepDays).toBe(2);
     expect(insights.sleepWake.typicalSleepWindows.length).toBeGreaterThan(0);
     expect(insights.sleepWake.typicalSleepWindows[0].averageMinutes).toBeGreaterThan(0);
+    expect(insights.sleepWake.sleepDurationByTimeOfDay).toEqual([
+      expect.objectContaining({ id: 'morning', averageMinutes: 60, sleepCount: 2 }),
+      expect.objectContaining({ id: 'afternoon', averageMinutes: 53, sleepCount: 4 }),
+      expect.objectContaining({ id: 'evening', averageMinutes: null, sleepCount: 0 }),
+    ]);
   });
 
   it('shows derived wake time in sleep history details', () => {
@@ -431,6 +444,74 @@ describe('statsProcessing', () => {
 
     expect(insights.sweetSpot.averageWakeWindowHours?.toFixed(1)).toBe('2.0');
     expect(insights.sweetSpot.recommendedTime).toBe('2026-03-21T11:00:00.000Z');
+  });
+
+  it('uses matching time-of-day wake windows for the nap sweet spot', () => {
+    const firstNightStart = localIso(2026, 3, 21, 20);
+    const firstNightEnd = localIso(2026, 3, 22, 8);
+    const firstMorningNapStart = localIso(2026, 3, 22, 8, 50);
+    const firstMorningNapEnd = localIso(2026, 3, 22, 9, 30);
+    const firstMiddayNapStart = localIso(2026, 3, 22, 13);
+    const firstMiddayNapEnd = localIso(2026, 3, 22, 14);
+    const secondNightStart = localIso(2026, 3, 22, 20);
+    const secondNightEnd = localIso(2026, 3, 23, 8);
+    const secondMorningNapStart = localIso(2026, 3, 23, 8, 50);
+    const secondMorningNapEnd = localIso(2026, 3, 23, 9, 30);
+    const secondMiddayNapStart = localIso(2026, 3, 23, 13);
+    const secondMiddayNapEnd = localIso(2026, 3, 23, 14);
+    const currentNightStart = localIso(2026, 3, 23, 20);
+    const currentNightEnd = localIso(2026, 3, 24, 8);
+
+    const snapshot = createSnapshot({
+      sleepSessions: [
+        createSleepSession({
+          type: 'night',
+          startTime: firstNightStart,
+          endTime: firstNightEnd,
+          duration: durationSeconds(firstNightStart, firstNightEnd),
+        }),
+        createSleepSession({
+          startTime: firstMorningNapStart,
+          endTime: firstMorningNapEnd,
+          duration: durationSeconds(firstMorningNapStart, firstMorningNapEnd),
+        }),
+        createSleepSession({
+          startTime: firstMiddayNapStart,
+          endTime: firstMiddayNapEnd,
+          duration: durationSeconds(firstMiddayNapStart, firstMiddayNapEnd),
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: secondNightStart,
+          endTime: secondNightEnd,
+          duration: durationSeconds(secondNightStart, secondNightEnd),
+        }),
+        createSleepSession({
+          startTime: secondMorningNapStart,
+          endTime: secondMorningNapEnd,
+          duration: durationSeconds(secondMorningNapStart, secondMorningNapEnd),
+        }),
+        createSleepSession({
+          startTime: secondMiddayNapStart,
+          endTime: secondMiddayNapEnd,
+          duration: durationSeconds(secondMiddayNapStart, secondMiddayNapEnd),
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: currentNightStart,
+          endTime: currentNightEnd,
+          duration: durationSeconds(currentNightStart, currentNightEnd),
+        }),
+      ],
+    });
+
+    const insights = buildInsights(snapshot, new Date(localIso(2026, 3, 24, 8, 45)));
+
+    expect(insights.sweetSpot.sleepType).toBe('nap');
+    expect(insights.sweetSpot.averageWakeWindowHours).toBeCloseTo(50 / 60);
+    expect(insights.sweetSpot.wakeWindowBasis).toBe('morning wake window');
+    expect(insights.sweetSpot.recommendedTime).toBe(localIso(2026, 3, 24, 8, 50));
+    expect(insights.patternCards.find((card) => card.id === 'wake-window')?.description).toContain('morning wake window');
   });
 
   it('classifies the next sleep as night sleep when it lines up with recent bedtimes', () => {
