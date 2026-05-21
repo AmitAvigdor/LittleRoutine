@@ -117,6 +117,11 @@ function getSleepWakeTime(session: { startTime: string; duration: number }): str
   return new Date(parseISO(session.startTime).getTime() + session.duration * 1000).toISOString();
 }
 
+function formatMedicineLastGiven(timestamp: string | null): string {
+  if (!timestamp) return 'Never';
+  return format(parseISO(timestamp), 'MMM d, yyyy HH:mm');
+}
+
 // Get max doses per day based on frequency
 function getMaxDosesPerDay(frequency: MedicationFrequency): number | null {
   switch (frequency) {
@@ -664,6 +669,7 @@ export function DashboardView() {
       const maxDoses = getMaxDosesPerDay(medicine.frequency);
       const dosesGiven = todayLogs.length;
       const isComplete = maxDoses !== null ? dosesGiven >= maxDoses : false;
+      const lastGivenAt = logs[0]?.timestamp ?? null;
 
       return {
         id: medicine.id,
@@ -671,6 +677,7 @@ export function DashboardView() {
         dosesGiven,
         maxDoses,
         isComplete,
+        lastGivenAt,
       };
     });
   }, [medicines, medicineLogs]);
@@ -968,8 +975,8 @@ export function DashboardView() {
                   title={todo.medicine.name}
                   subtitle={
                     todo.maxDoses
-                      ? `${todo.dosesGiven}/${todo.maxDoses} doses given`
-                      : `${todo.dosesGiven} doses given`
+                      ? `${todo.dosesGiven}/${todo.maxDoses} doses given - Last given: ${formatMedicineLastGiven(todo.lastGivenAt)}`
+                      : `${todo.dosesGiven} doses given - Last given: ${formatMedicineLastGiven(todo.lastGivenAt)}`
                   }
                   done={todo.isComplete}
                   onClick={() => navigate('/more/medicine')}

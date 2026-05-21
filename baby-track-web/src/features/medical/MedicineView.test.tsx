@@ -1,6 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MedicineView } from './MedicineView';
+import { describe, it, vi, beforeEach, afterEach } from 'vitest';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 
@@ -18,6 +16,7 @@ vi.mock('@/lib/firestore', () => ({
   subscribeToMedicineLogs: vi.fn(() => vi.fn()),
   createMedicine: vi.fn(),
   createMedicineLog: vi.fn(),
+  deleteMedicine: vi.fn(),
   updateMedicine: vi.fn(),
 }));
 
@@ -27,8 +26,8 @@ describe('MedicineView', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    (useAuth as any).mockReturnValue({ user: mockUser });
-    (useAppStore as any).mockReturnValue({ selectedBaby: mockBaby });
+    vi.mocked(useAuth).mockReturnValue({ user: mockUser } as ReturnType<typeof useAuth>);
+    vi.mocked(useAppStore).mockReturnValue({ selectedBaby: mockBaby } as ReturnType<typeof useAppStore>);
   });
 
   afterEach(() => {

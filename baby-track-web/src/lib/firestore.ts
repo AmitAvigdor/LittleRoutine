@@ -1164,6 +1164,26 @@ export async function updateMedicine(medicineId: string, updates: Partial<Medici
   });
 }
 
+export async function deleteMedicine(medicineId: string): Promise<void> {
+  const logsQuery = query(
+    collection(db, 'medicineLogs'),
+    where('medicineId', '==', medicineId)
+  );
+  const logsSnapshot = await getDocs(logsQuery);
+  const refsToDelete = [
+    ...logsSnapshot.docs.map((docSnap) => docSnap.ref),
+    doc(db, 'medicines', medicineId),
+  ];
+
+  for (let index = 0; index < refsToDelete.length; index += 450) {
+    const batch = writeBatch(db);
+    refsToDelete.slice(index, index + 450).forEach((ref) => {
+      batch.delete(ref);
+    });
+    await batch.commit();
+  }
+}
+
 export function subscribeToMedicines(
   babyId: string,
   callback: (medicines: Medicine[]) => void

@@ -8,10 +8,10 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { useHomeStore } from '@/stores/homeStore';
 import { prefetchHomeData } from '@/features/dashboard/homeDataSync';
-import { createMedicine, createMedicineLog, subscribeToMedicineLogs, updateMedicine } from '@/lib/firestore';
+import { createMedicine, createMedicineLog, deleteMedicine, subscribeToMedicineLogs, updateMedicine } from '@/lib/firestore';
 import type { Medicine, MedicineLog } from '@/types';
 import { MedicationFrequency, MEDICATION_FREQUENCY_CONFIG } from '@/types/enums';
-import { Pill, Plus, X, Check, History, AlertTriangle } from 'lucide-react';
+import { Pill, Plus, X, Check, History, AlertTriangle, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { toast } from '@/stores/toastStore';
 
@@ -60,6 +60,16 @@ function getHoursUntilNextDose(logs: MedicineLog[], hoursInterval: number | null
   const hoursSinceLastDose = (now.getTime() - lastDoseTime.getTime()) / (1000 * 60 * 60);
 
   return Math.max(0, hoursInterval - hoursSinceLastDose);
+}
+
+function formatMedicineDateTime(timestamp: string): string {
+  return new Date(timestamp).toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 export function MedicineView() {
@@ -296,6 +306,25 @@ export function MedicineView() {
     }
   };
 
+  const handleDeleteMedicine = async (medicine: Medicine) => {
+    const confirmed = window.confirm(`Delete ${medicine.name} and all of its dose history?`);
+    if (!confirmed) return;
+
+    try {
+      await deleteMedicine(medicine.id);
+      if (selectedMedicineId === medicine.id) {
+        setSelectedMedicineId(null);
+      }
+      if (user && selectedBaby) {
+        prefetchHomeData({ userId: user.uid, babyId: selectedBaby.id });
+      }
+      toast.success(`${medicine.name} deleted`);
+    } catch (error) {
+      console.error('Error deleting medicine:', error);
+      toast.error('Failed to delete medicine');
+    }
+  };
+
   const activeMedicines = medicines.filter(m => m.isActive);
   const inactiveMedicines = medicines.filter(m => !m.isActive);
 
@@ -420,6 +449,7 @@ export function MedicineView() {
                 const dosesToday = getDosesToday(medicine);
                 const maxDoses = getMaxDosesPerDay(medicine.frequency);
                 const logs = medicineLogs[medicine.id] || [];
+                const lastGivenAt = logs[0]?.timestamp ?? null;
 
                 return (
                   <MedicineCard
@@ -427,10 +457,12 @@ export function MedicineView() {
                     medicine={medicine}
                     onGive={() => handleGiveMedicine(medicine)}
                     onToggleActive={() => handleToggleActive(medicine)}
+                    onDelete={() => handleDeleteMedicine(medicine)}
                     onSelect={() => setSelectedMedicineId(medicine.id)}
                     canGive={canGive}
                     dosesToday={dosesToday}
                     maxDoses={maxDoses}
+                    lastGivenAt={lastGivenAt}
                     hoursUntilNext={
                       medicine.frequency === 'everyHours' && medicine.hoursInterval
                         ? getHoursUntilNextDose(logs, medicine.hoursInterval)
@@ -453,7 +485,9 @@ export function MedicineView() {
                   key={medicine.id}
                   medicine={medicine}
                   onToggleActive={() => handleToggleActive(medicine)}
+                  onDelete={() => handleDeleteMedicine(medicine)}
                   onSelect={() => setSelectedMedicineId(medicine.id)}
+                  lastGivenAt={medicineLogs[medicine.id]?.[0]?.timestamp}
                   inactive
                 />
               ))}
@@ -499,21 +533,25 @@ function MedicineCard({
   medicine,
   onGive,
   onToggleActive,
+  onDelete,
   onSelect,
   inactive,
   canGive = true,
   dosesToday = 0,
   maxDoses,
+  lastGivenAt,
   hoursUntilNext,
 }: {
   medicine: Medicine;
   onGive?: () => void;
   onToggleActive: () => void;
+  onDelete: () => void;
   onSelect: () => void;
   inactive?: boolean;
   canGive?: boolean;
   dosesToday?: number;
   maxDoses?: number | null;
+  lastGivenAt?: string | null;
   hoursUntilNext?: number;
 }) {
   const freqConfig = MEDICATION_FREQUENCY_CONFIG[medicine.frequency];
@@ -559,6 +597,11 @@ function MedicineCard({
               </span>
             )}
           </div>
+          {lastGivenAt !== undefined && (
+            <p className="mt-1 text-xs text-gray-500">
+              Last given: {lastGivenAt ? formatMedicineDateTime(lastGivenAt) : 'Never'}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {!inactive && onGive && (
@@ -577,6 +620,13 @@ function MedicineCard({
             className="p-2 text-gray-400 hover:text-gray-600 text-xs"
           >
             {inactive ? 'Activate' : 'Deactivate'}
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-2 text-red-400 hover:text-red-600"
+            aria-label={`Delete ${medicine.name}`}
+          >
+            <Trash2 className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -692,6 +742,7 @@ function MedicineDetail({
   }, [medicine.id]);
 
   const freqConfig = MEDICATION_FREQUENCY_CONFIG[medicine.frequency];
+  const lastGivenAt = logs[0]?.timestamp ?? null;
 
   // Calculate dose status
   const todayLogs = logs.filter((log) => isToday(parseISO(log.timestamp)));
@@ -739,6 +790,12 @@ function MedicineDetail({
         <div className="flex justify-between">
           <span className="text-gray-500">Frequency</span>
           <span className="font-medium">{freqConfig.label}</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-gray-500">Last given</span>
+          <span className="font-medium text-right">
+            {lastGivenAt ? formatMedicineDateTime(lastGivenAt) : 'Never'}
+          </span>
         </div>
         {maxDoses !== null && (
           <div className="flex justify-between">
@@ -798,7 +855,7 @@ function MedicineDetail({
             {logs.map((log) => (
               <div key={log.id} className="flex justify-between text-sm py-1 border-b border-gray-100">
                 <span className="text-gray-500">
-                  {new Date(log.timestamp).toLocaleString()}
+                  {formatMedicineDateTime(log.timestamp)}
                 </span>
                 {log.givenBy && <span>{log.givenBy}</span>}
               </div>
