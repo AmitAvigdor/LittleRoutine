@@ -55,6 +55,17 @@ interface SleepDurationEstimate {
   label: string;
 }
 
+interface WakeWindowSample {
+  minutes: number;
+  wakeTime: string;
+  nextSleepStartTime: string;
+}
+
+interface WakeWindowEstimate {
+  minutes: number;
+  label: string;
+}
+
 function countUniqueDays(timestamps: string[]): number {
   return new Set(timestamps.map((timestamp) => format(parseISO(timestamp), 'yyyy-MM-dd'))).size;
 }
@@ -115,6 +126,32 @@ function getNapTimeBucketLabel(bucket: NapTimeBucket): string {
     default:
       return 'recent naps';
   }
+}
+
+function getWakeWindowTimeBucketLabel(bucket: NapTimeBucket): string {
+  switch (bucket) {
+    case 'early-morning':
+      return 'recent early-morning wake window';
+    case 'morning':
+      return 'recent morning wake window';
+    case 'midday':
+      return 'recent midday wake window';
+    case 'afternoon':
+      return 'recent afternoon wake window';
+    case 'evening':
+      return 'recent evening wake window';
+    default:
+      return 'recent 3-day wake window';
+  }
+}
+
+function getClockMinutes(date: Date): number {
+  return date.getHours() * 60 + date.getMinutes();
+}
+
+function getClockDistanceMinutes(first: Date, second: Date): number {
+  const diff = Math.abs(getClockMinutes(first) - getClockMinutes(second));
+  return Math.min(diff, 24 * 60 - diff);
 }
 
 function isCompletedSleepSession(session: SleepSession): boolean {
@@ -195,10 +232,14 @@ function calculateAverageFeedingGapMinutes(
   return Math.round(gapMinutes.reduce((sum, minutes) => sum + minutes, 0) / gapMinutes.length);
 }
 
-function calculateAverageWakeWindowMinutes(
+function averageWakeWindowSamples(samples: WakeWindowSample[]): number {
+  return Math.round(samples.reduce((sum, sample) => sum + sample.minutes, 0) / samples.length);
+}
+
+function buildRecentWakeWindowSamples(
   sleepSessions: SleepSession[],
   now: Date
-): number | null {
+): WakeWindowSample[] {
   const threeDayWindow = {
     start: startOfDay(subDays(now, 2)),
     end: now,
@@ -217,7 +258,7 @@ function calculateAverageWakeWindowMinutes(
     )
     .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
-  const wakeWindows: number[] = [];
+  const wakeWindows: WakeWindowSample[] = [];
   let pointer = 0;
   let latestWakeTime: string | null = null;
 
@@ -238,15 +279,60 @@ function calculateAverageWakeWindowMinutes(
       (new Date(nap.startTime).getTime() - new Date(latestWakeTime).getTime()) / (1000 * 60);
 
     if (wakeMinutes >= 45 && wakeMinutes <= 6 * 60) {
-      wakeWindows.push(wakeMinutes);
+      wakeWindows.push({
+        minutes: wakeMinutes,
+        wakeTime: latestWakeTime,
+        nextSleepStartTime: nap.startTime,
+      });
     }
   });
 
-  if (wakeWindows.length === 0) {
+  return wakeWindows;
+}
+
+function calculateTimeAwareWakeWindowEstimate(
+  sleepSessions: SleepSession[],
+  now: Date
+): WakeWindowEstimate | null {
+  const wakeWindowSamples = buildRecentWakeWindowSamples(sleepSessions, now);
+
+  if (wakeWindowSamples.length === 0) {
     return null;
   }
 
-  return Math.round(wakeWindows.reduce((sum, minutes) => sum + minutes, 0) / wakeWindows.length);
+  const targetTime = now;
+  const targetBucket = getNapTimeBucket(targetTime.toISOString());
+  const matchingBucketSamples = wakeWindowSamples.filter(
+    (sample) => getNapTimeBucket(sample.nextSleepStartTime) === targetBucket
+  );
+
+  if (matchingBucketSamples.length > 0) {
+    return {
+      minutes: averageWakeWindowSamples(matchingBucketSamples),
+      label: getWakeWindowTimeBucketLabel(targetBucket),
+    };
+  }
+
+  const closestClockSamples = [...wakeWindowSamples]
+    .sort(
+      (a, b) =>
+        getClockDistanceMinutes(parseISO(a.nextSleepStartTime), targetTime) -
+        getClockDistanceMinutes(parseISO(b.nextSleepStartTime), targetTime)
+    )
+    .filter((sample) => getClockDistanceMinutes(parseISO(sample.nextSleepStartTime), targetTime) <= 3 * 60)
+    .slice(0, 3);
+
+  if (closestClockSamples.length > 0) {
+    return {
+      minutes: averageWakeWindowSamples(closestClockSamples),
+      label: 'recent similar-time wake window',
+    };
+  }
+
+  return {
+    minutes: averageWakeWindowSamples(wakeWindowSamples),
+    label: 'recent 3-day wake window',
+  };
 }
 
 function calculateTypicalNightSleepStartMinutes(sleepSessions: SleepSession[], now: Date): number | null {
@@ -580,13 +666,17 @@ export function buildSmartSuggestion({
   }
 
   const latestCompletedSleep = getLatestCompletedSleep(sleepSessions, now);
-  const averageWakeWindowMinutes = calculateAverageWakeWindowMinutes(sleepSessions, now);
 
   if (!hasActiveSleep && !activeSleep && latestCompletedSleep) {
     const latestWakeTime = getSleepWakeTime(latestCompletedSleep);
     const awakeMinutes = differenceInMinutes(now, parseISO(latestWakeTime));
     const typicalNightSleepStart = calculateTypicalNightSleepStartMinutes(sleepSessions, now);
     const averagePreBedWakeWindowMinutes = calculateAveragePreBedWakeWindowMinutes(sleepSessions, now);
+    const wakeWindowEstimate = calculateTimeAwareWakeWindowEstimate(
+      sleepSessions,
+      now
+    );
+    const averageWakeWindowMinutes = wakeWindowEstimate?.minutes ?? null;
     const genericPredictedSleepTime =
       averageWakeWindowMinutes !== null
         ? new Date(
@@ -644,6 +734,10 @@ export function buildSmartSuggestion({
         ? averagePreBedWakeWindowMinutes
         : averageWakeWindowMinutes ??
           Math.max(15, differenceInMinutes(predictedSleepTime, parseISO(latestWakeTime)));
+    const referenceWakeWindowLabel =
+      isLikelyNightSleep && averagePreBedWakeWindowMinutes !== null
+        ? 'recent pre-bed wake window'
+        : wakeWindowEstimate?.label ?? 'recent 3-day wake window';
     const minutesUntilPredictedSleep = differenceInMinutes(predictedSleepTime, now);
     const shouldSuggest =
       awakeMinutes >= referenceWakeWindowMinutes - 15 ||
@@ -677,7 +771,7 @@ export function buildSmartSuggestion({
           ? isFeedNearBedtime && feedingDueAt !== null
             ? `Baby has been awake for ${formatMinutesAsDuration(awakeMinutes)}. The next feed is likely around ${format(feedingDueAt, 'h:mm a')}, and bedtime usually follows around ${format(predictedSleepTime, 'h:mm a')}.`
             : `Baby has been awake for ${formatMinutesAsDuration(awakeMinutes)}. The recent pre-bed wake window is about ${formatMinutesAsDuration(referenceWakeWindowMinutes)}, and night sleep often starts around ${formatClockMinutesAsTime(typicalNightSleepStart)}.`
-          : `Baby has been awake for ${formatMinutesAsDuration(awakeMinutes)}. The recent 3-day wake window is about ${formatMinutesAsDuration(referenceWakeWindowMinutes)}.`,
+          : `Baby has been awake for ${formatMinutesAsDuration(awakeMinutes)}. The ${referenceWakeWindowLabel} is about ${formatMinutesAsDuration(referenceWakeWindowMinutes)}.`,
         isOverdue,
         actionKind:
           isFeedNearBedtime && feedingTypePreference !== 'formula'
@@ -706,7 +800,7 @@ export function buildSmartSuggestion({
             ? isFeedNearBedtime && feedingDueAt !== null
               ? `The next feed is likely around ${format(feedingDueAt, 'h:mm a')}, and bedtime often starts around ${formatClockMinutesAsTime(typicalNightSleepStart)}.`
               : `The recent pre-bed wake window is about ${formatMinutesAsDuration(referenceWakeWindowMinutes)}, and night sleep often starts around ${formatClockMinutesAsTime(typicalNightSleepStart)}.`
-            : `The recent 3-day wake window is about ${formatMinutesAsDuration(referenceWakeWindowMinutes)}.`,
+            : `The ${referenceWakeWindowLabel} is about ${formatMinutesAsDuration(referenceWakeWindowMinutes)}.`,
           isOverdue: false,
           actionKind:
             isFeedNearBedtime && feedingTypePreference !== 'formula'

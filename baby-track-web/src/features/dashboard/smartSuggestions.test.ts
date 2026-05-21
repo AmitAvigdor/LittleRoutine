@@ -211,6 +211,74 @@ describe('buildSmartSuggestion', () => {
     expect(suggestion?.title).toBe('Time for a Nap');
   });
 
+  it('uses the matching time-of-day wake window instead of mixing in longer afternoon wake windows', () => {
+    const firstNightStart = localIso(2026, 3, 21, 20);
+    const firstNightEnd = localIso(2026, 3, 22, 8);
+    const firstMorningNapStart = localIso(2026, 3, 22, 8, 50);
+    const firstMorningNapEnd = localIso(2026, 3, 22, 9, 30);
+    const firstMiddayNapStart = localIso(2026, 3, 22, 13);
+    const firstMiddayNapEnd = localIso(2026, 3, 22, 14);
+    const secondNightStart = localIso(2026, 3, 22, 20);
+    const secondNightEnd = localIso(2026, 3, 23, 8);
+    const secondMorningNapStart = localIso(2026, 3, 23, 8, 50);
+    const secondMorningNapEnd = localIso(2026, 3, 23, 9, 30);
+    const secondMiddayNapStart = localIso(2026, 3, 23, 13);
+    const secondMiddayNapEnd = localIso(2026, 3, 23, 14);
+    const currentNightStart = localIso(2026, 3, 23, 20);
+    const currentNightEnd = localIso(2026, 3, 24, 8);
+
+    const suggestion = buildSmartSuggestion({
+      feedingSessions: [],
+      bottleSessions: [],
+      sleepSessions: [
+        createSleepSession({
+          type: 'night',
+          startTime: firstNightStart,
+          endTime: firstNightEnd,
+          duration: durationSeconds(firstNightStart, firstNightEnd),
+        }),
+        createSleepSession({
+          startTime: firstMorningNapStart,
+          endTime: firstMorningNapEnd,
+          duration: durationSeconds(firstMorningNapStart, firstMorningNapEnd),
+        }),
+        createSleepSession({
+          startTime: firstMiddayNapStart,
+          endTime: firstMiddayNapEnd,
+          duration: durationSeconds(firstMiddayNapStart, firstMiddayNapEnd),
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: secondNightStart,
+          endTime: secondNightEnd,
+          duration: durationSeconds(secondNightStart, secondNightEnd),
+        }),
+        createSleepSession({
+          startTime: secondMorningNapStart,
+          endTime: secondMorningNapEnd,
+          duration: durationSeconds(secondMorningNapStart, secondMorningNapEnd),
+        }),
+        createSleepSession({
+          startTime: secondMiddayNapStart,
+          endTime: secondMiddayNapEnd,
+          duration: durationSeconds(secondMiddayNapStart, secondMiddayNapEnd),
+        }),
+        createSleepSession({
+          type: 'night',
+          startTime: currentNightStart,
+          endTime: currentNightEnd,
+          duration: durationSeconds(currentNightStart, currentNightEnd),
+        }),
+      ],
+      diaperChanges: [],
+      now: new Date(localIso(2026, 3, 24, 8, 45)),
+    });
+
+    expect(suggestion?.kind).toBe('sleep');
+    expect(suggestion?.title).toBe('Time for a Nap');
+    expect(suggestion?.detail).toContain('recent morning wake window is about 50 min');
+  });
+
   it('derives wake time from sleep duration when completed sleep has no endTime', () => {
     const suggestion = buildSmartSuggestion({
       feedingSessions: [
