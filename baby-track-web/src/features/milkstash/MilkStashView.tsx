@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { createMilkStash, subscribeToMilkStash, migrateMilkStashToBaby, markMilkStashInUse, markMilkStashUsed, updateMilkStashVolume, createBottleSession, deleteMilkStashEntry, deleteMilkStashEntries } from '@/lib/firestore';
-import type { MilkStash, Baby } from '@/types';
+import { getBabyAccessUserIds, type MilkStash, type Baby } from '@/types';
 import { MilkStorageLocation, MILK_STORAGE_CONFIG } from '@/types/enums';
 import { Milk, Plus, X, Clock, Check, AlertTriangle, Trash2, Pencil } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -51,12 +51,13 @@ export function MilkStashView() {
       console.error('Error migrating milk stash:', error);
     });
 
+    const legacyUserIds = activeBaby ? getBabyAccessUserIds(activeBaby) : [user.uid];
     const unsubscribe = subscribeToMilkStash(activeBabyId, (data) => {
       setStash(data);
-    });
+    }, legacyUserIds);
 
     return () => unsubscribe();
-  }, [user, activeBabyId]);
+  }, [user, activeBabyId, activeBaby]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

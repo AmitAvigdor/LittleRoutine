@@ -848,26 +848,71 @@ export async function deleteMilkStashEntries(stashIds: string[]): Promise<void> 
 
 export function subscribeToMilkStash(
   babyId: string,
-  callback: (stash: MilkStash[]) => void
+  callback: (stash: MilkStash[]) => void,
+  legacyUserIds: string[] = []
 ): () => void {
-  // Custom query with two where clauses, sort client-side
-  const q = query(
+  const sourceItems = new Map<string, MilkStash[]>();
+  const emitMergedItems = () => {
+    const merged = new Map<string, MilkStash>();
+
+    sourceItems.forEach((items) => {
+      items.forEach((item) => {
+        merged.set(item.id, item);
+      });
+    });
+
+    const items = Array.from(merged.values());
+    items.sort((a, b) => new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime());
+    callback(items);
+  };
+
+  const unsubscribers: Array<() => void> = [];
+  const babyScopedQuery = query(
     collection(db, 'milkStash'),
     where('babyId', '==', babyId),
     where('isUsed', '==', false)
   );
-  return onSnapshot(q, (snapshot) => {
+
+  unsubscribers.push(onSnapshot(babyScopedQuery, (snapshot) => {
     const items = snapshot.docs.map((docSnap) => ({
       id: docSnap.id,
       ...convertTimestamps(docSnap.data()),
     })) as MilkStash[];
-    // Sort by expiration date ascending
-    items.sort((a, b) => new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime());
-    callback(items);
+    sourceItems.set('baby', items);
+    emitMergedItems();
   }, (error) => {
     console.error('Error subscribing to milkStash:', error);
-    callback([]);
+    sourceItems.set('baby', []);
+    emitMergedItems();
+  }));
+
+  const uniqueLegacyUserIds = Array.from(new Set(legacyUserIds.filter(Boolean)));
+  uniqueLegacyUserIds.forEach((legacyUserId) => {
+    const legacyQuery = query(
+      collection(db, 'milkStash'),
+      where('userId', '==', legacyUserId),
+      where('isUsed', '==', false)
+    );
+    const sourceKey = `legacy:${legacyUserId}`;
+
+    unsubscribers.push(onSnapshot(legacyQuery, (snapshot) => {
+      const items = snapshot.docs
+        .map((docSnap) => ({
+          id: docSnap.id,
+          ...convertTimestamps(docSnap.data()),
+        })) as MilkStash[];
+      sourceItems.set(sourceKey, items.filter((item) => !item.babyId));
+      emitMergedItems();
+    }, (error) => {
+      console.error(`Error subscribing to legacy milkStash for ${legacyUserId}:`, error);
+      sourceItems.set(sourceKey, []);
+      emitMergedItems();
+    }));
   });
+
+  return () => {
+    unsubscribers.forEach((unsubscribe) => unsubscribe());
+  };
 }
 
 // ============ SLEEP SESSIONS ============

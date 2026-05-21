@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, parseISO, differenceInMinutes } from 'date-fns';
+import { format, parseISO, differenceInMinutes, isToday as isTodayFns } from 'date-fns';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { useAppStore } from '@/stores/appStore';
 import { useHomeStore } from '@/stores/homeStore';
@@ -12,8 +12,8 @@ import {
   getSuggestedBreastSide,
   getRoomTempExpirationMinutes,
 } from '@/types';
+import { MedicationFrequency } from '@/types/enums';
 import { resolveFavoriteFeatures } from '@/features/featureCatalog';
-import { getMedicationTrackerStatus } from '@/features/medical/medicationTracker';
 import { startFeedingSession, createSleepSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { toast } from '@/stores/toastStore';
@@ -117,15 +117,23 @@ function getSleepWakeTime(session: { startTime: string; duration: number }): str
   return new Date(parseISO(session.startTime).getTime() + session.duration * 1000).toISOString();
 }
 
-function formatMinutesAsShortDuration(totalMinutes: number): string {
-  const minutes = Math.max(0, Math.ceil(totalMinutes));
-  if (minutes <= 0) return 'now';
-  if (minutes < 60) return `${minutes}m`;
-
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  if (remainingMinutes === 0) return `${hours}h`;
-  return `${hours}h ${remainingMinutes}m`;
+// Get max doses per day based on frequency
+function getMaxDosesPerDay(frequency: MedicationFrequency): number | null {
+  switch (frequency) {
+    case 'onceDaily':
+      return 1;
+    case 'twiceDaily':
+      return 2;
+    case 'threeTimesDaily':
+      return 3;
+    case 'fourTimesDaily':
+      return 4;
+    case 'asNeeded':
+    case 'everyHours':
+      return null;
+    default:
+      return null;
+  }
 }
 
 interface StatusCardProps {
@@ -497,15 +505,6 @@ export function DashboardView() {
   const upsertSleepSession = useHomeStore((state) => state.upsertSleepSession);
   const removeSleepSession = useHomeStore((state) => state.removeSleepSession);
   const [smartActionBusy, setSmartActionBusy] = useState<SmartSuggestionActionKind | null>(null);
-  const [trackerNow, setTrackerNow] = useState(() => new Date());
-
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      setTrackerNow(new Date());
-    }, 60 * 1000);
-
-    return () => window.clearInterval(interval);
-  }, []);
 
   // Get all active timers
   const activeTimers = useMemo(() => {
@@ -659,30 +658,22 @@ export function DashboardView() {
   // Get medicine todo items
   const medicineTodos = useMemo(() => {
     const activeMeds = medicines.filter(m => m.isActive && m.frequency !== 'asNeeded');
-
     return activeMeds.map((medicine) => {
       const logs = medicineLogs[medicine.id] || [];
-      const trackerStatus = getMedicationTrackerStatus(medicine, logs, trackerNow);
-      const isComplete = trackerStatus.reason === 'dailyLimit';
-      const statusText = trackerStatus.reason === 'interval'
-        ? `Next safe in ${formatMinutesAsShortDuration(trackerStatus.remainingMinutes)}`
-        : trackerStatus.reason === 'missingInterval'
-          ? 'Needs interval setup'
-          : trackerStatus.canGive
-            ? 'Ready for next dose'
-            : 'All doses given today';
+      const todayLogs = logs.filter((log) => isTodayFns(parseISO(log.timestamp)));
+      const maxDoses = getMaxDosesPerDay(medicine.frequency);
+      const dosesGiven = todayLogs.length;
+      const isComplete = maxDoses !== null ? dosesGiven >= maxDoses : false;
 
       return {
         id: medicine.id,
         medicine,
-        dosesGiven: trackerStatus.dosesToday,
-        maxDoses: trackerStatus.maxDosesToday,
+        dosesGiven,
+        maxDoses,
         isComplete,
-        isDue: trackerStatus.canGive,
-        statusText,
       };
     });
-  }, [medicines, medicineLogs, trackerNow]);
+  }, [medicines, medicineLogs]);
 
   const feedingStatusCard = useMemo(() => ({
     title: 'Last Feeding',
@@ -884,8 +875,8 @@ export function DashboardView() {
   // Calculate baby's age
   const babyAge = selectedBaby?.birthDate ? calculateBabyAge(selectedBaby.birthDate) : null;
 
-  // Count medicines that are safe to give now
-  const dueMedicineTodos = medicineTodos.filter(t => t.isDue);
+  // Count incomplete medicine todos
+  const incompleteMedicineTodos = medicineTodos.filter(t => !t.isComplete);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
@@ -962,9 +953,9 @@ export function DashboardView() {
                 <span className="text-base">✅</span>
                 <h3 className="text-sm font-bold text-gray-700">Today's To Do</h3>
               </div>
-              {dueMedicineTodos.length > 0 && (
+              {incompleteMedicineTodos.length > 0 && (
                 <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full">
-                  {dueMedicineTodos.length} due
+                  {incompleteMedicineTodos.length} pending
                 </span>
               )}
             </div>
@@ -977,8 +968,8 @@ export function DashboardView() {
                   title={todo.medicine.name}
                   subtitle={
                     todo.maxDoses
-                      ? `${todo.dosesGiven}/${todo.maxDoses} doses given - ${todo.statusText}`
-                      : `${todo.dosesGiven} doses given - ${todo.statusText}`
+                      ? `${todo.dosesGiven}/${todo.maxDoses} doses given`
+                      : `${todo.dosesGiven} doses given`
                   }
                   done={todo.isComplete}
                   onClick={() => navigate('/more/medicine')}

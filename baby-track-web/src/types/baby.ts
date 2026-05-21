@@ -29,6 +29,10 @@ export interface UpdateBabyInput {
   isActive?: boolean;
 }
 
+export function getBabyAccessUserIds(baby: Pick<Baby, 'userId' | 'sharedWith'>): string[] {
+  return Array.from(new Set([baby.userId, ...(baby.sharedWith || [])].filter(Boolean)));
+}
+
 // Helper to calculate baby's age
 export function calculateBabyAge(birthDate: string | null): { months: number; weeks: number; days: number; totalDays: number; text: string } | null {
   if (!birthDate) return null;

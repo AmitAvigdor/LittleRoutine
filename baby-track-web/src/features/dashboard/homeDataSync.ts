@@ -12,7 +12,8 @@ import {
   subscribeToSleepSessions,
 } from '@/lib/firestore';
 import { useHomeStore } from '@/stores/homeStore';
-import type { Medicine } from '@/types';
+import { useAppStore } from '@/stores/appStore';
+import { getBabyAccessUserIds, type Medicine } from '@/types';
 
 interface HomeSyncContext {
   userId: string;
@@ -63,6 +64,9 @@ function syncMedicineLogs(medicines: Medicine[]) {
 
 function startSubscriptions({ userId, babyId }: HomeSyncContext) {
   const store = useHomeStore.getState();
+  const selectedBaby = useAppStore.getState().selectedBaby;
+  const milkStashLegacyUserIds =
+    selectedBaby?.id === babyId ? getBabyAccessUserIds(selectedBaby) : [userId];
   store.setContext(userId, babyId);
   migrateMilkStashToBaby(userId, babyId).catch((error) => {
     console.error('Error migrating milk stash:', error);
@@ -97,7 +101,7 @@ function startSubscriptions({ userId, babyId }: HomeSyncContext) {
     subscribeToMilkStash(babyId, (stash) => {
       store.setMilkStash(stash);
       store.markRefreshed();
-    }),
+    }, milkStashLegacyUserIds),
   ];
 
   activeSyncKey = `${userId}:${babyId}`;

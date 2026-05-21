@@ -9,7 +9,8 @@ let milkStashCallback: ((stash: MilkStash[]) => void) | null = null;
 
 const mockCreateMilkStash = vi.fn();
 const mockMigrateMilkStashToBaby = vi.fn();
-const mockSubscribeToMilkStash = vi.fn((_: string, callback: (stash: MilkStash[]) => void) => {
+const mockSubscribeToMilkStash = vi.fn((_: string, callback: (stash: MilkStash[]) => void, _legacyUserIds?: string[]) => {
+  void _legacyUserIds;
   milkStashCallback = callback;
   callback([]);
   return vi.fn();
@@ -21,7 +22,7 @@ const mockUpdateMilkStashVolume = vi.fn();
 vi.mock('@/lib/firestore', () => ({
   createMilkStash: (...args: unknown[]) => mockCreateMilkStash(...args),
   migrateMilkStashToBaby: (...args: unknown[]) => mockMigrateMilkStashToBaby(...args),
-  subscribeToMilkStash: (...args: [string, (stash: MilkStash[]) => void]) => mockSubscribeToMilkStash(...args),
+  subscribeToMilkStash: (...args: [string, (stash: MilkStash[]) => void, string[]?]) => mockSubscribeToMilkStash(...args),
   markMilkStashInUse: vi.fn(),
   markMilkStashUsed: vi.fn(),
   updateMilkStashVolume: (...args: unknown[]) => mockUpdateMilkStashVolume(...args),
@@ -92,7 +93,7 @@ describe('MilkStashView', () => {
     renderMilkStashView();
 
     expect(mockMigrateMilkStashToBaby).toHaveBeenCalledWith(mockUser.uid, mockBaby.id);
-    expect(mockSubscribeToMilkStash).toHaveBeenCalledWith(mockBaby.id, expect.any(Function));
+    expect(mockSubscribeToMilkStash).toHaveBeenCalledWith(mockBaby.id, expect.any(Function), [mockBaby.userId]);
   });
 
   it('creates new stash entries under the selected baby profile', async () => {

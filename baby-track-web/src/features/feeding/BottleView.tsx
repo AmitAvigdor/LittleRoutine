@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
 import { BabyMoodSelector } from '@/components/ui/MoodSelector';
-import { Baby, BottleSession, BottleContentType, BabyMood, MilkStash, VolumeUnit, BOTTLE_CONTENT_CONFIG, convertVolume } from '@/types';
+import { Baby, BottleSession, BottleContentType, BabyMood, MilkStash, VolumeUnit, BOTTLE_CONTENT_CONFIG, convertVolume, getBabyAccessUserIds } from '@/types';
 import { createBottleSession, createBottleSessionFromMilkStash, subscribeToBottleSessions, subscribeToMilkStash, migrateMilkStashToBaby } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
@@ -73,9 +73,9 @@ export function BottleView({ baby }: BottleViewProps) {
       console.error('Error migrating milk stash:', error);
     });
 
-    const unsubscribe = subscribeToMilkStash(baby.id, setMilkStash);
+    const unsubscribe = subscribeToMilkStash(baby.id, setMilkStash, getBabyAccessUserIds(baby));
     return () => unsubscribe();
-  }, [user, baby.id]);
+  }, [user, baby]);
 
   useEffect(() => {
     if (settings?.preferredVolumeUnit) {

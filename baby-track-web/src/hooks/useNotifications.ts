@@ -28,7 +28,7 @@ import {
   migrateMilkStashToBaby,
   subscribeToMilkStash,
 } from '@/lib/firestore';
-import type { FeedingSession, BottleSession, DiaperChange, Medicine, MedicineLog, MilkStash } from '@/types';
+import { getBabyAccessUserIds, type FeedingSession, type BottleSession, type DiaperChange, type Medicine, type MedicineLog, type MilkStash } from '@/types';
 import { getRoomTempExpirationMinutes } from '@/types/feeding';
 
 const CHECK_INTERVAL_MS = 60 * 1000; // Check every 60 seconds
@@ -341,7 +341,7 @@ export function useNotifications() {
     unsubscribers.push(
       subscribeToMilkStash(selectedBaby.id, (stash) => {
         milkStashRef.current = stash;
-      })
+      }, getBabyAccessUserIds(selectedBaby))
     );
 
     return () => {
