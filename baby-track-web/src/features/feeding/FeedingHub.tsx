@@ -141,7 +141,7 @@ export function FeedingHub() {
           <>
             {activeTab === 'breast' && <BreastfeedingView baby={selectedBaby} />}
             {activeTab === 'bottle' && <BottleView baby={selectedBaby} />}
-            {activeTab === 'solids' && <SolidFoodsView embedded foods={solidFoods} />}
+            {activeTab === 'solids' && <SolidFoodsView embedded foods={solidFoods} autoOpenAdd />}
           </>
         )}
 

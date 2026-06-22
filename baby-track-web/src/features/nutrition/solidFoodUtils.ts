@@ -32,7 +32,11 @@ export function formatSolidFoodTime(food: SolidFood): string | null {
 }
 
 export function getSolidFoodTimelineTimestamp(food: SolidFood): string {
-  return food.timestamp ?? `${normalizeSolidFoodDate(food.date)}T12:00:00`;
+  if (food.timestamp) return food.timestamp;
+  if (normalizeSolidFoodDate(food.createdAt) === normalizeSolidFoodDate(food.date)) {
+    return food.createdAt;
+  }
+  return `${normalizeSolidFoodDate(food.date)}T12:00:00`;
 }
 
 export function compareSolidFoodsNewestFirst(a: SolidFood, b: SolidFood): number {

@@ -8,6 +8,7 @@ import type {
   MilkStash,
   PumpSession,
   SleepSession,
+  SolidFood,
 } from '@/types';
 
 interface HomeDataState {
@@ -16,6 +17,7 @@ interface HomeDataState {
   feedingSessions: FeedingSession[];
   pumpSessions: PumpSession[];
   bottleSessions: BottleSession[];
+  solidFoods: SolidFood[];
   sleepSessions: SleepSession[];
   diaperChanges: DiaperChange[];
   medicines: Medicine[];
@@ -27,6 +29,7 @@ interface HomeDataState {
   setFeedingSessions: (sessions: FeedingSession[]) => void;
   setPumpSessions: (sessions: PumpSession[]) => void;
   setBottleSessions: (sessions: BottleSession[]) => void;
+  setSolidFoods: (foods: SolidFood[]) => void;
   setSleepSessions: (sessions: SleepSession[]) => void;
   upsertFeedingSession: (session: FeedingSession) => void;
   removeFeedingSession: (sessionId: string) => void;
@@ -51,6 +54,7 @@ const initialState = {
   feedingSessions: [],
   pumpSessions: [],
   bottleSessions: [],
+  solidFoods: [],
   sleepSessions: [],
   diaperChanges: [],
   medicines: [],
@@ -77,6 +81,7 @@ export const useHomeStore = create<HomeDataState>()((set) => ({
       feedingSessions: [],
       pumpSessions: [],
       bottleSessions: [],
+      solidFoods: [],
       sleepSessions: [],
       diaperChanges: [],
       medicines: [],
@@ -93,6 +98,15 @@ export const useHomeStore = create<HomeDataState>()((set) => ({
 
   setBottleSessions: (bottleSessions) =>
     set({ bottleSessions: sortByDateDesc(bottleSessions, 'timestamp') }),
+
+  setSolidFoods: (solidFoods) =>
+    set({
+      solidFoods: [...solidFoods].sort((a, b) => {
+        const aTime = a.timestamp ?? `${a.date}T12:00:00`;
+        const bTime = b.timestamp ?? `${b.date}T12:00:00`;
+        return new Date(bTime).getTime() - new Date(aTime).getTime();
+      }),
+    }),
 
   setSleepSessions: (sleepSessions) =>
     set({ sleepSessions: sortByDateDesc(sleepSessions, 'startTime') }),

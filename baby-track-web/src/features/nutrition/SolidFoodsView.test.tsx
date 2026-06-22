@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -48,10 +49,10 @@ vi.mock('@/stores/toastStore', () => ({
 
 import { SolidFoodsView } from './SolidFoodsView';
 
-function renderSolidFoodsView() {
+function renderSolidFoodsView(props: ComponentProps<typeof SolidFoodsView> = {}) {
   return render(
     <BrowserRouter>
-      <SolidFoodsView />
+      <SolidFoodsView {...props} />
     </BrowserRouter>
   );
 }
@@ -88,6 +89,12 @@ describe('SolidFoodsView', () => {
     mockSubscribeToSolidFoods.mockClear();
     mockSetSelectedBabyId.mockReset();
     vi.stubGlobal('confirm', vi.fn(() => true));
+  });
+
+  it('opens Add Food immediately when embedded from the feeding tab', () => {
+    renderSolidFoodsView({ embedded: true, foods: [], autoOpenAdd: true });
+
+    expect(screen.getByRole('dialog', { name: 'Add Food' })).toBeInTheDocument();
   });
 
   it('creates a new solid food entry for the selected baby', async () => {

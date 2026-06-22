@@ -44,7 +44,7 @@ describe('solid food dates', () => {
   });
 
   it('keeps date-only legacy foods compatible with the feeding timeline', () => {
-    expect(getSolidFoodTimelineTimestamp(makeFood({ date: '2026-06-20' }))).toBe('2026-06-20T12:00:00');
+    expect(getSolidFoodTimelineTimestamp(makeFood({ date: '2026-06-20' }))).toBe('2026-06-20T08:00:00.000Z');
   });
 
   it('sorts by food date and then newest creation time', () => {

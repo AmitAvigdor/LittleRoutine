@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { DiaperChange, Medicine, MedicineLog } from '@/types';
+import type { DiaperChange, Medicine, MedicineLog, SolidFood } from '@/types';
 import { useHomeStore } from './homeStore';
 
 const baseMedicine: Medicine = {
@@ -42,6 +42,24 @@ const baseDiaperChange: DiaperChange = {
   updatedAt: '2026-03-22T09:00:00.000Z',
 };
 
+const baseSolidFood: SolidFood = {
+  id: 'solid-1',
+  babyId: 'baby-1',
+  userId: 'user-1',
+  foodName: 'Banana',
+  date: '2026-03-22',
+  timestamp: '2026-03-22T10:00:00.000Z',
+  category: 'fruit',
+  isFirstIntroduction: true,
+  reaction: 'none',
+  reactionNotes: null,
+  liked: null,
+  photoUrl: null,
+  notes: null,
+  createdAt: '2026-03-22T10:00:00.000Z',
+  updatedAt: '2026-03-22T10:00:00.000Z',
+};
+
 function resetStore() {
   useHomeStore.setState({
     activeBabyId: null,
@@ -49,6 +67,7 @@ function resetStore() {
     feedingSessions: [],
     pumpSessions: [],
     bottleSessions: [],
+    solidFoods: [],
     sleepSessions: [],
     diaperChanges: [],
     medicines: [],
@@ -104,5 +123,14 @@ describe('homeStore', () => {
     });
 
     expect(useHomeStore.getState().diaperChanges[0].id).toBe('change-2');
+  });
+
+  it('keeps solid foods sorted for the home feeding status', () => {
+    useHomeStore.getState().setSolidFoods([
+      baseSolidFood,
+      { ...baseSolidFood, id: 'solid-2', timestamp: '2026-03-22T12:00:00.000Z' },
+    ]);
+
+    expect(useHomeStore.getState().solidFoods[0].id).toBe('solid-2');
   });
 });

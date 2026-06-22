@@ -80,13 +80,18 @@ function getDefaultFormState() {
 interface SolidFoodsViewProps {
   embedded?: boolean;
   foods?: SolidFood[];
+  autoOpenAdd?: boolean;
 }
 
-export function SolidFoodsView({ embedded = false, foods: suppliedFoods }: SolidFoodsViewProps = {}) {
+export function SolidFoodsView({
+  embedded = false,
+  foods: suppliedFoods,
+  autoOpenAdd = false,
+}: SolidFoodsViewProps = {}) {
   const { user } = useAuth();
   const { selectedBaby } = useAppStore();
   const [foods, setFoods] = useState<SolidFood[]>([]);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(autoOpenAdd);
   const [saving, setSaving] = useState(false);
   const [isLoadingFoods, setIsLoadingFoods] = useState(true);
   const [filter, setFilter] = useState<FoodCategory | 'all'>('all');
@@ -101,11 +106,11 @@ export function SolidFoodsView({ embedded = false, foods: suppliedFoods }: Solid
   const formTitleId = useId();
 
   useEffect(() => {
-    setShowForm(false);
+    setShowForm(autoOpenAdd);
     setEditingFoodId(null);
     setFormError('');
     setFormState(getDefaultFormState());
-  }, [selectedBaby]);
+  }, [autoOpenAdd, selectedBaby]);
 
   useEffect(() => {
     if (!selectedBaby) {

@@ -10,6 +10,7 @@ import {
   subscribeToMilkStash,
   subscribeToPumpSessions,
   subscribeToSleepSessions,
+  subscribeToSolidFoods,
 } from '@/lib/firestore';
 import { useHomeStore } from '@/stores/homeStore';
 import { useAppStore } from '@/stores/appStore';
@@ -83,6 +84,10 @@ function startSubscriptions({ userId, babyId }: HomeSyncContext) {
     }),
     subscribeToBottleSessions(babyId, (sessions) => {
       store.setBottleSessions(sessions);
+      store.markRefreshed();
+    }),
+    subscribeToSolidFoods(babyId, (foods) => {
+      store.setSolidFoods(foods);
       store.markRefreshed();
     }),
     subscribeToSleepSessions(babyId, (sessions) => {

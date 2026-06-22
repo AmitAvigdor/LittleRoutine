@@ -29,6 +29,7 @@ import {
   CheckCircle2,
   Droplets,
   Briefcase,
+  Apple,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import {
@@ -36,8 +37,9 @@ import {
   type SmartSuggestion,
   type SmartSuggestionActionKind,
 } from './smartSuggestions';
-import { formatSleepStartedAt } from './dashboardFormatting';
+import { formatSleepStartedAt, getLatestFeedingStatus } from './dashboardFormatting';
 import { findNightSleepGroup, groupNightSleepSessions } from '@/features/sleep/sleepGrouping';
+import { getSolidFoodTimelineTimestamp } from '@/features/nutrition/solidFoodUtils';
 
 type DashboardIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -505,6 +507,7 @@ export function DashboardView() {
   const feedingSessions = useHomeStore((state) => state.feedingSessions);
   const pumpSessions = useHomeStore((state) => state.pumpSessions);
   const bottleSessions = useHomeStore((state) => state.bottleSessions);
+  const solidFoods = useHomeStore((state) => state.solidFoods);
   const sleepSessions = useHomeStore((state) => state.sleepSessions);
   const diaperChanges = useHomeStore((state) => state.diaperChanges);
   const medicines = useHomeStore((state) => state.medicines);
@@ -596,34 +599,10 @@ export function DashboardView() {
     [favoriteFeatureIds, settings?.feedingTypePreference]
   );
 
-  // Get last feeding info (breastfeeding or bottle - pump is not feeding, it's milk collection)
-  const lastFeeding = useMemo(() => {
-    const allFeedings: { timestamp: string; type: string; details: string }[] = [];
-
-    // Add breastfeeding sessions (not active)
-    feedingSessions
-      .filter((s) => !s.isActive)
-      .forEach((s) => {
-        allFeedings.push({
-          timestamp: s.startTime,
-          type: 'breast',
-          details: `Breastfeeding - ${BREAST_SIDE_CONFIG[s.breastSide].label}`,
-        });
-      });
-
-    // Add bottle sessions
-    bottleSessions.forEach((s) => {
-      allFeedings.push({
-        timestamp: s.timestamp,
-        type: 'bottle',
-        details: `Bottle - ${s.volume} ${s.volumeUnit}`,
-      });
-    });
-
-    // Sort by timestamp descending and get the most recent
-    allFeedings.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    return allFeedings[0] || null;
-  }, [feedingSessions, bottleSessions]);
+  const lastFeeding = useMemo(
+    () => getLatestFeedingStatus(feedingSessions, bottleSessions, solidFoods),
+    [feedingSessions, bottleSessions, solidFoods]
+  );
 
   // Get last diaper change
   const lastDiaper = useMemo(() => {
@@ -694,12 +673,12 @@ export function DashboardView() {
 
   const feedingStatusCard = useMemo(() => ({
     title: 'Last Feeding',
-    Icon: lastFeeding?.type === 'bottle' ? Milk : Baby,
-    iconBg: '#e91e63',
+    Icon: lastFeeding?.type === 'bottle' ? Milk : lastFeeding?.type === 'solid' ? Apple : Baby,
+    iconBg: lastFeeding?.type === 'solid' ? '#4caf50' : '#e91e63',
     timeSince: lastFeeding ? formatTimeSince(lastFeeding.timestamp) : null,
     subtitle: lastFeeding?.details,
     urgencyColor: lastFeeding ? getUrgencyColor(lastFeeding.timestamp, 120, 180) : undefined,
-    route: '/feed',
+    route: lastFeeding?.type === 'solid' ? '/feed?tab=solids' : '/feed',
   }), [lastFeeding]);
 
   const sleepStatusCard = useMemo(() => ({
@@ -728,14 +707,15 @@ export function DashboardView() {
   const todaySummary = useMemo(() => ({
     feedings:
       feedingSessions.filter((s) => !s.isActive && isToday(s.startTime)).length +
-      bottleSessions.filter((s) => isToday(s.timestamp)).length,
+      bottleSessions.filter((s) => isToday(s.timestamp)).length +
+      solidFoods.filter((food) => isToday(getSolidFoodTimelineTimestamp(food))).length,
     sleeps:
       sleepSessions.filter((s) => !s.isActive && s.endTime && s.type === 'nap' && isToday(s.startTime)).length +
       groupNightSleepSessions(sleepSessions).filter(
         (group) => !group.isActive && group.endTime && isToday(group.endTime)
       ).length,
     diapers: diaperChanges.filter((c) => isToday(c.timestamp)).length,
-  }), [feedingSessions, bottleSessions, sleepSessions, diaperChanges]);
+  }), [feedingSessions, bottleSessions, solidFoods, sleepSessions, diaperChanges]);
 
   const smartSuggestion = useMemo(
     () =>

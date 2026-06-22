@@ -52,8 +52,8 @@ vi.mock('./BottleView', () => ({
 }));
 
 vi.mock('@/features/nutrition/SolidFoodsView', () => ({
-  SolidFoodsView: ({ embedded, foods }: { embedded?: boolean; foods?: SolidFood[] }) => (
-    <div>Solid foods content · {embedded ? 'embedded' : 'standalone'} · {foods?.length ?? 0} entries</div>
+  SolidFoodsView: ({ embedded, foods, autoOpenAdd }: { embedded?: boolean; foods?: SolidFood[]; autoOpenAdd?: boolean }) => (
+    <div>Solid foods content · {embedded ? 'embedded' : 'standalone'} · {foods?.length ?? 0} entries · {autoOpenAdd ? 'add open' : 'add closed'}</div>
   ),
 }));
 
@@ -93,7 +93,7 @@ describe('FeedingHub solids integration', () => {
     expect(screen.getByRole('button', { name: 'Breast' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Bottle' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Solids' })).toBeInTheDocument();
-    expect(await screen.findByText('Solid foods content · embedded · 1 entries')).toBeInTheDocument();
+    expect(await screen.findByText('Solid foods content · embedded · 1 entries · add open')).toBeInTheDocument();
     expect(screen.queryByTitle('Milk Stash')).not.toBeInTheDocument();
   });
 
@@ -103,6 +103,6 @@ describe('FeedingHub solids integration', () => {
 
     await user.click(await screen.findByText('Solids • Avocado'));
 
-    expect(await screen.findByText('Solid foods content · embedded · 1 entries')).toBeInTheDocument();
+    expect(await screen.findByText('Solid foods content · embedded · 1 entries · add open')).toBeInTheDocument();
   });
 });
