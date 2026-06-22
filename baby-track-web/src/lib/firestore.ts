@@ -44,7 +44,7 @@ import type {
   MedicineLog, CreateMedicineLogInput,
   Vaccination, CreateVaccinationInput,
   TeethingEvent, CreateTeethingEventInput,
-  SolidFood, CreateSolidFoodInput,
+  SolidFood, CreateSolidFoodInput, UpdateSolidFoodInput,
   DiaryEntry, CreateDiaryEntryInput,
   PediatricianNote, CreatePediatricianNoteInput,
   AppSettings, UpdateAppSettingsInput,
@@ -1365,6 +1365,20 @@ export function subscribeToSolidFoods(
     'desc',
     callback
   );
+}
+
+export async function updateSolidFood(
+  foodId: string,
+  input: UpdateSolidFoodInput
+): Promise<void> {
+  await updateDoc(doc(db, 'solidFoods', foodId), {
+    ...input,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+export async function deleteSolidFood(foodId: string): Promise<void> {
+  await deleteDoc(doc(db, 'solidFoods', foodId));
 }
 
 // ============ DIARY ENTRIES ============

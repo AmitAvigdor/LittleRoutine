@@ -1,4 +1,4 @@
-import { InputHTMLAttributes, forwardRef, ReactNode } from 'react';
+import { InputHTMLAttributes, forwardRef, ReactNode, useId } from 'react';
 import { clsx } from 'clsx';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -10,11 +10,14 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, icon, type, ...props }, ref) => {
     const isDateOrTime = type === 'date' || type === 'time';
+    const generatedId = useId();
+    const inputId = props.id ?? generatedId;
+    const errorId = error ? `${inputId}-error` : undefined;
 
     return (
       <div className="w-full min-w-0">
         {label && (
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1.5">
             {label}
           </label>
         )}
@@ -26,7 +29,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
           <input
             ref={ref}
+            id={inputId}
             type={type}
+            aria-invalid={error ? 'true' : undefined}
+            aria-describedby={errorId}
             className={clsx(
               'w-full min-w-0 rounded-xl border-2 bg-white px-3 py-2.5 text-gray-900 text-base',
               'placeholder:text-gray-400',
@@ -42,7 +48,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           />
         </div>
         {error && (
-          <p className="mt-1.5 text-sm text-red-500">{error}</p>
+          <p id={errorId} className="mt-1.5 text-sm text-red-500">{error}</p>
         )}
       </div>
     );
@@ -59,15 +65,22 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, label, error, ...props }, ref) => {
+    const generatedId = useId();
+    const textareaId = props.id ?? generatedId;
+    const errorId = error ? `${textareaId}-error` : undefined;
+
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label htmlFor={textareaId} className="block text-sm font-medium text-gray-700 mb-1.5">
             {label}
           </label>
         )}
         <textarea
           ref={ref}
+          id={textareaId}
+          aria-invalid={error ? 'true' : undefined}
+          aria-describedby={errorId}
           className={clsx(
             'w-full rounded-xl border-2 bg-white px-4 py-2.5 text-gray-900',
             'placeholder:text-gray-400',
@@ -80,7 +93,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {error && (
-          <p className="mt-1.5 text-sm text-red-500">{error}</p>
+          <p id={errorId} className="mt-1.5 text-sm text-red-500">{error}</p>
         )}
       </div>
     );

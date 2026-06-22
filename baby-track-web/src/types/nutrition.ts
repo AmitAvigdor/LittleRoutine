@@ -29,6 +29,8 @@ export interface CreateSolidFoodInput {
   notes?: string | null;
 }
 
+export interface UpdateSolidFoodInput extends Partial<CreateSolidFoodInput> {}
+
 // Get all foods with reactions for allergy tracking
 export function getFoodsWithReactions(foods: SolidFood[]): SolidFood[] {
   return foods.filter(f => f.reaction && f.reaction !== 'none');
