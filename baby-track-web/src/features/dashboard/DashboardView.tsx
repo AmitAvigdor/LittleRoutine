@@ -36,6 +36,7 @@ import {
   type SmartSuggestion,
   type SmartSuggestionActionKind,
 } from './smartSuggestions';
+import { formatSleepStartedAt } from './dashboardFormatting';
 
 type DashboardIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -555,7 +556,7 @@ export function DashboardView() {
         id: s.id,
         type: 'sleep',
         title: 'Sleeping',
-        subtitle: SLEEP_TYPE_CONFIG[s.type].label,
+        subtitle: `${SLEEP_TYPE_CONFIG[s.type].label} · ${formatSleepStartedAt(s.startTime)}`,
         startTime: s.startTime,
         icon: <Moon className="w-6 h-6 text-white" />,
         iconBg: '#3f51b5',
@@ -640,7 +641,7 @@ export function DashboardView() {
         isAsleep: true,
         timestamp: activeSleep.startTime,
         type: activeSleep.type,
-        details: `${SLEEP_TYPE_CONFIG[activeSleep.type].label} in progress`,
+        details: `${SLEEP_TYPE_CONFIG[activeSleep.type].label} in progress · ${formatSleepStartedAt(activeSleep.startTime)}`,
       };
     }
 
