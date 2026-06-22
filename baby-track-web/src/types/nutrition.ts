@@ -6,6 +6,7 @@ export interface SolidFood {
   userId: string;
   foodName: string;
   date: string;
+  timestamp?: string | null;
   category: FoodCategory;
   isFirstIntroduction: boolean;
   reaction: FoodReaction | null;
@@ -20,6 +21,7 @@ export interface SolidFood {
 export interface CreateSolidFoodInput {
   foodName: string;
   date: string;
+  timestamp?: string | null;
   category: FoodCategory;
   isFirstIntroduction?: boolean;
   reaction?: FoodReaction | null;

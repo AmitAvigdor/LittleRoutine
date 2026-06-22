@@ -1341,6 +1341,7 @@ export async function createSolidFood(
     ...input,
     babyId,
     userId,
+    timestamp: input.timestamp ?? null,
     isFirstIntroduction: input.isFirstIntroduction ?? false,
     reaction: input.reaction ?? null,
     reactionNotes: input.reactionNotes ?? null,

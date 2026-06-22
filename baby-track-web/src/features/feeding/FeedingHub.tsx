@@ -1,50 +1,49 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
-import { Milk, Baby, Clock } from 'lucide-react';
+import { Milk, Baby, Clock, Apple } from 'lucide-react';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { SegmentedControl } from '@/components/ui/Select';
 import { BreastfeedingView } from './BreastfeedingView';
 import { BottleView } from './BottleView';
+import { SolidFoodsView } from '@/features/nutrition/SolidFoodsView';
+import { getSolidFoodTimelineTimestamp } from '@/features/nutrition/solidFoodUtils';
 import { EditSessionModal } from '@/components/ui/EditSessionModal';
 import { MoodIndicator } from '@/components/ui/MoodSelector';
 import { useAppStore } from '@/stores/appStore';
-import { subscribeToFeedingSessions, subscribeToBottleSessions } from '@/lib/firestore';
-import { FeedingSession, BottleSession, BREAST_SIDE_CONFIG, BOTTLE_CONTENT_CONFIG, formatDuration } from '@/types';
+import { subscribeToFeedingSessions, subscribeToBottleSessions, subscribeToSolidFoods } from '@/lib/firestore';
+import { FeedingSession, BottleSession, SolidFood, BREAST_SIDE_CONFIG, BOTTLE_CONTENT_CONFIG, FOOD_CATEGORY_CONFIG, formatDuration } from '@/types';
 
-type FeedingTab = 'breast' | 'bottle';
+type FeedingTab = 'breast' | 'bottle' | 'solids';
 
 const tabOptions = [
   { value: 'breast', label: 'Breast', icon: <Baby className="w-4 h-4" /> },
   { value: 'bottle', label: 'Bottle', icon: <Milk className="w-4 h-4" /> },
+  { value: 'solids', label: 'Solids', icon: <Apple className="w-4 h-4" /> },
 ];
 
 export function FeedingHub() {
   const { selectedBaby, babies, settings } = useAppStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab') as FeedingTab | null;
   const [feedingSessions, setFeedingSessions] = useState<FeedingSession[]>([]);
   const [bottleSessions, setBottleSessions] = useState<BottleSession[]>([]);
+  const [solidFoods, setSolidFoods] = useState<SolidFood[]>([]);
   const [selectedFeedingSession, setSelectedFeedingSession] = useState<FeedingSession | null>(null);
   const [selectedBottleSession, setSelectedBottleSession] = useState<BottleSession | null>(null);
 
-  // Set initial tab based on feeding type preference
-  const getInitialTab = (): FeedingTab => {
-    if (settings?.feedingTypePreference === 'formula') {
-      return 'bottle';
-    }
-    return 'breast';
-  };
-
-  const [activeTab, setActiveTab] = useState<FeedingTab>(getInitialTab);
-
-  // Update tab when settings change (e.g., when settings load)
-  useEffect(() => {
-    if (settings?.feedingTypePreference === 'formula') {
-      setActiveTab('bottle');
-    } else if (settings?.feedingTypePreference === 'breastfeeding') {
-      setActiveTab('breast');
-    }
-  }, [settings?.feedingTypePreference]);
+  const activeTab: FeedingTab =
+    requestedTab === 'breast' || requestedTab === 'bottle' || requestedTab === 'solids'
+      ? requestedTab
+      : settings?.feedingTypePreference === 'formula'
+        ? 'bottle'
+        : 'breast';
   const navigate = useNavigate();
+
+  const handleTabChange = (value: string) => {
+    const tab = value as FeedingTab;
+    setSearchParams({ tab }, { replace: true });
+  };
 
   // Subscribe to both feeding types
   useEffect(() => {
@@ -52,10 +51,12 @@ export function FeedingHub() {
 
     const unsubFeeding = subscribeToFeedingSessions(selectedBaby.id, setFeedingSessions);
     const unsubBottle = subscribeToBottleSessions(selectedBaby.id, setBottleSessions);
+    const unsubSolids = subscribeToSolidFoods(selectedBaby.id, setSolidFoods);
 
     return () => {
       unsubFeeding();
       unsubBottle();
+      unsubSolids();
     };
   }, [selectedBaby]);
 
@@ -63,9 +64,9 @@ export function FeedingHub() {
   const recentFeedings = useMemo(() => {
     const combined: Array<{
       id: string;
-      type: 'breast' | 'bottle';
+      type: 'breast' | 'bottle' | 'solid';
       timestamp: string;
-      session: FeedingSession | BottleSession;
+      session: FeedingSession | BottleSession | SolidFood;
     }> = [];
 
     // Add completed breastfeeding sessions
@@ -90,11 +91,20 @@ export function FeedingHub() {
       });
     });
 
+    solidFoods.forEach((food) => {
+      combined.push({
+        id: food.id,
+        type: 'solid',
+        timestamp: getSolidFoodTimelineTimestamp(food),
+        session: food,
+      });
+    });
+
     // Sort by timestamp descending (most recent first)
     combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     return combined.slice(0, 10);
-  }, [feedingSessions, bottleSessions]);
+  }, [feedingSessions, bottleSessions, solidFoods]);
 
   if (babies.length === 0) {
     return <NoBabiesHeader />;
@@ -104,7 +114,7 @@ export function FeedingHub() {
     <div>
       <Header
         title="Feed"
-        rightAction={
+        rightAction={activeTab !== 'solids' ? (
           <button
             onClick={() => navigate('/more/milk-stash')}
             className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -112,7 +122,7 @@ export function FeedingHub() {
           >
             <Milk className="w-5 h-5 text-gray-600" />
           </button>
-        }
+        ) : undefined}
       />
 
       <div className="px-4 py-4">
@@ -121,7 +131,8 @@ export function FeedingHub() {
           <SegmentedControl
             options={tabOptions}
             value={activeTab}
-            onChange={(value) => setActiveTab(value as FeedingTab)}
+            onChange={handleTabChange}
+            fullWidth
           />
         </div>
 
@@ -130,11 +141,12 @@ export function FeedingHub() {
           <>
             {activeTab === 'breast' && <BreastfeedingView baby={selectedBaby} />}
             {activeTab === 'bottle' && <BottleView baby={selectedBaby} />}
+            {activeTab === 'solids' && <SolidFoodsView embedded foods={solidFoods} />}
           </>
         )}
 
         {/* Combined Recent Feedings */}
-        {recentFeedings.length > 0 && (
+        {activeTab !== 'solids' && recentFeedings.length > 0 && (
           <div className="mt-6 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
               <h3 className="font-semibold text-gray-900">Recent Feedings</h3>
@@ -171,7 +183,7 @@ export function FeedingHub() {
                       <MoodIndicator babyMood={session.babyMood} momMood={session.momMood} size="sm" />
                     </button>
                   );
-                } else {
+                } else if (item.type === 'bottle') {
                   const session = item.session as BottleSession;
                   return (
                     <button
@@ -197,6 +209,32 @@ export function FeedingHub() {
                         </div>
                       </div>
                       <MoodIndicator babyMood={session.babyMood} size="sm" />
+                    </button>
+                  );
+                } else {
+                  const food = item.session as SolidFood;
+                  const category = FOOD_CATEGORY_CONFIG[food.category];
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleTabChange('solids')}
+                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50/80 active:bg-gray-100 transition-colors text-left"
+                    >
+                      <div
+                        className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm"
+                        style={{ backgroundColor: category.color }}
+                      >
+                        <Apple className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900">Solids • {food.foodName}</p>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <Clock className="w-3 h-3 flex-shrink-0" />
+                          <span className="font-medium">{category.label}</span>
+                          <span>•</span>
+                          <span className="truncate">{format(parseISO(item.timestamp), food.timestamp ? 'MMM d, h:mm a' : 'MMM d')}</span>
+                        </div>
+                      </div>
                     </button>
                   );
                 }

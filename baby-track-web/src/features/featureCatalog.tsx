@@ -71,7 +71,7 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
   { id: 'play', label: 'Play', path: '/more/play', color: '#ff9800', icon: Gamepad2, emoji: '🎮' },
   { id: 'walks', label: 'Walks', path: '/more/walks', color: '#8bc34a', icon: Footprints, emoji: '🚶' },
   { id: 'growth', label: 'Growth', path: '/more/growth', color: '#ff9800', icon: TrendingUp, emoji: '📈' },
-  { id: 'solid-foods', label: 'Solids', path: '/more/solid-foods', color: '#4caf50', icon: Apple, emoji: '🍎' },
+  { id: 'solid-foods', label: 'Solids', path: '/feed?tab=solids', color: '#4caf50', icon: Apple, emoji: '🍎' },
   { id: 'vaccinations', label: 'Vaccines', path: '/more/vaccinations', color: '#03a9f4', icon: Syringe, emoji: '💉' },
   { id: 'medicine', label: 'Medicine', path: '/more/medicine', color: '#9c27b0', icon: Pill, emoji: '💊' },
   { id: 'teething', label: 'Teething', path: '/more/teething', color: '#e91e63', icon: SmilePlus, emoji: '🦷' },

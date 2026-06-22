@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { SolidFood } from '@/types';
 import {
   compareSolidFoodsNewestFirst,
+  combineSolidFoodDateAndTime,
   formatSolidFoodDate,
+  getSolidFoodTimelineTimestamp,
   normalizeSolidFoodDate,
 } from './solidFoodUtils';
 
@@ -35,11 +37,21 @@ describe('solid food dates', () => {
     expect(formatSolidFoodDate('2026-06-20')).toBe('Jun 20, 2026');
   });
 
+  it('combines a local date and time into an exact timestamp', () => {
+    expect(combineSolidFoodDateAndTime('2026-06-20', '14:30')).toBe(
+      new Date('2026-06-20T14:30:00').toISOString()
+    );
+  });
+
+  it('keeps date-only legacy foods compatible with the feeding timeline', () => {
+    expect(getSolidFoodTimelineTimestamp(makeFood({ date: '2026-06-20' }))).toBe('2026-06-20T12:00:00');
+  });
+
   it('sorts by food date and then newest creation time', () => {
     const foods = [
       makeFood({ id: 'older-day', date: '2026-06-19', createdAt: '2026-06-19T20:00:00.000Z' }),
-      makeFood({ id: 'older-entry', createdAt: '2026-06-20T08:00:00.000Z' }),
-      makeFood({ id: 'newer-entry', createdAt: '2026-06-20T12:00:00.000Z' }),
+      makeFood({ id: 'older-entry', timestamp: '2026-06-20T08:00:00.000Z', createdAt: '2026-06-20T13:00:00.000Z' }),
+      makeFood({ id: 'newer-entry', timestamp: '2026-06-20T12:00:00.000Z', createdAt: '2026-06-20T12:00:00.000Z' }),
     ].sort(compareSolidFoodsNewestFirst);
 
     expect(foods.map((food) => food.id)).toEqual(['newer-entry', 'older-entry', 'older-day']);

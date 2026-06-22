@@ -13,7 +13,10 @@ import { clsx } from 'clsx';
 import { toast } from '@/stores/toastStore';
 import {
   compareSolidFoodsNewestFirst,
+  combineSolidFoodDateAndTime,
   formatSolidFoodDate,
+  formatSolidFoodTime,
+  getSolidFoodTimeInputValue,
   normalizeSolidFoodDate,
 } from './solidFoodUtils';
 
@@ -60,9 +63,11 @@ function getSuggestedFoods() {
 }
 
 function getDefaultFormState() {
+  const now = new Date();
   return {
     foodName: '',
     date: getTodayLocalDate(),
+    time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
     category: 'fruit' as FoodCategory,
     isFirstIntroduction: true,
     reaction: 'none' as FoodReaction,
@@ -72,7 +77,12 @@ function getDefaultFormState() {
   };
 }
 
-export function SolidFoodsView() {
+interface SolidFoodsViewProps {
+  embedded?: boolean;
+  foods?: SolidFood[];
+}
+
+export function SolidFoodsView({ embedded = false, foods: suppliedFoods }: SolidFoodsViewProps = {}) {
   const { user } = useAuth();
   const { selectedBaby } = useAppStore();
   const [foods, setFoods] = useState<SolidFood[]>([]);
@@ -95,9 +105,17 @@ export function SolidFoodsView() {
     setEditingFoodId(null);
     setFormError('');
     setFormState(getDefaultFormState());
+  }, [selectedBaby]);
 
+  useEffect(() => {
     if (!selectedBaby) {
       setFoods([]);
+      setIsLoadingFoods(false);
+      return;
+    }
+
+    if (suppliedFoods !== undefined) {
+      setFoods(suppliedFoods);
       setIsLoadingFoods(false);
       return;
     }
@@ -111,7 +129,7 @@ export function SolidFoodsView() {
     });
 
     return () => unsubscribe();
-  }, [selectedBaby]);
+  }, [selectedBaby, suppliedFoods]);
 
   const existingFoodNames = useMemo(
     () => new Set(
@@ -207,6 +225,7 @@ export function SolidFoodsView() {
     setFormState({
       foodName: food.foodName,
       date: normalizeSolidFoodDate(food.date),
+      time: getSolidFoodTimeInputValue(food),
       category: food.category,
       isFirstIntroduction: food.isFirstIntroduction,
       reaction: food.reaction ?? 'none',
@@ -228,12 +247,19 @@ export function SolidFoodsView() {
       return;
     }
 
+    const entryTimestamp = combineSolidFoodDateAndTime(formState.date, formState.time);
+    if (entryTimestamp && new Date(entryTimestamp).getTime() > Date.now()) {
+      setFormError('Time cannot be in the future.');
+      return;
+    }
+
     setSaving(true);
     setFormError('');
     try {
       const payload = {
         foodName: trimmedFoodName,
         date: normalizeSolidFoodDate(formState.date),
+        timestamp: entryTimestamp,
         category: formState.category,
         isFirstIntroduction: formState.isFirstIntroduction,
         reaction: formState.reaction,
@@ -290,7 +316,7 @@ export function SolidFoodsView() {
 
   return (
     <div>
-      <Header
+      {!embedded && <Header
         title="Solid Foods"
         showBabySwitcher
         rightAction={
@@ -299,9 +325,21 @@ export function SolidFoodsView() {
             Add
           </Button>
         }
-      />
+      />}
 
-      <div className="px-4 py-4 space-y-4">
+      <div className={clsx('space-y-4', embedded ? 'pt-1' : 'px-4 py-4')}>
+        {embedded && (
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-gray-900">Solid foods</h2>
+              <p className="text-xs text-gray-500">Introductions, preferences, and reactions</p>
+            </div>
+            <Button size="sm" onClick={openCreateForm}>
+              <Plus className="mr-1 h-4 w-4" />
+              Add food
+            </Button>
+          </div>
+        )}
         {/* Reactions Alert */}
         {foodsWithReactions.length > 0 && (
           <Card className="bg-amber-50 border border-amber-200">
@@ -415,6 +453,13 @@ export function SolidFoodsView() {
                 max={getTodayLocalDate()}
                 onChange={(e) => updateFormState('date', e.target.value)}
                 required
+              />
+
+              <Input
+                type="time"
+                label="Time (optional)"
+                value={formState.time}
+                onChange={(e) => updateFormState('time', e.target.value)}
               />
 
               {/* Category */}
@@ -667,6 +712,7 @@ export function SolidFoodsView() {
             {dateFoods.map((food) => {
               const catConfig = FOOD_CATEGORY_CONFIG[food.category];
               const reactionConfig = food.reaction ? FOOD_REACTION_CONFIG[food.reaction] : null;
+              const foodTime = formatSolidFoodTime(food);
 
               return (
                 <Card key={food.id} className="py-3">
@@ -700,6 +746,9 @@ export function SolidFoodsView() {
                         )}
                       </div>
                       <p className="font-medium text-gray-900 mt-1">{food.foodName}</p>
+                      {foodTime && (
+                        <p className="mt-0.5 text-xs text-gray-400">{foodTime}</p>
+                      )}
                       {food.reactionNotes && food.reaction !== 'none' && (
                         <p className="text-sm text-amber-700 mt-1">{food.reactionNotes}</p>
                       )}

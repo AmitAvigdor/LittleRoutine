@@ -106,6 +106,7 @@ describe('SolidFoodsView', () => {
           foodName: 'Mango',
           category: 'fruit',
           isFirstIntroduction: true,
+          timestamp: expect.any(String),
         })
       );
     });
