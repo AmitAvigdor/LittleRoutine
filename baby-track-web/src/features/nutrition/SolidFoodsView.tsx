@@ -2,15 +2,20 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import { Input, Textarea } from '@/components/ui/Input';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { createSolidFood, deleteSolidFood, subscribeToSolidFoods, updateSolidFood } from '@/lib/firestore';
 import type { SolidFood } from '@/types';
-import { COMMON_FOODS, FoodCategory, FoodReaction, FoodPreference, FOOD_CATEGORY_CONFIG, FOOD_REACTION_CONFIG, FOOD_PREFERENCE_CONFIG } from '@/types/enums';
+import { COMMON_FOODS, FoodCategory, FoodReaction, FoodPreference, FOOD_CATEGORY_CONFIG, FOOD_REACTION_CONFIG } from '@/types/enums';
 import { Apple, AlertTriangle, Minus, Pencil, Plus, Search, ThumbsDown, ThumbsUp, Trash2, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { toast } from '@/stores/toastStore';
+import {
+  compareSolidFoodsNewestFirst,
+  formatSolidFoodDate,
+  normalizeSolidFoodDate,
+} from './solidFoodUtils';
 
 function getTodayLocalDate() {
   const now = new Date();
@@ -19,10 +24,6 @@ function getTodayLocalDate() {
   const day = String(now.getDate()).padStart(2, '0');
 
   return `${year}-${month}-${day}`;
-}
-
-function formatFoodDate(date: string) {
-  return new Date(`${date}T12:00:00`).toLocaleDateString();
 }
 
 function normalizeFoodName(foodName: string) {
@@ -81,13 +82,20 @@ export function SolidFoodsView() {
   const [filter, setFilter] = useState<FoodCategory | 'all'>('all');
   const [search, setSearch] = useState('');
   const [editingFoodId, setEditingFoodId] = useState<string | null>(null);
+  const [deletingFoodId, setDeletingFoodId] = useState<string | null>(null);
   const [formError, setFormError] = useState('');
   const [formState, setFormState] = useState(getDefaultFormState());
   const reactionLabelId = useId();
   const preferenceLabelId = useId();
   const categoryLabelId = useId();
+  const formTitleId = useId();
 
   useEffect(() => {
+    setShowForm(false);
+    setEditingFoodId(null);
+    setFormError('');
+    setFormState(getDefaultFormState());
+
     if (!selectedBaby) {
       setFoods([]);
       setIsLoadingFoods(false);
@@ -106,8 +114,12 @@ export function SolidFoodsView() {
   }, [selectedBaby]);
 
   const existingFoodNames = useMemo(
-    () => new Set(foods.map((food) => normalizeFoodName(food.foodName))),
-    [foods]
+    () => new Set(
+      foods
+        .filter((food) => food.id !== editingFoodId)
+        .map((food) => normalizeFoodName(food.foodName))
+    ),
+    [editingFoodId, foods]
   );
 
   const normalizedCurrentFoodName = normalizeFoodName(formState.foodName);
@@ -124,7 +136,7 @@ export function SolidFoodsView() {
         || (food.reactionNotes?.toLowerCase().includes(query) ?? false);
 
       return categoryMatches && queryMatches;
-    });
+    }).sort(compareSolidFoodsNewestFirst);
   }, [filter, foods, search]);
 
   const foodsWithReactions = useMemo(() => {
@@ -136,20 +148,42 @@ export function SolidFoodsView() {
         const key = normalizeFoodName(food.foodName);
         const existing = latestByFood.get(key);
 
-        if (!existing || food.date > existing.date || food.updatedAt > existing.updatedAt) {
+        const isNewerDate = normalizeSolidFoodDate(food.date) > normalizeSolidFoodDate(existing?.date ?? '');
+        const isSameDateButNewer = existing
+          && normalizeSolidFoodDate(food.date) === normalizeSolidFoodDate(existing.date)
+          && food.updatedAt > existing.updatedAt;
+
+        if (!existing || isNewerDate || isSameDateButNewer) {
           latestByFood.set(key, food);
         }
       });
 
-    return Array.from(latestByFood.values()).sort((a, b) => b.date.localeCompare(a.date));
+    return Array.from(latestByFood.values()).sort(compareSolidFoodsNewestFirst);
   }, [foods]);
 
   const suggestionFoods = useMemo(() => getSuggestedFoods(), []);
+  const visibleSuggestions = useMemo(() => {
+    const query = normalizeFoodName(formState.foodName);
+    const matches = query
+      ? COMMON_FOODS.filter((food) => normalizeFoodName(food.name).includes(query))
+      : suggestionFoods;
+    return matches.slice(0, 6);
+  }, [formState.foodName, suggestionFoods]);
+
+  const foodGroups = useMemo(() => {
+    const groups = new Map<string, SolidFood[]>();
+    filteredFoods.forEach((food) => {
+      const date = normalizeSolidFoodDate(food.date);
+      groups.set(date, [...(groups.get(date) ?? []), food]);
+    });
+    return Array.from(groups.entries());
+  }, [filteredFoods]);
 
   const updateFormState = <K extends keyof ReturnType<typeof getDefaultFormState>>(
     key: K,
     value: ReturnType<typeof getDefaultFormState>[K]
   ) => {
+    setFormError('');
     setFormState((current) => ({ ...current, [key]: value }));
   };
 
@@ -172,7 +206,7 @@ export function SolidFoodsView() {
     setFormError('');
     setFormState({
       foodName: food.foodName,
-      date: food.date,
+      date: normalizeSolidFoodDate(food.date),
       category: food.category,
       isFirstIntroduction: food.isFirstIntroduction,
       reaction: food.reaction ?? 'none',
@@ -194,21 +228,16 @@ export function SolidFoodsView() {
       return;
     }
 
-    if (formState.reaction !== 'none' && !formState.reactionNotes.trim()) {
-      setFormError('Add a short note for any reaction so it is useful later.');
-      return;
-    }
-
     setSaving(true);
     setFormError('');
     try {
       const payload = {
         foodName: trimmedFoodName,
-        date: formState.date,
+        date: normalizeSolidFoodDate(formState.date),
         category: formState.category,
         isFirstIntroduction: formState.isFirstIntroduction,
         reaction: formState.reaction,
-        reactionNotes: formState.reaction === 'none' ? null : formState.reactionNotes.trim(),
+        reactionNotes: formState.reaction === 'none' ? null : formState.reactionNotes.trim() || null,
         liked: formState.liked,
         notes: formState.notes.trim() || null,
       };
@@ -232,10 +261,11 @@ export function SolidFoodsView() {
   };
 
   const handleDelete = async (food: SolidFood) => {
-    if (!window.confirm(`Delete ${food.foodName} from ${formatFoodDate(food.date)}?`)) {
+    if (!window.confirm(`Delete ${food.foodName} from ${formatSolidFoodDate(food.date)}?`)) {
       return;
     }
 
+    setDeletingFoodId(food.id);
     try {
       await deleteSolidFood(food.id);
       if (editingFoodId === food.id) {
@@ -245,6 +275,8 @@ export function SolidFoodsView() {
     } catch (error) {
       console.error('Error deleting solid food:', error);
       toast.error('Could not delete food entry');
+    } finally {
+      setDeletingFoodId(null);
     }
   };
 
@@ -284,7 +316,7 @@ export function SolidFoodsView() {
                         {food.foodName} · {FOOD_REACTION_CONFIG[food.reaction ?? 'none'].label}
                       </p>
                       <p className="text-amber-600">
-                        {formatFoodDate(food.date)}
+                        {formatSolidFoodDate(food.date)}
                         {food.reactionNotes ? ` · ${food.reactionNotes}` : ''}
                       </p>
                     </div>
@@ -302,15 +334,24 @@ export function SolidFoodsView() {
 
         {/* Add Entry Form */}
         {showForm && (
-          <Card>
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-950/40 px-4 py-6">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={formTitleId}
+            className="mx-auto w-full max-w-lg"
+          >
+          <Card className="shadow-xl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">
+              <h3 id={formTitleId} className="font-semibold text-gray-900">
                 {editingFoodId ? 'Edit Food Entry' : 'Add Food'}
               </h3>
               <button
                 type="button"
                 aria-label="Close solid food form"
                 onClick={closeForm}
+                disabled={saving}
+                className="rounded-lg p-2 hover:bg-gray-100 disabled:opacity-50"
               >
                 <X className="w-5 h-5 text-gray-400" />
               </button>
@@ -333,13 +374,19 @@ export function SolidFoodsView() {
                       ? current.isFirstIntroduction
                       : !hasTried,
                   }));
+                  setFormError('');
                 }}
                 required
               />
 
               {/* Common foods suggestions */}
-              <div className="flex flex-wrap gap-2">
-                {suggestionFoods.map((food) => (
+              {visibleSuggestions.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs font-medium text-gray-500">
+                  {formState.foodName.trim() ? 'Matching foods' : 'Quick picks'}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                {visibleSuggestions.map((food) => (
                   <button
                     key={food.name}
                     type="button"
@@ -352,12 +399,14 @@ export function SolidFoodsView() {
                         isFirstIntroduction: !existingFoodNames.has(normalizedFoodName),
                       }));
                     }}
-                    className="px-3 py-2 text-sm bg-gray-100 rounded-full hover:bg-gray-200"
+                    className="px-3 py-1.5 text-sm bg-gray-100 rounded-full hover:bg-gray-200"
                   >
                     {food.name}
                   </button>
                 ))}
+                </div>
               </div>
+              )}
 
               <Input
                 type="date"
@@ -385,7 +434,7 @@ export function SolidFoodsView() {
                         className={clsx(
                           'px-3 py-2 rounded-full text-sm font-medium transition-colors border',
                           formState.category === cat
-                            ? 'text-white border-transparent'
+                            ? clsx(cat === 'protein' ? 'text-white' : 'text-gray-950', 'border-transparent')
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         )}
                         style={formState.category === cat ? { backgroundColor: config.color } : undefined}
@@ -428,11 +477,14 @@ export function SolidFoodsView() {
                         key={r}
                         type="button"
                         aria-pressed={formState.reaction === r}
-                        onClick={() => updateFormState('reaction', r)}
+                        onClick={() => {
+                          updateFormState('reaction', r);
+                          if (r === 'none') updateFormState('reactionNotes', '');
+                        }}
                         className={clsx(
                           'flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                           formState.reaction === r
-                            ? 'text-white'
+                            ? r === 'severe' ? 'text-white' : 'text-gray-950'
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         )}
                         style={formState.reaction === r ? { backgroundColor: config.color } : undefined}
@@ -445,12 +497,12 @@ export function SolidFoodsView() {
               </div>
 
               {formState.reaction !== 'none' && (
-                <Input
-                  label="Reaction Notes"
-                  placeholder="Describe the reaction..."
+                <Textarea
+                  label="Reaction details (optional)"
+                  placeholder="Add details only if they are useful"
                   value={formState.reactionNotes}
                   onChange={(e) => updateFormState('reactionNotes', e.target.value)}
-                  required
+                  rows={2}
                 />
               )}
 
@@ -459,27 +511,27 @@ export function SolidFoodsView() {
                 <label id={preferenceLabelId} className="block text-sm font-medium text-gray-700 mb-2">
                   Did baby like it?
                 </label>
-                <div className="flex gap-2" role="group" aria-labelledby={preferenceLabelId}>
+                <div className="grid grid-cols-3 gap-2" role="group" aria-labelledby={preferenceLabelId}>
                   <button
                     type="button"
                     aria-pressed={formState.liked === 'loved'}
                     onClick={() => updateFormState('liked', formState.liked === 'loved' ? null : 'loved')}
                     className={clsx(
-                      'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors',
+                      'flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-sm transition-colors',
                       formState.liked === 'loved'
                         ? 'bg-green-500 text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     )}
                   >
                     <ThumbsUp className="w-4 h-4" />
-                    Loved it
+                    Loved
                   </button>
                   <button
                     type="button"
                     aria-pressed={formState.liked === 'neutral'}
                     onClick={() => updateFormState('liked', formState.liked === 'neutral' ? null : 'neutral')}
                     className={clsx(
-                      'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors',
+                      'flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-sm transition-colors',
                       formState.liked === 'neutral'
                         ? 'bg-gray-500 text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -493,7 +545,7 @@ export function SolidFoodsView() {
                     aria-pressed={formState.liked === 'disliked'}
                     onClick={() => updateFormState('liked', formState.liked === 'disliked' ? null : 'disliked')}
                     className={clsx(
-                      'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors',
+                      'flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-sm transition-colors',
                       formState.liked === 'disliked'
                         ? 'bg-red-500 text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -505,19 +557,20 @@ export function SolidFoodsView() {
                 </div>
               </div>
 
-              <Input
+              <Textarea
                 label="Notes (optional)"
-                placeholder="Add notes..."
+                placeholder="Anything else worth remembering"
                 value={formState.notes}
                 onChange={(e) => updateFormState('notes', e.target.value)}
+                rows={2}
               />
 
               {formError && (
-                <p className="text-sm text-red-500">{formError}</p>
+                <p role="alert" className="text-sm text-red-500">{formError}</p>
               )}
 
               <div className="flex gap-2">
-                <Button type="button" variant="outline" className="flex-1" onClick={closeForm}>
+                <Button type="button" variant="outline" className="flex-1" onClick={closeForm} disabled={saving}>
                   Cancel
                 </Button>
                 <Button type="submit" className="flex-1" disabled={saving || !formState.foodName.trim()}>
@@ -526,6 +579,8 @@ export function SolidFoodsView() {
               </div>
             </form>
           </Card>
+          </div>
+          </div>
         )}
 
         {/* Filter */}
@@ -538,6 +593,16 @@ export function SolidFoodsView() {
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
           />
+          {search && (
+            <button
+              type="button"
+              aria-label="Clear search"
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-gray-400 hover:bg-gray-100"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
         <div className="flex gap-2 overflow-x-auto pb-2">
@@ -565,7 +630,7 @@ export function SolidFoodsView() {
                 className={clsx(
                   'px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap',
                   filter === cat
-                    ? 'text-white'
+                    ? cat === 'protein' ? 'text-white' : 'text-gray-950'
                     : 'bg-gray-100 text-gray-600'
                 )}
                 style={filter === cat ? { backgroundColor: config.color } : undefined}
@@ -592,8 +657,14 @@ export function SolidFoodsView() {
             </p>
           </Card>
         ) : (
-          <div className="space-y-2">
-            {filteredFoods.map((food) => {
+          <div className="space-y-5">
+            {foodGroups.map(([date, dateFoods]) => (
+              <section key={date} aria-label={formatSolidFoodDate(date)}>
+                <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  {formatSolidFoodDate(date)}
+                </h3>
+                <div className="space-y-2">
+            {dateFoods.map((food) => {
               const catConfig = FOOD_CATEGORY_CONFIG[food.category];
               const reactionConfig = food.reaction ? FOOD_REACTION_CONFIG[food.reaction] : null;
 
@@ -603,7 +674,10 @@ export function SolidFoodsView() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span
-                          className="px-2 py-0.5 rounded-full text-xs text-white"
+                          className={clsx(
+                            'px-2 py-0.5 rounded-full text-xs',
+                            food.category === 'protein' ? 'text-white' : 'text-gray-950'
+                          )}
                           style={{ backgroundColor: catConfig.color }}
                         >
                           {catConfig.label}
@@ -615,7 +689,10 @@ export function SolidFoodsView() {
                         )}
                         {reactionConfig && food.reaction !== 'none' && (
                           <span
-                            className="px-2 py-0.5 rounded-full text-xs text-white"
+                            className={clsx(
+                              'px-2 py-0.5 rounded-full text-xs',
+                              food.reaction === 'severe' ? 'text-white' : 'text-gray-950'
+                            )}
                             style={{ backgroundColor: reactionConfig.color }}
                           >
                             {reactionConfig.label}
@@ -623,9 +700,6 @@ export function SolidFoodsView() {
                         )}
                       </div>
                       <p className="font-medium text-gray-900 mt-1">{food.foodName}</p>
-                      <p className="text-xs text-gray-400">
-                        {formatFoodDate(food.date)}
-                      </p>
                       {food.reactionNotes && food.reaction !== 'none' && (
                         <p className="text-sm text-amber-700 mt-1">{food.reactionNotes}</p>
                       )}
@@ -649,7 +723,8 @@ export function SolidFoodsView() {
                         type="button"
                         aria-label={`Delete ${food.foodName}`}
                         onClick={() => handleDelete(food)}
-                        className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"
+                        disabled={deletingFoodId === food.id}
+                        className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-40"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -658,6 +733,9 @@ export function SolidFoodsView() {
                 </Card>
               );
             })}
+                </div>
+              </section>
+            ))}
           </div>
         )}
       </div>

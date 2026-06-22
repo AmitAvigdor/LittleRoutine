@@ -29,7 +29,7 @@ export interface CreateSolidFoodInput {
   notes?: string | null;
 }
 
-export interface UpdateSolidFoodInput extends Partial<CreateSolidFoodInput> {}
+export type UpdateSolidFoodInput = Partial<CreateSolidFoodInput>;
 
 // Get all foods with reactions for allergy tracking
 export function getFoodsWithReactions(foods: SolidFood[]): SolidFood[] {

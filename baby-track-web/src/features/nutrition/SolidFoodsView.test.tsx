@@ -128,6 +128,28 @@ describe('SolidFoodsView', () => {
     expect(screen.getByText(/already logged before/i)).toBeInTheDocument();
   });
 
+  it('saves a reaction without forcing reaction comments', async () => {
+    const user = userEvent.setup();
+    renderSolidFoodsView();
+
+    await user.click(screen.getByRole('button', { name: 'Add' }));
+    await user.type(screen.getByLabelText('Food Name'), 'Egg');
+    await user.click(screen.getByRole('button', { name: 'Mild' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(mockCreateSolidFood).toHaveBeenCalledWith(
+        mockBaby.id,
+        mockUser.uid,
+        expect.objectContaining({
+          foodName: 'Egg',
+          reaction: 'mild',
+          reactionNotes: null,
+        })
+      );
+    });
+  });
+
   it('edits an existing entry and sends the update payload', async () => {
     const user = userEvent.setup();
     renderSolidFoodsView();
