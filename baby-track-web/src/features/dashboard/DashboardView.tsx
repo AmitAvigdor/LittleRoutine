@@ -37,6 +37,7 @@ import {
   type SmartSuggestionActionKind,
 } from './smartSuggestions';
 import { formatSleepStartedAt } from './dashboardFormatting';
+import { findNightSleepGroup, groupNightSleepSessions } from '@/features/sleep/sleepGrouping';
 
 type DashboardIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -60,7 +61,8 @@ function formatElapsedTime(
   isPaused?: boolean,
   pausedAt?: string | null,
   totalPausedDuration?: number,
-  nowMs: number = Date.now()
+  nowMs: number = Date.now(),
+  elapsedOffsetSeconds: number = 0
 ): string {
   const start = new Date(startTime);
   const pausedDuration = totalPausedDuration || 0;
@@ -75,7 +77,7 @@ function formatElapsedTime(
     elapsedMs = nowMs - start.getTime() - (pausedDuration * 1000);
   }
 
-  const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+  const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000) + elapsedOffsetSeconds);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
@@ -321,6 +323,7 @@ interface ActiveTimerInfo {
   isPaused?: boolean;
   pausedAt?: string | null;
   totalPausedDuration?: number;
+  elapsedOffsetSeconds?: number;
   icon: React.ReactNode;
   iconBg: string;
   route: string;
@@ -346,7 +349,8 @@ function buildTimerPresentation(timer: ActiveTimerInfo, nowMs: number) {
           timer.isPaused,
           timer.pausedAt,
           timer.totalPausedDuration,
-          nowMs
+          nowMs,
+          timer.elapsedOffsetSeconds
         ),
     isExpiringSoon,
   };
@@ -552,12 +556,14 @@ export function DashboardView() {
 
     // Active sleep
     sleepSessions.filter(s => s.isActive).forEach(s => {
+      const nightGroup = s.type === 'night' ? findNightSleepGroup(sleepSessions, s.id) : null;
       timers.push({
         id: s.id,
         type: 'sleep',
         title: 'Sleeping',
-        subtitle: `${SLEEP_TYPE_CONFIG[s.type].label} · ${formatSleepStartedAt(s.startTime)}`,
+        subtitle: `${SLEEP_TYPE_CONFIG[s.type].label} · ${formatSleepStartedAt(nightGroup?.startTime ?? s.startTime)}`,
         startTime: s.startTime,
+        elapsedOffsetSeconds: nightGroup?.completedDuration ?? 0,
         icon: <Moon className="w-6 h-6 text-white" />,
         iconBg: '#3f51b5',
         route: '/sleep',
@@ -637,11 +643,14 @@ export function DashboardView() {
     // Check if there's an active sleep session
     const activeSleep = sleepSessions.find((s) => s.isActive);
     if (activeSleep) {
+      const nightGroup = activeSleep.type === 'night'
+        ? findNightSleepGroup(sleepSessions, activeSleep.id)
+        : null;
       return {
         isAsleep: true,
         timestamp: activeSleep.startTime,
         type: activeSleep.type,
-        details: `${SLEEP_TYPE_CONFIG[activeSleep.type].label} in progress · ${formatSleepStartedAt(activeSleep.startTime)}`,
+        details: `${SLEEP_TYPE_CONFIG[activeSleep.type].label} in progress · ${formatSleepStartedAt(nightGroup?.startTime ?? activeSleep.startTime)}`,
       };
     }
 
@@ -720,12 +729,11 @@ export function DashboardView() {
     feedings:
       feedingSessions.filter((s) => !s.isActive && isToday(s.startTime)).length +
       bottleSessions.filter((s) => isToday(s.timestamp)).length,
-    sleeps: sleepSessions.filter((s) => {
-      if (s.isActive || !s.endTime) return false;
-      return s.type === 'nap'
-        ? isToday(s.startTime)
-        : isToday(s.endTime);
-    }).length,
+    sleeps:
+      sleepSessions.filter((s) => !s.isActive && s.endTime && s.type === 'nap' && isToday(s.startTime)).length +
+      groupNightSleepSessions(sleepSessions).filter(
+        (group) => !group.isActive && group.endTime && isToday(group.endTime)
+      ).length,
     diapers: diaperChanges.filter((c) => isToday(c.timestamp)).length,
   }), [feedingSessions, bottleSessions, sleepSessions, diaperChanges]);
 

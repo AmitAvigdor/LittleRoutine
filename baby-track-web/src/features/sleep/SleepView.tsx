@@ -16,6 +16,7 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { useHomeStore } from '@/stores/homeStore';
 import { toast } from '@/stores/toastStore';
+import { groupNightSleepSessions } from './sleepGrouping';
 import { Moon, Sun, Clock, Bed, Timer as TimerIcon, Edit3, Trash2, ChevronDown, ChevronUp, X } from 'lucide-react';
 
 type EntryMode = 'timer' | 'manual';
@@ -443,6 +444,9 @@ export function SleepView() {
   const todayNight = completedSessions.filter(
     (s) => s.type === 'night' && s.endTime && isToday(parseISO(s.endTime))
   );
+  const todayNightGroups = groupNightSleepSessions(sessions).filter(
+    (group) => !group.isActive && group.endTime && isToday(parseISO(group.endTime))
+  );
   const todayNapTime = todayNaps.reduce((sum, s) => sum + s.duration, 0);
   const todayNightTime = todayNight.reduce((sum, s) => sum + s.duration, 0);
 
@@ -720,7 +724,7 @@ export function SleepView() {
               <Moon className="w-5 h-5 text-indigo-500" />
             </div>
             <p className="text-sm text-gray-500 mb-0.5">Night</p>
-            <p className="text-2xl font-bold text-gray-900">{todayNight.length}</p>
+            <p className="text-2xl font-bold text-gray-900">{todayNightGroups.length}</p>
             <p className="text-xs text-gray-500 mt-1">{formatSleepDuration(todayNightTime)} total</p>
           </div>
         </div>
