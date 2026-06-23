@@ -20,6 +20,8 @@ import {
   normalizeSolidFoodDate,
 } from './solidFoodUtils';
 
+type SolidFoodFormState = ReturnType<typeof getDefaultFormState>;
+
 function getTodayLocalDate() {
   const now = new Date();
   const year = now.getFullYear();
@@ -31,6 +33,30 @@ function getTodayLocalDate() {
 
 function normalizeFoodName(foodName: string) {
   return foodName.trim().toLowerCase();
+}
+
+function findCommonFood(foodName: string) {
+  const normalizedFoodName = normalizeFoodName(foodName);
+  return COMMON_FOODS.find((food) => normalizeFoodName(food.name) === normalizedFoodName);
+}
+
+function getUpdatedFoodNameState(
+  current: SolidFoodFormState,
+  nextFoodName: string,
+  existingFoodNames: Set<string>
+) {
+  const normalizedNextFoodName = normalizeFoodName(nextFoodName);
+  const hasTried = normalizedNextFoodName.length > 0 && existingFoodNames.has(normalizedNextFoodName);
+  const commonFood = findCommonFood(nextFoodName);
+
+  return {
+    ...current,
+    foodName: nextFoodName,
+    category: commonFood?.category ?? current.category,
+    isFirstIntroduction: normalizedNextFoodName.length === 0
+      ? current.isFirstIntroduction
+      : !hasTried,
+  };
 }
 
 function getSuggestedFoods() {
@@ -100,6 +126,7 @@ export function SolidFoodsView({
   const [deletingFoodId, setDeletingFoodId] = useState<string | null>(null);
   const [formError, setFormError] = useState('');
   const [formState, setFormState] = useState(getDefaultFormState());
+  const [showMoreDetails, setShowMoreDetails] = useState(false);
   const reactionLabelId = useId();
   const preferenceLabelId = useId();
   const categoryLabelId = useId();
@@ -110,6 +137,7 @@ export function SolidFoodsView({
     setEditingFoodId(null);
     setFormError('');
     setFormState(getDefaultFormState());
+    setShowMoreDetails(false);
   }, [autoOpenAdd, selectedBaby]);
 
   useEffect(() => {
@@ -215,12 +243,14 @@ export function SolidFoodsView({
     setEditingFoodId(null);
     setFormError('');
     setFormState(getDefaultFormState());
+    setShowMoreDetails(false);
   };
 
   const openCreateForm = () => {
     setEditingFoodId(null);
     setFormError('');
     setFormState(getDefaultFormState());
+    setShowMoreDetails(false);
     setShowForm(true);
   };
 
@@ -238,6 +268,7 @@ export function SolidFoodsView({
       liked: food.liked,
       notes: food.notes ?? '',
     });
+    setShowMoreDetails(true);
     setShowForm(true);
   };
 
@@ -377,15 +408,15 @@ export function SolidFoodsView({
 
         {/* Add Entry Form */}
         {showForm && (
-          <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-950/40 px-4 py-6">
+          <div className="fixed inset-0 z-[70] flex bg-gray-950/40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:items-center sm:px-4">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby={formTitleId}
-            className="mx-auto w-full max-w-lg"
+            className="mx-auto mt-auto w-full max-w-lg sm:my-auto"
           >
-          <Card className="shadow-xl">
-            <div className="flex items-center justify-between mb-4">
+          <Card padding="none" className="flex max-h-[calc(100dvh_-_env(safe-area-inset-top)_-_env(safe-area-inset-bottom)_-_1.5rem)] flex-col overflow-hidden shadow-xl">
+            <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-3">
               <h3 id={formTitleId} className="font-semibold text-gray-900">
                 {editingFoodId ? 'Edit Food Entry' : 'Add Food'}
               </h3>
@@ -400,23 +431,15 @@ export function SolidFoodsView({
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+              <div className="min-h-0 space-y-4 overflow-y-auto px-4 py-4">
               <Input
                 label="Food Name"
                 placeholder="Enter food name"
                 value={formState.foodName}
                 onChange={(e) => {
                   const nextFoodName = e.target.value;
-                  const normalizedNextFoodName = normalizeFoodName(nextFoodName);
-                  const hasTried = normalizedNextFoodName.length > 0 && existingFoodNames.has(normalizedNextFoodName);
-
-                  setFormState((current) => ({
-                    ...current,
-                    foodName: nextFoodName,
-                    isFirstIntroduction: normalizedNextFoodName.length === 0
-                      ? current.isFirstIntroduction
-                      : !hasTried,
-                  }));
+                  setFormState((current) => getUpdatedFoodNameState(current, nextFoodName, existingFoodNames));
                   setFormError('');
                 }}
                 required
@@ -451,75 +474,91 @@ export function SolidFoodsView({
               </div>
               )}
 
-              <Input
-                type="date"
-                label="Date"
-                value={formState.date}
-                max={getTodayLocalDate()}
-                onChange={(e) => updateFormState('date', e.target.value)}
-                required
-              />
+              <div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-3">
+                <Input
+                  type="date"
+                  label="Date"
+                  value={formState.date}
+                  max={getTodayLocalDate()}
+                  onChange={(e) => updateFormState('date', e.target.value)}
+                  required
+                />
 
-              <Input
-                type="time"
-                label="Time (optional)"
-                value={formState.time}
-                onChange={(e) => updateFormState('time', e.target.value)}
-              />
-
-              {/* Category */}
-              <div>
-                <label id={categoryLabelId} className="block text-sm font-medium text-gray-700 mb-2">
-                  Category
-                </label>
-                <div className="flex flex-wrap gap-2" role="group" aria-labelledby={categoryLabelId}>
-                  {(Object.keys(FOOD_CATEGORY_CONFIG) as FoodCategory[]).map((cat) => {
-                    const config = FOOD_CATEGORY_CONFIG[cat];
-                    return (
-                      <button
-                        key={cat}
-                        type="button"
-                        aria-pressed={formState.category === cat}
-                        onClick={() => updateFormState('category', cat)}
-                        className={clsx(
-                          'px-3 py-2 rounded-full text-sm font-medium transition-colors border',
-                          formState.category === cat
-                            ? clsx(cat === 'protein' ? 'text-white' : 'text-gray-950', 'border-transparent')
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        )}
-                        style={formState.category === cat ? { backgroundColor: config.color } : undefined}
-                      >
-                        {config.label}
-                      </button>
-                    );
-                  })}
-                </div>
+                <Input
+                  type="time"
+                  label="Time"
+                  value={formState.time}
+                  onChange={(e) => updateFormState('time', e.target.value)}
+                />
               </div>
 
-              {/* First Introduction */}
-              <label className="flex items-center gap-2">
+              <label className="flex items-start gap-2 rounded-xl bg-blue-50 px-3 py-2.5">
                 <input
                   type="checkbox"
                   checked={formState.isFirstIntroduction}
                   onChange={(e) => updateFormState('isFirstIntroduction', e.target.checked)}
-                  className="w-4 h-4 rounded text-primary-500"
+                  className="mt-0.5 h-4 w-4 rounded text-primary-500"
                 />
                 <span className="text-sm text-gray-700">
                   First time trying this food
                   {formState.foodName.trim() && (
-                    <span className="text-gray-500">
-                      {shouldSuggestFirstIntroduction ? ' · suggested as first try' : ' · already logged before'}
+                    <span className="block text-xs text-gray-500">
+                      {shouldSuggestFirstIntroduction ? 'Suggested as first try' : 'Already logged before'}
                     </span>
                   )}
                 </span>
               </label>
 
+              <button
+                type="button"
+                onClick={() => setShowMoreDetails((current) => !current)}
+                className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
+                aria-expanded={showMoreDetails}
+                aria-label={showMoreDetails ? 'Hide more details' : 'Show more details'}
+              >
+                <span>More details</span>
+                <span className="text-xs text-gray-500">
+                  {showMoreDetails ? 'Hide' : 'Reaction, category, notes'}
+                </span>
+              </button>
+
+              {showMoreDetails && (
+                <div className="space-y-4 rounded-2xl border border-gray-100 bg-gray-50/70 p-3">
+                {/* Category */}
+                <div>
+                  <label id={categoryLabelId} className="mb-2 block text-sm font-medium text-gray-700">
+                    Category
+                  </label>
+                  <div className="flex flex-wrap gap-2" role="group" aria-labelledby={categoryLabelId}>
+                    {(Object.keys(FOOD_CATEGORY_CONFIG) as FoodCategory[]).map((cat) => {
+                      const config = FOOD_CATEGORY_CONFIG[cat];
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          aria-pressed={formState.category === cat}
+                          onClick={() => updateFormState('category', cat)}
+                          className={clsx(
+                            'rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
+                            formState.category === cat
+                              ? clsx(cat === 'protein' ? 'text-white' : 'text-gray-950', 'border-transparent')
+                              : 'bg-white text-gray-600 hover:bg-gray-100'
+                          )}
+                          style={formState.category === cat ? { backgroundColor: config.color } : undefined}
+                        >
+                          {config.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
               {/* Reaction */}
               <div>
-                <label id={reactionLabelId} className="block text-sm font-medium text-gray-700 mb-2">
+                <label id={reactionLabelId} className="mb-2 block text-sm font-medium text-gray-700">
                   Reaction
                 </label>
-                <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby={reactionLabelId}>
+                <div className="grid grid-cols-4 gap-1.5" role="group" aria-labelledby={reactionLabelId}>
                   {(Object.keys(FOOD_REACTION_CONFIG) as FoodReaction[]).map((r) => {
                     const config = FOOD_REACTION_CONFIG[r];
                     return (
@@ -532,10 +571,10 @@ export function SolidFoodsView({
                           if (r === 'none') updateFormState('reactionNotes', '');
                         }}
                         className={clsx(
-                          'flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                          'rounded-lg px-2 py-2 text-sm font-medium transition-colors',
                           formState.reaction === r
                             ? r === 'severe' ? 'text-white' : 'text-gray-950'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            : 'bg-white text-gray-600 hover:bg-gray-100'
                         )}
                         style={formState.reaction === r ? { backgroundColor: config.color } : undefined}
                       >
@@ -561,16 +600,16 @@ export function SolidFoodsView({
                 <label id={preferenceLabelId} className="block text-sm font-medium text-gray-700 mb-2">
                   Did baby like it?
                 </label>
-                <div className="grid grid-cols-3 gap-2" role="group" aria-labelledby={preferenceLabelId}>
+                <div className="grid grid-cols-3 gap-1.5" role="group" aria-labelledby={preferenceLabelId}>
                   <button
                     type="button"
                     aria-pressed={formState.liked === 'loved'}
                     onClick={() => updateFormState('liked', formState.liked === 'loved' ? null : 'loved')}
                     className={clsx(
-                      'flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-sm transition-colors',
+                      'flex items-center justify-center gap-1 px-2 py-2 rounded-lg text-sm transition-colors',
                       formState.liked === 'loved'
                         ? 'bg-green-500 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        : 'bg-white text-gray-600 hover:bg-gray-100'
                     )}
                   >
                     <ThumbsUp className="w-4 h-4" />
@@ -581,10 +620,10 @@ export function SolidFoodsView({
                     aria-pressed={formState.liked === 'neutral'}
                     onClick={() => updateFormState('liked', formState.liked === 'neutral' ? null : 'neutral')}
                     className={clsx(
-                      'flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-sm transition-colors',
+                      'flex items-center justify-center gap-1 px-2 py-2 rounded-lg text-sm transition-colors',
                       formState.liked === 'neutral'
                         ? 'bg-gray-500 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        : 'bg-white text-gray-600 hover:bg-gray-100'
                     )}
                   >
                     <Minus className="w-4 h-4" />
@@ -595,10 +634,10 @@ export function SolidFoodsView({
                     aria-pressed={formState.liked === 'disliked'}
                     onClick={() => updateFormState('liked', formState.liked === 'disliked' ? null : 'disliked')}
                     className={clsx(
-                      'flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-sm transition-colors',
+                      'flex items-center justify-center gap-1 px-2 py-2 rounded-lg text-sm transition-colors',
                       formState.liked === 'disliked'
                         ? 'bg-red-500 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        : 'bg-white text-gray-600 hover:bg-gray-100'
                     )}
                   >
                     <ThumbsDown className="w-4 h-4" />
@@ -614,12 +653,15 @@ export function SolidFoodsView({
                 onChange={(e) => updateFormState('notes', e.target.value)}
                 rows={2}
               />
+                </div>
+              )}
 
               {formError && (
                 <p role="alert" className="text-sm text-red-500">{formError}</p>
               )}
+              </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 border-t border-gray-100 bg-white px-4 py-3">
                 <Button type="button" variant="outline" className="flex-1" onClick={closeForm} disabled={saving}>
                   Cancel
                 </Button>

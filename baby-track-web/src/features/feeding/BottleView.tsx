@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format, isToday, parseISO } from 'date-fns';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/Select';
 import { BabyMoodSelector } from '@/components/ui/MoodSelector';
-import { Baby, BottleSession, BottleContentType, BabyMood, MilkStash, VolumeUnit, BOTTLE_CONTENT_CONFIG, convertVolume, getBabyAccessUserIds } from '@/types';
+import { Baby, BottleSession, BottleContentType, BabyMood, MilkStash, VolumeUnit, BOTTLE_CONTENT_CONFIG, convertVolume, getBabyAccessUserIds, getRoomTempExpirationMinutes } from '@/types';
 import { createBottleSession, createBottleSessionFromMilkStash, subscribeToBottleSessions, subscribeToMilkStash, migrateMilkStashToBaby } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
@@ -96,13 +96,26 @@ export function BottleView({ baby }: BottleViewProps) {
     }
   }, [contentType, selectedMilkStashId]);
 
-  const availableFridgeMilk = milkStash.filter((item) => item.location === 'fridge' && !item.isInUse);
+  const availableBreastMilk = useMemo(
+    () => milkStash.filter((item) => {
+      if (item.location !== 'fridge' || item.isUsed) {
+        return false;
+      }
+
+      if (!item.isInUse) {
+        return true;
+      }
+
+      return !item.inUseStartDate || getRoomTempExpirationMinutes(item.inUseStartDate) > 0;
+    }),
+    [milkStash]
+  );
 
   useEffect(() => {
-    if (selectedMilkStashId && !availableFridgeMilk.some((item) => item.id === selectedMilkStashId)) {
+    if (selectedMilkStashId && !availableBreastMilk.some((item) => item.id === selectedMilkStashId)) {
       setSelectedMilkStashId(null);
     }
-  }, [availableFridgeMilk, selectedMilkStashId]);
+  }, [availableBreastMilk, selectedMilkStashId]);
 
   const handleQuickAdd = (quickVolume: number) => {
     setVolume(quickVolume.toString());
@@ -122,7 +135,7 @@ export function BottleView({ baby }: BottleViewProps) {
     const savedVolume = parseFloat(volume);
     const savedUnit = volumeUnit;
     const selectedMilkStash = selectedMilkStashId
-      ? availableFridgeMilk.find((item) => item.id === selectedMilkStashId) ?? null
+      ? availableBreastMilk.find((item) => item.id === selectedMilkStashId) ?? null
       : null;
 
     if (selectedMilkStash && contentType === 'breastMilk') {
@@ -301,7 +314,7 @@ export function BottleView({ baby }: BottleViewProps) {
 
             {contentType === 'breastMilk' && (
               <FridgeMilkPicker
-                stash={availableFridgeMilk}
+                stash={availableBreastMilk}
                 volumeUnit={volumeUnit}
                 selectedMilkStashId={selectedMilkStashId}
                 onSelect={setSelectedMilkStashId}
@@ -365,7 +378,7 @@ export function BottleView({ baby }: BottleViewProps) {
 
             {contentType === 'breastMilk' && (
               <FridgeMilkPicker
-                stash={availableFridgeMilk}
+                stash={availableBreastMilk}
                 volumeUnit={volumeUnit}
                 selectedMilkStashId={selectedMilkStashId}
                 onSelect={setSelectedMilkStashId}
@@ -433,7 +446,7 @@ function FridgeMilkPicker({
     <Card className="border border-blue-100 bg-blue-50/50">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
-          <p className="text-sm font-medium text-blue-900">Fridge breast milk inventory</p>
+          <p className="text-sm font-medium text-blue-900">Available breast milk</p>
           <p className="text-xs text-blue-700 mt-1">
             {stash.length} bottle{stash.length === 1 ? '' : 's'} available • {totalVolume.toFixed(1)} {volumeUnit}
           </p>
@@ -443,7 +456,7 @@ function FridgeMilkPicker({
 
       {stash.length === 0 ? (
         <p className="text-sm text-blue-700">
-          No fridge bottles available to link. You can still log this feeding without selecting one.
+          No available breast milk to link. You can still log this feeding without selecting one.
         </p>
       ) : (
         <div className="space-y-2">
@@ -457,7 +470,7 @@ function FridgeMilkPicker({
                 : 'border-blue-100 bg-white/70 text-blue-800 hover:border-blue-300'
             )}
           >
-            Do not link a fridge bottle
+            Do not link a milk bottle
           </button>
 
           {stash.map((item) => {
@@ -467,6 +480,12 @@ function FridgeMilkPicker({
               parseISO(item.pumpedDate),
               item.pumpedDate.includes('T') ? 'MMM d, h:mm a' : 'MMM d'
             );
+            const roomTempMinutesLeft = item.isInUse && item.inUseStartDate
+              ? Math.floor(getRoomTempExpirationMinutes(item.inUseStartDate))
+              : null;
+            const roomTempLabel = roomTempMinutesLeft === null
+              ? null
+              : `${Math.floor(roomTempMinutesLeft / 60)}h ${roomTempMinutesLeft % 60}m left`;
 
             return (
               <button
@@ -488,6 +507,11 @@ function FridgeMilkPicker({
                     <p className="text-xs text-gray-500 mt-1">
                       Pumped {pumpedDateLabel}
                     </p>
+                    {item.isInUse && (
+                      <p className="mt-1 text-xs font-medium text-amber-600">
+                        On the go{roomTempLabel ? ` • ${roomTempLabel}` : ''}
+                      </p>
+                    )}
                   </div>
                   <div
                     className={clsx(

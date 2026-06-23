@@ -121,7 +121,7 @@ describe('SleepView', () => {
       });
       mockSessions = [activeSession];
 
-      const { rerender } = renderSleepView();
+      renderSleepView();
 
       // Simulate user stopping the timer (would set showForm to true)
       // We can't easily simulate this without exposing internal state,
@@ -195,6 +195,37 @@ describe('SleepView', () => {
 
       // Component should render
       expect(screen.getByText('Sleep')).toBeInTheDocument();
+    });
+  });
+
+  describe('today stats', () => {
+    it('counts a merged night sleep across midnight as one full night total', () => {
+      vi.setSystemTime(new Date('2026-06-23T10:00:00'));
+
+      mockSessions = [
+        createMockSleepSession({
+          id: 'night-before-midnight',
+          type: 'night',
+          isActive: false,
+          startTime: '2026-06-22T21:00:00',
+          endTime: '2026-06-22T23:00:00',
+          duration: 2 * 60 * 60,
+          date: '2026-06-22',
+        }),
+        createMockSleepSession({
+          id: 'night-after-feeding',
+          type: 'night',
+          isActive: false,
+          startTime: '2026-06-22T23:30:00',
+          endTime: '2026-06-23T08:30:00',
+          duration: 9 * 60 * 60,
+          date: '2026-06-22',
+        }),
+      ];
+
+      renderSleepView();
+
+      expect(screen.getByText('11h 0m total')).toBeInTheDocument();
     });
   });
 

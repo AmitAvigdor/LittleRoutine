@@ -95,6 +95,8 @@ describe('SolidFoodsView', () => {
     renderSolidFoodsView({ embedded: true, foods: [], autoOpenAdd: true });
 
     expect(screen.getByRole('dialog', { name: 'Add Food' })).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Reaction' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show more details' })).toBeInTheDocument();
   });
 
   it('creates a new solid food entry for the selected baby', async () => {
@@ -142,6 +144,7 @@ describe('SolidFoodsView', () => {
 
     await user.click(screen.getByRole('button', { name: 'Add' }));
     await user.type(screen.getByLabelText('Food Name'), 'Egg');
+    await user.click(screen.getByRole('button', { name: 'Show more details' }));
     await user.click(screen.getByRole('button', { name: 'Mild' }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
 

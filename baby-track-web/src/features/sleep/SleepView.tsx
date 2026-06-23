@@ -441,14 +441,11 @@ export function SleepView() {
   const todayNaps = completedSessions.filter(
     (s) => s.type === 'nap' && isToday(parseISO(s.startTime))
   );
-  const todayNight = completedSessions.filter(
-    (s) => s.type === 'night' && s.endTime && isToday(parseISO(s.endTime))
-  );
   const todayNightGroups = groupNightSleepSessions(sessions).filter(
     (group) => !group.isActive && group.endTime && isToday(parseISO(group.endTime))
   );
   const todayNapTime = todayNaps.reduce((sum, s) => sum + s.duration, 0);
-  const todayNightTime = todayNight.reduce((sum, s) => sum + s.duration, 0);
+  const todayNightTime = todayNightGroups.reduce((sum, group) => sum + group.completedDuration, 0);
 
   return (
     <div>
