@@ -518,6 +518,26 @@ export function DashboardView() {
   const upsertSleepSession = useHomeStore((state) => state.upsertSleepSession);
   const removeSleepSession = useHomeStore((state) => state.removeSleepSession);
   const [smartActionBusy, setSmartActionBusy] = useState<SmartSuggestionActionKind | null>(null);
+  const [suggestionNowMs, setSuggestionNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const refreshSuggestionClock = () => setSuggestionNowMs(Date.now());
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') {
+        refreshSuggestionClock();
+      }
+    };
+    const interval = window.setInterval(refreshSuggestionClock, 60 * 1000);
+
+    window.addEventListener('focus', refreshSuggestionClock);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refreshSuggestionClock);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, []);
 
   // Get all active timers
   const activeTimers = useMemo(() => {
@@ -727,8 +747,16 @@ export function DashboardView() {
         feedingTypePreference: settings?.feedingTypePreference,
         hasActiveFeeding: feedingSessions.some((session) => session.isActive),
         hasActiveSleep: sleepSessions.some((session) => session.isActive),
+        now: new Date(suggestionNowMs),
       }),
-    [feedingSessions, bottleSessions, sleepSessions, diaperChanges, settings?.feedingTypePreference]
+    [
+      feedingSessions,
+      bottleSessions,
+      sleepSessions,
+      diaperChanges,
+      settings?.feedingTypePreference,
+      suggestionNowMs,
+    ]
   );
 
   const smartSuggestionActionLabel = useMemo(() => {
