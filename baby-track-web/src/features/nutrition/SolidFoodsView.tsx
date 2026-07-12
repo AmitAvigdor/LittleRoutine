@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -107,12 +107,16 @@ interface SolidFoodsViewProps {
   embedded?: boolean;
   foods?: SolidFood[];
   autoOpenAdd?: boolean;
+  editFoodId?: string | null;
+  onEditFoodOpened?: () => void;
 }
 
 export function SolidFoodsView({
   embedded = false,
   foods: suppliedFoods,
   autoOpenAdd = false,
+  editFoodId = null,
+  onEditFoodOpened,
 }: SolidFoodsViewProps = {}) {
   const { user } = useAuth();
   const { selectedBaby } = useAppStore();
@@ -254,7 +258,7 @@ export function SolidFoodsView({
     setShowForm(true);
   };
 
-  const openEditForm = (food: SolidFood) => {
+  const openEditForm = useCallback((food: SolidFood) => {
     setEditingFoodId(food.id);
     setFormError('');
     setFormState({
@@ -270,7 +274,21 @@ export function SolidFoodsView({
     });
     setShowMoreDetails(true);
     setShowForm(true);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!editFoodId) {
+      return;
+    }
+
+    const foodToEdit = foods.find((food) => food.id === editFoodId);
+    if (!foodToEdit) {
+      return;
+    }
+
+    openEditForm(foodToEdit);
+    onEditFoodOpened?.();
+  }, [editFoodId, foods, onEditFoodOpened, openEditForm]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

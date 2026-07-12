@@ -52,9 +52,24 @@ vi.mock('./BottleView', () => ({
 }));
 
 vi.mock('@/features/nutrition/SolidFoodsView', () => ({
-  SolidFoodsView: ({ embedded, foods, autoOpenAdd }: { embedded?: boolean; foods?: SolidFood[]; autoOpenAdd?: boolean }) => (
-    <div>Solid foods content · {embedded ? 'embedded' : 'standalone'} · {foods?.length ?? 0} entries · {autoOpenAdd ? 'add open' : 'add closed'}</div>
-  ),
+  SolidFoodsView: ({
+    embedded,
+    foods,
+    autoOpenAdd,
+    editFoodId,
+  }: {
+    embedded?: boolean;
+    foods?: SolidFood[];
+    autoOpenAdd?: boolean;
+    editFoodId?: string | null;
+    onEditFoodOpened?: () => void;
+  }) => {
+    return (
+      <div>
+        Solid foods content · {embedded ? 'embedded' : 'standalone'} · {foods?.length ?? 0} entries · {autoOpenAdd ? 'add open' : 'add closed'} · edit {editFoodId ?? 'none'}
+      </div>
+    );
+  },
 }));
 
 import { FeedingHub } from './FeedingHub';
@@ -93,14 +108,14 @@ describe('FeedingHub solids integration', () => {
     expect(screen.getByRole('button', { name: 'Breast' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Bottle' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Solids' })).toBeInTheDocument();
-    expect(await screen.findByText('Solid foods content · embedded · 1 entries · add closed')).toBeInTheDocument();
+    expect(await screen.findByText('Solid foods content · embedded · 1 entries · add closed · edit none')).toBeInTheDocument();
     expect(screen.queryByTitle('Milk Stash')).not.toBeInTheDocument();
   });
 
   it('opens add food when explicitly requested from the URL', async () => {
     renderHub('/feed?tab=solids&action=add');
 
-    expect(await screen.findByText('Solid foods content · embedded · 1 entries · add open')).toBeInTheDocument();
+    expect(await screen.findByText('Solid foods content · embedded · 1 entries · add open · edit none')).toBeInTheDocument();
   });
 
   it('opens add food when the solids tab is chosen inside Feed', async () => {
@@ -109,15 +124,15 @@ describe('FeedingHub solids integration', () => {
 
     await user.click(screen.getByRole('button', { name: 'Solids' }));
 
-    expect(await screen.findByText('Solid foods content · embedded · 1 entries · add open')).toBeInTheDocument();
+    expect(await screen.findByText('Solid foods content · embedded · 1 entries · add open · edit none')).toBeInTheDocument();
   });
 
-  it('shows solids in recent feedings and opens the solids history without add food', async () => {
+  it('shows solids in recent feedings and opens that solid entry for editing', async () => {
     const user = userEvent.setup();
     renderHub();
 
     await user.click(await screen.findByText('Solids • Avocado'));
 
-    expect(await screen.findByText('Solid foods content · embedded · 1 entries · add closed')).toBeInTheDocument();
+    expect(await screen.findByText('Solid foods content · embedded · 1 entries · add closed · edit solid-1')).toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { Milk, Baby, Clock, Apple } from 'lucide-react';
@@ -31,6 +31,7 @@ export function FeedingHub() {
   const [solidFoods, setSolidFoods] = useState<SolidFood[]>([]);
   const [selectedFeedingSession, setSelectedFeedingSession] = useState<FeedingSession | null>(null);
   const [selectedBottleSession, setSelectedBottleSession] = useState<BottleSession | null>(null);
+  const [selectedSolidFoodId, setSelectedSolidFoodId] = useState<string | null>(null);
   const shouldAutoOpenSolidsAdd = searchParams.get('action') === 'add';
 
   const activeTab: FeedingTab =
@@ -46,9 +47,14 @@ export function FeedingHub() {
     setSearchParams(tab === 'solids' ? { tab, action: 'add' } : { tab }, { replace: true });
   };
 
-  const showSolidsHistory = () => {
+  const openSolidFoodForEdit = (foodId: string) => {
+    setSelectedSolidFoodId(foodId);
     setSearchParams({ tab: 'solids' }, { replace: true });
   };
+
+  const clearSelectedSolidFoodId = useCallback(() => {
+    setSelectedSolidFoodId(null);
+  }, []);
 
   // Subscribe to both feeding types
   useEffect(() => {
@@ -147,7 +153,13 @@ export function FeedingHub() {
             {activeTab === 'breast' && <BreastfeedingView baby={selectedBaby} />}
             {activeTab === 'bottle' && <BottleView baby={selectedBaby} />}
             {activeTab === 'solids' && (
-              <SolidFoodsView embedded foods={solidFoods} autoOpenAdd={shouldAutoOpenSolidsAdd} />
+              <SolidFoodsView
+                embedded
+                foods={solidFoods}
+                autoOpenAdd={shouldAutoOpenSolidsAdd}
+                editFoodId={selectedSolidFoodId}
+                onEditFoodOpened={clearSelectedSolidFoodId}
+              />
             )}
           </>
         )}
@@ -224,7 +236,7 @@ export function FeedingHub() {
                   return (
                     <button
                       key={item.id}
-                      onClick={showSolidsHistory}
+                      onClick={() => openSolidFoodForEdit(food.id)}
                       className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50/80 active:bg-gray-100 transition-colors text-left"
                     >
                       <div

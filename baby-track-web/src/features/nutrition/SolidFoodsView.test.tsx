@@ -99,6 +99,22 @@ describe('SolidFoodsView', () => {
     expect(screen.getByRole('button', { name: 'Show more details' })).toBeInTheDocument();
   });
 
+  it('opens a requested solid food entry for editing', () => {
+    const onEditFoodOpened = vi.fn();
+
+    renderSolidFoodsView({
+      embedded: true,
+      foods: [makeSolidFood({ id: 'food-edit', foodName: 'Apple' })],
+      editFoodId: 'food-edit',
+      onEditFoodOpened,
+    });
+
+    expect(screen.getByRole('dialog', { name: 'Edit Food Entry' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Food Name')).toHaveValue('Apple');
+    expect(screen.getByRole('button', { name: 'Update' })).toBeInTheDocument();
+    expect(onEditFoodOpened).toHaveBeenCalledTimes(1);
+  });
+
   it('creates a new solid food entry for the selected baby', async () => {
     const user = userEvent.setup();
     renderSolidFoodsView();
