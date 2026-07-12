@@ -87,22 +87,37 @@ describe('FeedingHub solids integration', () => {
     });
   });
 
-  it('opens solids as a third feeding tab from the URL', async () => {
+  it('shows solids as a third feeding tab from the URL without opening add food', async () => {
     renderHub('/feed?tab=solids');
 
     expect(screen.getByRole('button', { name: 'Breast' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Bottle' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Solids' })).toBeInTheDocument();
-    expect(await screen.findByText('Solid foods content · embedded · 1 entries · add open')).toBeInTheDocument();
+    expect(await screen.findByText('Solid foods content · embedded · 1 entries · add closed')).toBeInTheDocument();
     expect(screen.queryByTitle('Milk Stash')).not.toBeInTheDocument();
   });
 
-  it('shows solids in recent feedings and opens the solids tab', async () => {
+  it('opens add food when explicitly requested from the URL', async () => {
+    renderHub('/feed?tab=solids&action=add');
+
+    expect(await screen.findByText('Solid foods content · embedded · 1 entries · add open')).toBeInTheDocument();
+  });
+
+  it('opens add food when the solids tab is chosen inside Feed', async () => {
+    const user = userEvent.setup();
+    renderHub();
+
+    await user.click(screen.getByRole('button', { name: 'Solids' }));
+
+    expect(await screen.findByText('Solid foods content · embedded · 1 entries · add open')).toBeInTheDocument();
+  });
+
+  it('shows solids in recent feedings and opens the solids history without add food', async () => {
     const user = userEvent.setup();
     renderHub();
 
     await user.click(await screen.findByText('Solids • Avocado'));
 
-    expect(await screen.findByText('Solid foods content · embedded · 1 entries · add open')).toBeInTheDocument();
+    expect(await screen.findByText('Solid foods content · embedded · 1 entries · add closed')).toBeInTheDocument();
   });
 });

@@ -698,7 +698,7 @@ export function DashboardView() {
     timeSince: lastFeeding ? formatTimeSince(lastFeeding.timestamp) : null,
     subtitle: lastFeeding?.details,
     urgencyColor: lastFeeding ? getUrgencyColor(lastFeeding.timestamp, 120, 180) : undefined,
-    route: lastFeeding?.type === 'solid' ? '/feed?tab=solids' : '/feed',
+    route: '/feed',
   }), [lastFeeding]);
 
   const sleepStatusCard = useMemo(() => ({

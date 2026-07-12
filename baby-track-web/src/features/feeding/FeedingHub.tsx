@@ -31,6 +31,7 @@ export function FeedingHub() {
   const [solidFoods, setSolidFoods] = useState<SolidFood[]>([]);
   const [selectedFeedingSession, setSelectedFeedingSession] = useState<FeedingSession | null>(null);
   const [selectedBottleSession, setSelectedBottleSession] = useState<BottleSession | null>(null);
+  const shouldAutoOpenSolidsAdd = searchParams.get('action') === 'add';
 
   const activeTab: FeedingTab =
     requestedTab === 'breast' || requestedTab === 'bottle' || requestedTab === 'solids'
@@ -42,7 +43,11 @@ export function FeedingHub() {
 
   const handleTabChange = (value: string) => {
     const tab = value as FeedingTab;
-    setSearchParams({ tab }, { replace: true });
+    setSearchParams(tab === 'solids' ? { tab, action: 'add' } : { tab }, { replace: true });
+  };
+
+  const showSolidsHistory = () => {
+    setSearchParams({ tab: 'solids' }, { replace: true });
   };
 
   // Subscribe to both feeding types
@@ -141,7 +146,9 @@ export function FeedingHub() {
           <>
             {activeTab === 'breast' && <BreastfeedingView baby={selectedBaby} />}
             {activeTab === 'bottle' && <BottleView baby={selectedBaby} />}
-            {activeTab === 'solids' && <SolidFoodsView embedded foods={solidFoods} autoOpenAdd />}
+            {activeTab === 'solids' && (
+              <SolidFoodsView embedded foods={solidFoods} autoOpenAdd={shouldAutoOpenSolidsAdd} />
+            )}
           </>
         )}
 
@@ -217,7 +224,7 @@ export function FeedingHub() {
                   return (
                     <button
                       key={item.id}
-                      onClick={() => handleTabChange('solids')}
+                      onClick={showSolidsHistory}
                       className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50/80 active:bg-gray-100 transition-colors text-left"
                     >
                       <div
