@@ -12,7 +12,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={clsx(
-          'rounded-2xl bg-white border border-gray-100',
+          'card rounded-2xl bg-white border border-gray-100',
           {
             // Variants
             'shadow-sm': variant === 'default',

@@ -26,6 +26,14 @@ export function MainLayout() {
   useNotifications();
   useHomeDataSync(user?.uid ?? null, selectedBabyId);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle('night-mode-root', nightMode);
+
+    return () => {
+      document.documentElement.classList.remove('night-mode-root');
+    };
+  }, [nightMode]);
+
   // Subscribe to babies and settings
   useEffect(() => {
     if (!user) {
