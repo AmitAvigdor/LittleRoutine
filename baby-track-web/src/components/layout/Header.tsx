@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
-import { ChevronDown, Plus, Baby as BabyIcon, Check, UserPlus } from 'lucide-react';
+import { ChevronDown, Plus, Baby as BabyIcon, Check, RefreshCw, UserPlus } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { joinBabyByShareCode } from '@/lib/firestore';
 import { toast } from '@/stores/toastStore';
 import { BABY_COLOR_CONFIG } from '@/types';
+import { refreshHomeDataSync } from '@/features/dashboard/homeDataSync';
 
 interface HeaderProps {
   title: string;
@@ -24,12 +25,25 @@ export function Header({
   subtitle,
 }: HeaderProps) {
   const [showDropdown, setShowDropdown] = useState(false);
-  const { selectedBaby, babies, setSelectedBabyId } = useAppStore();
+  const { selectedBaby, babies, setSelectedBabyId, userId, isOnline, requestDataRefresh } = useAppStore();
   const navigate = useNavigate();
 
   const handleSelectBaby = (babyId: string) => {
     setSelectedBabyId(babyId);
     setShowDropdown(false);
+  };
+
+  const handleRefresh = () => {
+    if (!userId || !selectedBaby) return;
+
+    if (!isOnline) {
+      toast.error('Connect to the internet to refresh data');
+      return;
+    }
+
+    refreshHomeDataSync({ userId, babyId: selectedBaby.id });
+    requestDataRefresh();
+    toast.success('Refreshing data...');
   };
 
   const babyColor = selectedBaby?.color
@@ -45,7 +59,7 @@ export function Header({
     >
       <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
         {/* Title and Baby Switcher */}
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <h1
             className={clsx(
               'text-xl font-bold',
@@ -144,8 +158,30 @@ export function Header({
           )}
         </div>
 
-        {/* Right Action */}
-        {rightAction}
+        <div className="flex shrink-0 items-center gap-2">
+          {userId && selectedBaby && (
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={!isOnline}
+              className={clsx(
+                'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
+                'focus:outline-none focus:ring-2 focus:ring-offset-2',
+                gradient
+                  ? 'text-white hover:bg-white/20 focus:ring-white/60'
+                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:ring-primary-500',
+                !isOnline && 'cursor-not-allowed opacity-40'
+              )}
+              aria-label="Refresh data"
+              title="Refresh data"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          )}
+
+          {/* Right Action */}
+          {rightAction}
+        </div>
       </div>
     </header>
   );

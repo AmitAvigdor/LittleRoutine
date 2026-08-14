@@ -28,6 +28,7 @@ interface AppState {
   // Connectivity
   isOnline: boolean;
   hasPendingWrites: boolean;
+  dataRefreshVersion: number;
 
   // Loading states
   isLoadingBabies: boolean;
@@ -48,6 +49,7 @@ interface AppState {
   setLoadingSettings: (loading: boolean) => void;
   setOnlineStatus: (online: boolean) => void;
   setPendingWrites: (pending: boolean) => void;
+  requestDataRefresh: () => void;
   reset: () => void;
 }
 
@@ -63,6 +65,7 @@ const initialState = {
   favoriteFeatureIds: [],
   isOnline: true,
   hasPendingWrites: false,
+  dataRefreshVersion: 0,
   isLoadingBabies: true,
   isLoadingSettings: true,
 };
@@ -138,6 +141,8 @@ export const useAppStore = create<AppState>()(
 
       setOnlineStatus: (online) => set({ isOnline: online }),
       setPendingWrites: (pending) => set({ hasPendingWrites: pending }),
+      requestDataRefresh: () =>
+        set((state) => ({ dataRefreshVersion: state.dataRefreshVersion + 1 })),
 
       reset: () => set(initialState),
     }),

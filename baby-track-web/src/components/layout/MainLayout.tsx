@@ -19,6 +19,7 @@ export function MainLayout() {
     isLoadingSettings,
     setLoadingBabies,
     setLoadingSettings,
+    dataRefreshVersion,
   } = useAppStore();
 
   // Initialize notifications/reminders system
@@ -77,7 +78,7 @@ export function MainLayout() {
       )}
     >
       <main className="max-w-lg mx-auto">
-        <Outlet />
+        <Outlet key={dataRefreshVersion} />
       </main>
       <BottomNav />
     </div>
