@@ -18,6 +18,7 @@ const mockSubscribeToMilkStash = vi.fn((_: string, callback: (stash: MilkStash[]
 const mockDeleteMilkStashEntry = vi.fn();
 const mockDeleteMilkStashEntries = vi.fn();
 const mockUpdateMilkStashVolume = vi.fn();
+const mockUpdateMilkStashLocation = vi.fn();
 
 vi.mock('@/lib/firestore', () => ({
   createMilkStash: (...args: unknown[]) => mockCreateMilkStash(...args),
@@ -26,6 +27,7 @@ vi.mock('@/lib/firestore', () => ({
   markMilkStashInUse: vi.fn(),
   markMilkStashUsed: vi.fn(),
   updateMilkStashVolume: (...args: unknown[]) => mockUpdateMilkStashVolume(...args),
+  updateMilkStashLocation: (...args: unknown[]) => mockUpdateMilkStashLocation(...args),
   createBottleSession: vi.fn(),
   deleteMilkStashEntry: (...args: unknown[]) => mockDeleteMilkStashEntry(...args),
   deleteMilkStashEntries: (...args: unknown[]) => mockDeleteMilkStashEntries(...args),
@@ -87,6 +89,8 @@ describe('MilkStashView', () => {
     mockDeleteMilkStashEntries.mockResolvedValue(undefined);
     mockUpdateMilkStashVolume.mockReset();
     mockUpdateMilkStashVolume.mockResolvedValue(undefined);
+    mockUpdateMilkStashLocation.mockReset();
+    mockUpdateMilkStashLocation.mockResolvedValue(undefined);
   });
 
   it('subscribes to milk stash by selected baby id', () => {
@@ -131,7 +135,7 @@ describe('MilkStashView', () => {
     expect(screen.getByText('7.0 oz')).toBeInTheDocument();
     await user.click(screen.getByLabelText('Edit 4 oz milk stash entry'));
 
-    expect(screen.getByText('Edit milk volume')).toBeInTheDocument();
+    expect(screen.getByText('Edit milk stash')).toBeInTheDocument();
     const editInput = screen.getByRole('spinbutton');
     await user.clear(editInput);
     await user.type(editInput, '5.5');
@@ -146,6 +150,26 @@ describe('MilkStashView', () => {
     });
 
     expect(screen.getByText('8.5 oz')).toBeInTheDocument();
+  });
+
+  it('moves a fridge stash entry to the freezer from the edit dialog', async () => {
+    const user = userEvent.setup();
+    renderMilkStashView();
+
+    const item = makeStashItem({ id: 'stash-1', volume: 4, location: 'fridge' });
+
+    act(() => {
+      milkStashCallback?.([item]);
+    });
+
+    await user.click(screen.getByLabelText('Edit 4 oz milk stash entry'));
+    await user.click(screen.getByRole('button', { name: 'Freezer' }));
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    await waitFor(() => {
+      expect(mockUpdateMilkStashLocation).toHaveBeenCalledWith('stash-1', 'freezer', '2024-01-15');
+    });
+    expect(mockUpdateMilkStashVolume).not.toHaveBeenCalled();
   });
 
   it('confirms before deleting a single stash entry and updates totals after refresh', async () => {
