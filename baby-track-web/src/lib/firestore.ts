@@ -1232,6 +1232,35 @@ export async function createMedicineLog(
   return docRef.id;
 }
 
+export async function completeOneTimeMedicine(
+  medicineId: string,
+  babyId: string,
+  userId: string,
+  input: CreateMedicineLogInput
+): Promise<string> {
+  const now = new Date().toISOString();
+  const logRef = doc(collection(db, 'medicineLogs'));
+  const batch = writeBatch(db);
+
+  batch.set(logRef, {
+    ...input,
+    medicineId,
+    babyId,
+    userId,
+    givenBy: input.givenBy ?? null,
+    notes: input.notes ?? null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  batch.update(doc(db, 'medicines', medicineId), {
+    isActive: false,
+    updatedAt: now,
+  });
+
+  await batch.commit();
+  return logRef.id;
+}
+
 export function subscribeToMedicineLogs(
   medicineId: string,
   callback: (logs: MedicineLog[]) => void

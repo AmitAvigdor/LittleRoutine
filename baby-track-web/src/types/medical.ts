@@ -121,6 +121,7 @@ export function getNextDoseTime(lastDose: string, frequency: MedicationFrequency
   let hoursToAdd: number;
 
   switch (frequency) {
+    case 'oneTime':
     case 'asNeeded':
       return null;
     case 'onceDaily':

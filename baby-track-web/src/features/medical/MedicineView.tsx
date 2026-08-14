@@ -8,16 +8,18 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
 import { useHomeStore } from '@/stores/homeStore';
 import { prefetchHomeData } from '@/features/dashboard/homeDataSync';
-import { createMedicine, createMedicineLog, deleteMedicine, subscribeToMedicineLogs, updateMedicine } from '@/lib/firestore';
+import { completeOneTimeMedicine, createMedicine, createMedicineLog, deleteMedicine, subscribeToMedicineLogs, updateMedicine } from '@/lib/firestore';
 import type { Medicine, MedicineLog } from '@/types';
 import { MedicationFrequency, MEDICATION_FREQUENCY_CONFIG } from '@/types/enums';
-import { Pill, Plus, X, Check, History, AlertTriangle, Trash2 } from 'lucide-react';
+import { Pill, Plus, X, Check, History, AlertTriangle, Pencil, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { toast } from '@/stores/toastStore';
 
 // Get max doses per day based on frequency
 function getMaxDosesPerDay(frequency: MedicationFrequency): number | null {
   switch (frequency) {
+    case 'oneTime':
+      return 1;
     case 'onceDaily':
       return 1;
     case 'twiceDaily':
@@ -81,6 +83,7 @@ export function MedicineView() {
   const removeMedicineLog = useHomeStore((state) => state.removeMedicineLog);
   const updateMedicineOptimistically = useHomeStore((state) => state.updateMedicineOptimistically);
   const [showForm, setShowForm] = useState(false);
+  const [editingMedicine, setEditingMedicine] = useState<Medicine | null>(null);
   const [selectedMedicineId, setSelectedMedicineId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -95,6 +98,36 @@ export function MedicineView() {
   const [frequency, setFrequency] = useState<MedicationFrequency>('asNeeded');
   const [hoursInterval, setHoursInterval] = useState('');
   const [instructions, setInstructions] = useState('');
+
+  const resetForm = () => {
+    setName('');
+    setDosage('');
+    setFrequency('asNeeded');
+    setHoursInterval('');
+    setInstructions('');
+    setEditingMedicine(null);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    resetForm();
+  };
+
+  const openAddForm = () => {
+    resetForm();
+    setShowForm(true);
+  };
+
+  const openEditForm = (medicine: Medicine) => {
+    setEditingMedicine(medicine);
+    setName(medicine.name);
+    setDosage(medicine.dosage);
+    setFrequency(medicine.frequency);
+    setHoursInterval(medicine.hoursInterval?.toString() ?? '');
+    setInstructions(medicine.instructions ?? '');
+    setSelectedMedicineId(null);
+    setShowForm(true);
+  };
 
   // Check if all active medicine logs have been loaded
   const allLogsLoaded = medicines
@@ -180,6 +213,10 @@ export function MedicineView() {
   const canGiveDose = useCallback((medicine: Medicine): boolean => {
     const logs = medicineLogs[medicine.id] || [];
 
+    if (medicine.frequency === 'oneTime') {
+      return logs.length === 0;
+    }
+
     if (medicine.frequency === 'asNeeded') {
       return true;
     }
@@ -222,24 +259,27 @@ export function MedicineView() {
         ? parsedHoursInterval
         : null;
 
-      await createMedicine(selectedBaby.id, user.uid, {
+      const values = {
         name: name.trim(),
-        dosage: dosage || '',
+        dosage: dosage.trim(),
         frequency,
         hoursInterval: validHoursInterval,
-        instructions: instructions || null,
-      });
-      prefetchHomeData({ userId: user.uid, babyId: selectedBaby.id });
+        instructions: instructions.trim() || null,
+      };
 
-      setName('');
-      setDosage('');
-      setFrequency('asNeeded');
-      setHoursInterval('');
-      setInstructions('');
-      setShowForm(false);
+      if (editingMedicine) {
+        await updateMedicine(editingMedicine.id, values);
+        updateMedicineOptimistically(editingMedicine.id, values);
+        toast.success(`${values.name} updated`);
+      } else {
+        await createMedicine(selectedBaby.id, user.uid, values);
+        toast.success(`${values.name} added`);
+      }
+      prefetchHomeData({ userId: user.uid, babyId: selectedBaby.id });
+      closeForm();
     } catch (error) {
-      console.error('Error adding medicine:', error);
-      toast.error('Failed to add medicine');
+      console.error('Error saving medicine:', error);
+      toast.error(`Failed to ${editingMedicine ? 'update' : 'add'} medicine`);
     } finally {
       setLoading(false);
     }
@@ -278,9 +318,12 @@ export function MedicineView() {
     });
 
     try {
-      await createMedicineLog(medicine.id, selectedBaby.id, user.uid, {
-        timestamp,
-      });
+      if (medicine.frequency === 'oneTime') {
+        await completeOneTimeMedicine(medicine.id, selectedBaby.id, user.uid, { timestamp });
+        updateMedicineOptimistically(medicine.id, { isActive: false });
+      } else {
+        await createMedicineLog(medicine.id, selectedBaby.id, user.uid, { timestamp });
+      }
       prefetchHomeData({ userId: user.uid, babyId: selectedBaby.id });
       toast.success(`${medicine.name} dose logged`);
     } catch (error) {
@@ -342,7 +385,7 @@ export function MedicineView() {
         title="Medicine"
         showBabySwitcher={false}
         rightAction={
-          <Button size="sm" onClick={() => setShowForm(true)}>
+          <Button size="sm" onClick={openAddForm}>
             <Plus className="w-4 h-4 mr-1" />
             Add
           </Button>
@@ -354,8 +397,10 @@ export function MedicineView() {
         {showForm && (
           <Card>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Add Medicine</h3>
-              <button onClick={() => setShowForm(false)}>
+              <h3 className="font-semibold text-gray-900">
+                {editingMedicine ? 'Edit Medicine' : 'Add Medicine'}
+              </h3>
+              <button type="button" onClick={closeForm} aria-label="Close medicine form">
                 <X className="w-5 h-5 text-gray-400" />
               </button>
             </div>
@@ -424,7 +469,7 @@ export function MedicineView() {
                 className="w-full"
                 disabled={loading || !name.trim() || (frequency === 'everyHours' && !hoursInterval)}
               >
-                {loading ? 'Saving...' : 'Add Medicine'}
+                {loading ? 'Saving...' : editingMedicine ? 'Save Changes' : 'Add Medicine'}
               </Button>
             </form>
           </Card>
@@ -457,6 +502,7 @@ export function MedicineView() {
                     medicine={medicine}
                     onGive={() => handleGiveMedicine(medicine)}
                     onToggleActive={() => handleToggleActive(medicine)}
+                    onEdit={() => openEditForm(medicine)}
                     onDelete={() => handleDeleteMedicine(medicine)}
                     onSelect={() => setSelectedMedicineId(medicine.id)}
                     canGive={canGive}
@@ -485,6 +531,7 @@ export function MedicineView() {
                   key={medicine.id}
                   medicine={medicine}
                   onToggleActive={() => handleToggleActive(medicine)}
+                  onEdit={() => openEditForm(medicine)}
                   onDelete={() => handleDeleteMedicine(medicine)}
                   onSelect={() => setSelectedMedicineId(medicine.id)}
                   lastGivenAt={medicineLogs[medicine.id]?.[0]?.timestamp}
@@ -512,7 +559,7 @@ export function MedicineView() {
             onDismiss={() => setShowReminder(false)}
             onAddMedicine={() => {
               setShowReminder(false);
-              setShowForm(true);
+              openAddForm();
             }}
             onGive={(medicine) => {
               // Check if can give dose before proceeding
@@ -533,6 +580,7 @@ function MedicineCard({
   medicine,
   onGive,
   onToggleActive,
+  onEdit,
   onDelete,
   onSelect,
   inactive,
@@ -545,6 +593,7 @@ function MedicineCard({
   medicine: Medicine;
   onGive?: () => void;
   onToggleActive: () => void;
+  onEdit: () => void;
   onDelete: () => void;
   onSelect: () => void;
   inactive?: boolean;
@@ -616,11 +665,20 @@ function MedicineCard({
             </Button>
           )}
           <button
-            onClick={onToggleActive}
-            className="p-2 text-gray-400 hover:text-gray-600 text-xs"
+            onClick={onEdit}
+            className="p-2 text-gray-400 hover:text-primary-600"
+            aria-label={`Edit ${medicine.name}`}
           >
-            {inactive ? 'Activate' : 'Deactivate'}
+            <Pencil className="h-4 w-4" />
           </button>
+          {!(inactive && medicine.frequency === 'oneTime' && lastGivenAt) && (
+            <button
+              onClick={onToggleActive}
+              className="p-2 text-gray-400 hover:text-gray-600 text-xs"
+            >
+              {inactive ? 'Activate' : 'Deactivate'}
+            </button>
+          )}
           <button
             onClick={onDelete}
             className="p-2 text-red-400 hover:text-red-600"
@@ -749,6 +807,7 @@ function MedicineDetail({
   const maxDoses = getMaxDosesPerDay(medicine.frequency);
 
   const canGive = (() => {
+    if (medicine.frequency === 'oneTime') return logs.length === 0;
     if (medicine.frequency === 'asNeeded') return true;
     if (medicine.frequency === 'everyHours' && medicine.hoursInterval) {
       return canGiveEveryHoursMedicine(logs, medicine.hoursInterval);

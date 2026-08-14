@@ -114,9 +114,10 @@ export const FOOD_PREFERENCE_CONFIG: Record<FoodPreference, { label: string; col
 };
 
 // Medication Frequency
-export type MedicationFrequency = 'asNeeded' | 'onceDaily' | 'twiceDaily' | 'threeTimesDaily' | 'fourTimesDaily' | 'everyHours';
+export type MedicationFrequency = 'oneTime' | 'asNeeded' | 'onceDaily' | 'twiceDaily' | 'threeTimesDaily' | 'fourTimesDaily' | 'everyHours';
 
 export const MEDICATION_FREQUENCY_CONFIG: Record<MedicationFrequency, { label: string; hoursInterval?: number }> = {
+  oneTime: { label: 'One-time Dose' },
   asNeeded: { label: 'As Needed' },
   onceDaily: { label: 'Once Daily', hoursInterval: 24 },
   twiceDaily: { label: 'Twice Daily', hoursInterval: 12 },

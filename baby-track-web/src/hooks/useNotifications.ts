@@ -183,8 +183,8 @@ export function useNotifications() {
       // Skip if already notified today
       if (notifiedToday.has(medicine.id)) continue;
 
-      // Skip "as needed" medicines
-      if (medicine.frequency === 'asNeeded') continue;
+      // One-time and as-needed medicines are logged manually.
+      if (medicine.frequency === 'oneTime' || medicine.frequency === 'asNeeded') continue;
 
       // Get last dose for this medicine
       const medicineLogsForThis = medicineLogsRef.current.filter(

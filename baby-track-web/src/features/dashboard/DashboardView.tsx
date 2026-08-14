@@ -130,6 +130,8 @@ function formatMedicineLastGiven(timestamp: string | null): string {
 // Get max doses per day based on frequency
 function getMaxDosesPerDay(frequency: MedicationFrequency): number | null {
   switch (frequency) {
+    case 'oneTime':
+      return 1;
     case 'onceDaily':
       return 1;
     case 'twiceDaily':

@@ -1,6 +1,12 @@
-import { describe, it, vi, beforeEach, afterEach } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
+import { useHomeStore } from '@/stores/homeStore';
+import { MemoryRouter } from 'react-router-dom';
+import { completeOneTimeMedicine, createMedicineLog, updateMedicine } from '@/lib/firestore';
+import type { Medicine } from '@/types';
+import { MedicineView } from './MedicineView';
 
 // Mock dependencies
 vi.mock('@/features/auth/AuthContext', () => ({
@@ -16,8 +22,13 @@ vi.mock('@/lib/firestore', () => ({
   subscribeToMedicineLogs: vi.fn(() => vi.fn()),
   createMedicine: vi.fn(),
   createMedicineLog: vi.fn(),
+  completeOneTimeMedicine: vi.fn(),
   deleteMedicine: vi.fn(),
   updateMedicine: vi.fn(),
+}));
+
+vi.mock('@/features/dashboard/homeDataSync', () => ({
+  prefetchHomeData: vi.fn(),
 }));
 
 describe('MedicineView', () => {
@@ -26,8 +37,65 @@ describe('MedicineView', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-14T12:00:00'));
     vi.mocked(useAuth).mockReturnValue({ user: mockUser } as ReturnType<typeof useAuth>);
     vi.mocked(useAppStore).mockReturnValue({ selectedBaby: mockBaby } as ReturnType<typeof useAppStore>);
+    useHomeStore.getState().resetHomeData();
+  });
+
+  const medicine: Medicine = {
+    id: 'medicine-1',
+    babyId: mockBaby.id,
+    userId: mockUser.uid,
+    name: 'Acamoli',
+    dosage: '2.5 ml',
+    frequency: 'asNeeded',
+    hoursInterval: null,
+    instructions: 'After food',
+    photoUrl: null,
+    isActive: true,
+    createdAt: '2026-08-14T08:00:00.000Z',
+    updatedAt: '2026-08-14T08:00:00.000Z',
+  };
+
+  it('edits an existing medicine', async () => {
+    useHomeStore.setState({ medicines: [medicine], medicineLogs: { [medicine.id]: [] } });
+    render(<MemoryRouter><MedicineView /></MemoryRouter>);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Acamoli' }));
+    fireEvent.change(screen.getByLabelText('Medicine Name'), { target: { value: 'Acamol' } });
+    fireEvent.click(screen.getByRole('button', { name: 'One-time Dose' }));
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    });
+
+    expect(updateMedicine).toHaveBeenCalledWith('medicine-1', {
+      name: 'Acamol',
+      dosage: '2.5 ml',
+      frequency: 'oneTime',
+      hoursInterval: null,
+      instructions: 'After food',
+    });
+  });
+
+  it('logs and archives a one-time medicine in one action', async () => {
+    const oneTimeMedicine: Medicine = { ...medicine, frequency: 'oneTime' };
+    useHomeStore.setState({ medicines: [oneTimeMedicine], medicineLogs: { [medicine.id]: [] } });
+    render(<MemoryRouter><MedicineView /></MemoryRouter>);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Give' }));
+    });
+
+    expect(completeOneTimeMedicine).toHaveBeenCalledWith(
+      'medicine-1',
+      mockBaby.id,
+      mockUser.uid,
+      { timestamp: expect.any(String) }
+    );
+    expect(createMedicineLog).not.toHaveBeenCalled();
+    expect(useHomeStore.getState().medicines[0].isActive).toBe(false);
   });
 
   afterEach(() => {
