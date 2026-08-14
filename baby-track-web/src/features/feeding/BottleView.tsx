@@ -122,6 +122,12 @@ export function BottleView({ baby }: BottleViewProps) {
     setShowForm(true);
   };
 
+  const handleUseAllMilk = (item: MilkStash) => {
+    const fullVolume = convertVolume(item.volume, item.volumeUnit, volumeUnit);
+    setSelectedMilkStashId(item.id);
+    setVolume(Number(fullVolume.toFixed(4)).toString());
+  };
+
   const handleSave = async () => {
     if (!user || !volume) return;
 
@@ -318,6 +324,7 @@ export function BottleView({ baby }: BottleViewProps) {
                 volumeUnit={volumeUnit}
                 selectedMilkStashId={selectedMilkStashId}
                 onSelect={setSelectedMilkStashId}
+                onUseAll={handleUseAllMilk}
               />
             )}
 
@@ -382,6 +389,7 @@ export function BottleView({ baby }: BottleViewProps) {
                 volumeUnit={volumeUnit}
                 selectedMilkStashId={selectedMilkStashId}
                 onSelect={setSelectedMilkStashId}
+                onUseAll={handleUseAllMilk}
               />
             )}
 
@@ -434,13 +442,16 @@ function FridgeMilkPicker({
   volumeUnit,
   selectedMilkStashId,
   onSelect,
+  onUseAll,
 }: {
   stash: MilkStash[];
   volumeUnit: VolumeUnit;
   selectedMilkStashId: string | null;
   onSelect: (id: string | null) => void;
+  onUseAll: (item: MilkStash) => void;
 }) {
   const totalVolume = stash.reduce((sum, item) => sum + convertVolume(item.volume, item.volumeUnit, volumeUnit), 0);
+  const selectedMilkStash = stash.find((item) => item.id === selectedMilkStashId) ?? null;
 
   return (
     <Card className="border border-blue-100 bg-blue-50/50">
@@ -523,6 +534,22 @@ function FridgeMilkPicker({
               </button>
             );
           })}
+
+          {selectedMilkStash && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full border-blue-200 text-blue-800 hover:border-blue-300 hover:bg-blue-50"
+              onClick={() => onUseAll(selectedMilkStash)}
+            >
+              <Milk className="w-4 h-4 mr-2" />
+              Use all {convertVolume(
+                selectedMilkStash.volume,
+                selectedMilkStash.volumeUnit,
+                volumeUnit
+              ).toFixed(1)} {volumeUnit}
+            </Button>
+          )}
         </div>
       )}
     </Card>

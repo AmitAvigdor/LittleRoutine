@@ -77,7 +77,7 @@ describe('BottleView', () => {
 
   it('links a selected fridge bottle when logging a breast milk feeding', async () => {
     const user = userEvent.setup();
-    const { container } = render(<BottleView baby={mockBaby} />);
+    render(<BottleView baby={mockBaby} />);
 
     expect(mockMigrateMilkStashToBaby).toHaveBeenCalledWith(mockUser.uid, mockBaby.id);
     expect(mockSubscribeToMilkStash).toHaveBeenCalledWith(mockBaby.id, expect.any(Function), [mockBaby.userId]);
@@ -92,11 +92,9 @@ describe('BottleView', () => {
 
     expect(screen.getByText('Available breast milk')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /4\.0 oz/i }));
+    await user.click(screen.getByRole('button', { name: 'Use all 4.0 oz' }));
 
-    const volumeInput = container.querySelector('input[type="number"]');
-    expect(volumeInput).not.toBeNull();
-    await user.clear(volumeInput!);
-    await user.type(volumeInput!, '4');
+    expect(screen.getByLabelText('Volume')).toHaveValue(4);
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
