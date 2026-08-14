@@ -126,6 +126,9 @@ export function BottleView({ baby }: BottleViewProps) {
     const fullVolume = convertVolume(item.volume, item.volumeUnit, volumeUnit);
     setSelectedMilkStashId(item.id);
     setVolume(Number(fullVolume.toFixed(4)).toString());
+    if (entryMode === 'quick') {
+      setShowForm(true);
+    }
   };
 
   const handleSave = async () => {
@@ -240,36 +243,48 @@ export function BottleView({ baby }: BottleViewProps) {
 
       {/* Quick Add Buttons */}
       {!showForm && entryMode === 'quick' && (
-        <Card>
-          <CardHeader title="Quick Add" subtitle="Tap to log a feeding" />
-          <div className="flex flex-wrap gap-2">
-            {quickAmounts.map((amount) => (
+        <>
+          <Card>
+            <CardHeader title="Quick Add" subtitle="Tap to log a feeding" />
+            <div className="flex flex-wrap gap-2">
+              {quickAmounts.map((amount) => (
+                <button
+                  key={amount}
+                  onClick={() => handleQuickAdd(amount)}
+                  className={clsx(
+                    'flex-1 min-w-[60px] py-4 rounded-xl text-center',
+                    'border-2 border-gray-200 hover:border-primary-300',
+                    'transition-all duration-200 hover:bg-primary-50'
+                  )}
+                >
+                  <p className="text-2xl font-bold text-gray-900">{amount}</p>
+                  <p className="text-xs text-gray-500">{volumeUnit}</p>
+                </button>
+              ))}
               <button
-                key={amount}
-                onClick={() => handleQuickAdd(amount)}
+                onClick={() => setShowForm(true)}
                 className={clsx(
                   'flex-1 min-w-[60px] py-4 rounded-xl text-center',
-                  'border-2 border-gray-200 hover:border-primary-300',
+                  'border-2 border-dashed border-gray-300 hover:border-primary-300',
                   'transition-all duration-200 hover:bg-primary-50'
                 )}
               >
-                <p className="text-2xl font-bold text-gray-900">{amount}</p>
-                <p className="text-xs text-gray-500">{volumeUnit}</p>
+                <Plus className="w-6 h-6 mx-auto text-gray-400" />
+                <p className="text-xs text-gray-500 mt-1">Custom</p>
               </button>
-            ))}
-            <button
-              onClick={() => setShowForm(true)}
-              className={clsx(
-                'flex-1 min-w-[60px] py-4 rounded-xl text-center',
-                'border-2 border-dashed border-gray-300 hover:border-primary-300',
-                'transition-all duration-200 hover:bg-primary-50'
-              )}
-            >
-              <Plus className="w-6 h-6 mx-auto text-gray-400" />
-              <p className="text-xs text-gray-500 mt-1">Custom</p>
-            </button>
-          </div>
-        </Card>
+            </div>
+          </Card>
+
+          {contentType === 'breastMilk' && (
+            <FridgeMilkPicker
+              stash={availableBreastMilk}
+              volumeUnit={volumeUnit}
+              selectedMilkStashId={selectedMilkStashId}
+              onSelect={setSelectedMilkStashId}
+              onUseAll={handleUseAllMilk}
+            />
+          )}
+        </>
       )}
 
       {/* Manual Entry Mode */}

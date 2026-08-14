@@ -88,13 +88,11 @@ describe('BottleView', () => {
       milkStashCallback?.([stashItem]);
     });
 
-    await user.click(screen.getByRole('button', { name: 'Custom' }));
-
     expect(screen.getByText('Available breast milk')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /4\.0 oz/i }));
-    await user.click(screen.getByRole('button', { name: 'Use all 4.0 oz' }));
+    await user.click(screen.getByRole('button', { name: '3 oz' }));
 
-    expect(screen.getByLabelText('Volume')).toHaveValue(4);
+    expect(screen.getByLabelText('Volume')).toHaveValue(3);
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
@@ -104,7 +102,7 @@ describe('BottleView', () => {
         expect.objectContaining({
           contentType: 'breastMilk',
           milkStashId: 'stash-1',
-          volume: 4,
+          volume: 3,
         })
       );
     });
@@ -115,7 +113,7 @@ describe('BottleView', () => {
   it('shows on-the-go pumped milk as available for bottle feeding', async () => {
     vi.setSystemTime(new Date('2024-01-15T10:00:00.000Z'));
     const user = userEvent.setup();
-    const { container } = render(<BottleView baby={mockBaby} />);
+    render(<BottleView baby={mockBaby} />);
 
     act(() => {
       milkStashCallback?.([
@@ -129,17 +127,13 @@ describe('BottleView', () => {
       ]);
     });
 
-    await user.click(screen.getByRole('button', { name: 'Custom' }));
-
     expect(screen.getByText('Available breast milk')).toBeInTheDocument();
     expect(screen.getByText(/On the go/)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /3\.0 oz/i }));
+    await user.click(screen.getByRole('button', { name: 'Use all 3.0 oz' }));
 
-    const volumeInput = container.querySelector('input[type="number"]');
-    expect(volumeInput).not.toBeNull();
-    await user.clear(volumeInput!);
-    await user.type(volumeInput!, '3');
+    expect(screen.getByLabelText('Volume')).toHaveValue(3);
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
@@ -156,7 +150,6 @@ describe('BottleView', () => {
   });
 
   it('does not show used milk bottles as available', async () => {
-    const user = userEvent.setup();
     render(<BottleView baby={mockBaby} />);
 
     act(() => {
@@ -168,8 +161,6 @@ describe('BottleView', () => {
         }),
       ]);
     });
-
-    await user.click(screen.getByRole('button', { name: 'Custom' }));
 
     expect(screen.getByText('No available breast milk to link. You can still log this feeding without selecting one.')).toBeInTheDocument();
   });
