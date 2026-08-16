@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from './AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -6,6 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { Baby, Mail, Lock, Chrome, Sparkles } from 'lucide-react';
 
 export function LoginPage() {
+  const { t } = useTranslation();
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, loading, error, clearError } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
@@ -20,11 +22,11 @@ export function LoginPage() {
 
     if (isSignUp) {
       if (password !== confirmPassword) {
-        setLocalError('Passwords do not match');
+        setLocalError(t('auth.passwordMismatch'));
         return;
       }
       if (password.length < 6) {
-        setLocalError('Password must be at least 6 characters');
+        setLocalError(t('auth.passwordTooShort'));
         return;
       }
       await signUpWithEmail(email, password);
@@ -57,14 +59,14 @@ export function LoginPage() {
             </div>
             <Sparkles className="absolute -top-1 -right-1 w-6 h-6 text-yellow-300" />
           </div>
-          <h1 className="text-4xl font-bold text-white tracking-tight">LittleRoutine</h1>
-          <p className="text-white/80 mt-2 text-lg">Track your baby's daily journey</p>
+          <h1 className="text-4xl font-bold text-white tracking-tight">{t('auth.title')}</h1>
+          <p className="text-white/80 mt-2 text-lg">{t('auth.subtitle')}</p>
         </div>
 
         {/* Login Card */}
         <Card className="p-6 shadow-2xl border-0 backdrop-blur-sm bg-white/95">
           <h2 className="text-2xl font-bold text-center mb-6 text-gray-900">
-            {isSignUp ? 'Create Account' : 'Welcome Back'} 👋
+            {isSignUp ? t('auth.createAccount') : t('auth.welcomeBack')} 👋
           </h2>
 
           {displayError && (
@@ -76,7 +78,7 @@ export function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               type="email"
-              placeholder="Email"
+              placeholder={t('auth.email')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               icon={<Mail className="w-5 h-5" />}
@@ -85,7 +87,7 @@ export function LoginPage() {
 
             <Input
               type="password"
-              placeholder="Password"
+              placeholder={t('auth.password')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               icon={<Lock className="w-5 h-5" />}
@@ -95,7 +97,7 @@ export function LoginPage() {
             {isSignUp && (
               <Input
                 type="password"
-                placeholder="Confirm Password"
+                placeholder={t('auth.confirmPassword')}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 icon={<Lock className="w-5 h-5" />}
@@ -104,7 +106,7 @@ export function LoginPage() {
             )}
 
             <Button type="submit" className="w-full h-12 text-base" disabled={loading}>
-              {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
+              {loading ? t('common.loading') : isSignUp ? t('auth.signUp') : t('auth.signIn')}
             </Button>
           </form>
 
@@ -113,7 +115,7 @@ export function LoginPage() {
               <div className="w-full border-t border-gray-200" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-400 font-medium">or continue with</span>
+              <span className="px-4 bg-white text-gray-400 font-medium">{t('auth.continueWith')}</span>
             </div>
           </div>
 
@@ -142,24 +144,24 @@ export function LoginPage() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            Continue with Google
+            {t('auth.continueWithGoogle')}
           </Button>
 
           <p className="text-center text-sm text-gray-600 mt-6">
-            {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+            {isSignUp ? t('auth.alreadyHaveAccount') : t('auth.dontHaveAccount')}{' '}
             <button
               type="button"
               onClick={toggleMode}
               className="text-primary-600 font-semibold hover:underline"
             >
-              {isSignUp ? 'Sign In' : 'Sign Up'}
+              {isSignUp ? t('auth.signIn') : t('auth.signUp')}
             </button>
           </p>
         </Card>
 
         {/* Footer */}
         <p className="text-center text-white/60 text-sm mt-6">
-          Made with ❤️ for parents everywhere
+          {t('auth.footer')}
         </p>
       </div>
     </div>

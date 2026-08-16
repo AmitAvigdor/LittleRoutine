@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   subscribeToAuthState,
   signInWithGoogle,
@@ -23,6 +24,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await signInWithGoogle();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sign in with Google');
+      setError(err instanceof Error ? err.message : t('auth.googleError'));
     } finally {
       setLoading(false);
     }
@@ -56,13 +58,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await signInWithEmail(email, password);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to sign in';
+      const errorMessage = err instanceof Error ? err.message : t('auth.signInError');
       if (errorMessage.includes('user-not-found')) {
-        setError('No account found with this email');
+        setError(t('auth.noAccount'));
       } else if (errorMessage.includes('wrong-password')) {
-        setError('Incorrect password');
+        setError(t('auth.wrongPassword'));
       } else if (errorMessage.includes('invalid-email')) {
-        setError('Invalid email address');
+        setError(t('auth.invalidEmail'));
       } else {
         setError(errorMessage);
       }
@@ -77,13 +79,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await signUpWithEmail(email, password);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create account';
+      const errorMessage = err instanceof Error ? err.message : t('auth.signUpError');
       if (errorMessage.includes('email-already-in-use')) {
-        setError('An account with this email already exists');
+        setError(t('auth.emailInUse'));
       } else if (errorMessage.includes('weak-password')) {
-        setError('Password should be at least 6 characters');
+        setError(t('auth.weakPassword'));
       } else if (errorMessage.includes('invalid-email')) {
-        setError('Invalid email address');
+        setError(t('auth.invalidEmail'));
       } else {
         setError(errorMessage);
       }
@@ -98,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await signOut();
       reset();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sign out');
+      setError(err instanceof Error ? err.message : t('auth.logoutError'));
     }
   };
 

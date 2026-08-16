@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -11,6 +12,7 @@ import { Syringe, Plus, X, Check, Clock, AlertCircle, Trash2 } from 'lucide-reac
 import { clsx } from 'clsx';
 
 export function VaccinationsView() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { selectedBaby } = useAppStore();
   const [vaccinations, setVaccinations] = useState<Vaccination[]>([]);
@@ -97,12 +99,12 @@ export function VaccinationsView() {
   return (
     <div>
       <Header
-        title="Vaccinations"
+        title={t('features.vaccinations')}
         showBabySwitcher={false}
         rightAction={
           <Button size="sm" onClick={() => setShowForm(true)}>
             <Plus className="w-4 h-4 mr-1" />
-            Add
+            {t('common.add')}
           </Button>
         }
       />

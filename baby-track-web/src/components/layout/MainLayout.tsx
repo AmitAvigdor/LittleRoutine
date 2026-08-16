@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BottomNav } from './BottomNav';
 import { useAppStore } from '@/stores/appStore';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -9,6 +10,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { clsx } from 'clsx';
 
 export function MainLayout() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const {
     setBabies,
@@ -72,7 +74,7 @@ export function MainLayout() {
       <div className="min-h-screen flex items-center justify-center gradient-primary">
         <div className="text-white text-center">
           <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-lg">Loading your data...</p>
+          <p className="text-lg">{t('common.loadingData')}</p>
         </div>
       </div>
     );

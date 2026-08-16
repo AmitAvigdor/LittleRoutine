@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { format, isToday, parseISO } from 'date-fns';
+import { he } from 'date-fns/locale';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -20,22 +22,13 @@ import { consumeDiaperBagSupplies, DIAPER_BAG_ITEM_IDS } from './diaperBagStorag
 type EntryMode = 'quick' | 'manual';
 type DiaperSource = 'home' | 'bag';
 
-const entryModeOptions = [
-  { value: 'quick', label: 'Quick', icon: <Zap className="w-4 h-4" /> },
-  { value: 'manual', label: 'Manual', icon: <Edit3 className="w-4 h-4" /> },
-];
-
-const diaperSourceOptions = [
-  { value: 'home', label: 'From Home' },
-  { value: 'bag', label: 'From Bag' },
-];
-
 const DIAPER_ICONS: Record<DiaperType, React.ReactNode> = {
   wet: <Droplet className="w-8 h-8" />,
   full: <Circle className="w-8 h-8" />,
 };
 
 export function DiaperView() {
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { selectedBaby, babies } = useAppStore();
   const changes = useHomeStore((state) => state.diaperChanges);
@@ -63,6 +56,30 @@ export function DiaperView() {
 
   // Expandable details state
   const [showDetails, setShowDetails] = useState(false);
+  const isHebrew = i18n.resolvedLanguage === 'he' || i18n.language === 'he';
+  const dateLocale = isHebrew ? he : undefined;
+  const compactDateTimeFormat = isHebrew ? 'd MMM, HH:mm' : 'MMM d, h:mm a';
+
+  const entryModeOptions = useMemo(
+    () => [
+      { value: 'quick', label: t('diaperScreen.quick'), icon: <Zap className="w-4 h-4" /> },
+      { value: 'manual', label: t('common.manual'), icon: <Edit3 className="w-4 h-4" /> },
+    ],
+    [t]
+  );
+
+  const diaperSourceOptions = useMemo(
+    () => [
+      { value: 'home', label: t('diaperScreen.fromHome') },
+      { value: 'bag', label: t('diaperScreen.fromBag') },
+    ],
+    [t]
+  );
+
+  const getDiaperTypeLabel = useCallback(
+    (type: DiaperType) => (type === 'wet' ? t('activity.wetDiaper') : t('activity.fullDiaper')),
+    [t]
+  );
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -126,7 +143,7 @@ export function DiaperView() {
       });
 
       prefetchHomeData({ userId: user.uid, babyId: selectedBaby.id });
-      toast.success(`${DIAPER_TYPE_CONFIG[type].label} diaper logged`);
+      toast.success(t('diaperScreen.logged', { type: getDiaperTypeLabel(type) }));
       applyBagSourceAdjustment(user.uid, source);
       setDiaperSource('home');
     } catch (error) {
@@ -134,14 +151,16 @@ export function DiaperView() {
         removeDiaperChangeFromStore(optimisticChange.id);
       }
       console.error('Error saving diaper change:', error);
-      toast.error('Failed to save diaper change. Please try again.');
+      toast.error(t('diaperScreen.saveError'));
     }
   }, [
     addOptimisticDiaperChange,
     buildOptimisticChange,
     diaperSource,
+    getDiaperTypeLabel,
     removeDiaperChangeFromStore,
     selectedBaby,
+    t,
     user,
   ]);
 
@@ -191,7 +210,7 @@ export function DiaperView() {
         removeDiaperChangeFromStore(optimisticChange.id);
       }
       console.error('Error saving diaper change:', error);
-      toast.error('Failed to save diaper change. Please try again.');
+      toast.error(t('diaperScreen.saveError'));
     } finally {
       setSaving(false);
     }
@@ -205,13 +224,13 @@ export function DiaperView() {
 
     // Check if date is valid
     if (isNaN(timestamp.getTime())) {
-      toast.error('Invalid date or time. Please check your input.');
+      toast.error(t('validation.invalidDateTime'));
       return;
     }
 
     // Check if date is not in the future
     if (timestamp > new Date()) {
-      toast.error('Time cannot be in the future.');
+      toast.error(t('validation.timeFuture'));
       return;
     }
 
@@ -245,14 +264,14 @@ export function DiaperView() {
       setManualDate(new Date().toISOString().split('T')[0]);
       setManualTime(format(new Date(), 'HH:mm'));
 
-      toast.success(`${DIAPER_TYPE_CONFIG[selectedType].label} diaper logged`);
+      toast.success(t('diaperScreen.logged', { type: getDiaperTypeLabel(selectedType) }));
       applyBagSourceAdjustment(user.uid, source);
     } catch (error) {
       if (optimisticChange) {
         removeDiaperChangeFromStore(optimisticChange.id);
       }
       console.error('Error saving diaper change:', error);
-      toast.error('Failed to save diaper change. Please try again.');
+      toast.error(t('diaperScreen.saveError'));
     } finally {
       setSaving(false);
     }
@@ -287,13 +306,13 @@ export function DiaperView() {
 
     // Check if date is valid
     if (isNaN(timestamp.getTime())) {
-      toast.error('Invalid date or time. Please check your input.');
+      toast.error(t('validation.invalidDateTime'));
       return;
     }
 
     // Check if date is not in the future
     if (timestamp > new Date()) {
-      toast.error('Time cannot be in the future.');
+      toast.error(t('validation.timeFuture'));
       return;
     }
 
@@ -326,11 +345,11 @@ export function DiaperView() {
       setManualDate(new Date().toISOString().split('T')[0]);
       setManualTime(format(new Date(), 'HH:mm'));
 
-      toast.success('Diaper change updated');
+      toast.success(t('diaperScreen.updated'));
     } catch (error) {
       updateDiaperChangeOptimistically(previousChange.id, previousChange);
       console.error('Error updating diaper change:', error);
-      toast.error('Failed to update diaper change. Please try again.');
+      toast.error(t('diaperScreen.updateError'));
     } finally {
       setSaving(false);
     }
@@ -361,10 +380,10 @@ export function DiaperView() {
       setNotes('');
       setBabyMood(null);
       setShowDetails(false);
-      toast.info('Diaper change deleted');
+      toast.info(t('diaperScreen.deleted'));
     } catch (error) {
       console.error('Error deleting diaper change:', error);
-      toast.error('Failed to delete diaper change. Please try again.');
+      toast.error(t('diaperScreen.deleteError'));
     } finally {
       setSaving(false);
     }
@@ -413,14 +432,14 @@ export function DiaperView() {
       const diapersItem = consumedItems.find((item) => item.id === DIAPER_BAG_ITEM_IDS.diapers);
 
       if (diapersItem?.quantity === 0) {
-        toast.warning('Your bag is now out of diapers!');
+        toast.warning(t('diaperScreen.bagEmpty'));
         return;
       }
 
-      toast.info('Diaper removed from bag. Remember to check if your wipes pack is getting low!');
+      toast.info(t('diaperScreen.bagUpdated'));
     } catch (error) {
       console.error('Error updating diaper bag inventory:', error);
-      toast.error('Diaper logged, but the bag inventory could not be updated.');
+      toast.error(t('diaperScreen.bagUpdateError'));
     }
   };
 
@@ -443,7 +462,7 @@ export function DiaperView() {
 
   return (
     <div>
-      <Header title="Diaper" />
+      <Header title={t('nav.diaper')} />
 
       <div className="px-4 py-4 space-y-4">
         {/* Entry Mode Toggle - hide when in form or editing */}
@@ -461,12 +480,12 @@ export function DiaperView() {
         {entryMode === 'quick' && !isInDetailForm && !isEditing && (
           <Card>
             <div className="text-center mb-4">
-              <h3 className="font-semibold text-gray-900">Quick Log</h3>
-              <p className="text-sm text-gray-500">Tap to log, hold for details</p>
+              <h3 className="font-semibold text-gray-900">{t('diaperScreen.quickLog')}</h3>
+              <p className="text-sm text-gray-500">{t('diaperScreen.tapToLog')}</p>
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Source</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('diaperScreen.source')}</label>
               <SegmentedControl
                 options={diaperSourceOptions}
                 value={diaperSource}
@@ -478,7 +497,7 @@ export function DiaperView() {
             {justSaved && (
               <div className="flex items-center justify-center gap-2 mb-4 text-green-600">
                 <Check className="w-5 h-5" />
-                <span className="font-medium">Saved!</span>
+                <span className="font-medium">{t('common.saved')}</span>
               </div>
             )}
 
@@ -514,7 +533,7 @@ export function DiaperView() {
                       className="mt-2 font-medium"
                       style={{ color: config.color }}
                     >
-                      {config.label}
+                      {getDiaperTypeLabel(type)}
                     </span>
                   </button>
                 );
@@ -522,7 +541,7 @@ export function DiaperView() {
             </div>
 
             <p className="text-xs text-center text-gray-400 mt-3">
-              Long press for detailed entry
+              {t('diaperScreen.longPress')}
             </p>
           </Card>
         )}
@@ -531,13 +550,13 @@ export function DiaperView() {
         {entryMode === 'manual' && !isInDetailForm && !isEditing && (
           <Card>
             <div className="text-center mb-4">
-              <h3 className="font-semibold text-gray-900">Log Past Diaper Change</h3>
+              <h3 className="font-semibold text-gray-900">{t('diaperScreen.logPastChange')}</h3>
             </div>
 
             <div className="space-y-4">
               {/* Diaper Type Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('diaperScreen.type')}</label>
                 <div className="grid grid-cols-2 gap-3">
                   {(['wet', 'full'] as DiaperType[]).map((type) => {
                     const config = DIAPER_TYPE_CONFIG[type];
@@ -564,7 +583,7 @@ export function DiaperView() {
                           className="mt-1 text-sm font-medium"
                           style={{ color: config.color }}
                         >
-                          {config.label}
+                          {getDiaperTypeLabel(type)}
                         </span>
                       </button>
                     );
@@ -575,20 +594,20 @@ export function DiaperView() {
               <div className="grid grid-cols-2 gap-3">
                 <Input
                   type="date"
-                  label="Date"
+                  label={t('common.date')}
                   value={manualDate}
                   onChange={(e) => setManualDate(e.target.value)}
                 />
                 <Input
                   type="time"
-                  label="Time"
+                  label={t('common.time')}
                   value={manualTime}
                   onChange={(e) => setManualTime(e.target.value)}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Source</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('diaperScreen.source')}</label>
                 <SegmentedControl
                   options={diaperSourceOptions}
                   value={diaperSource}
@@ -602,7 +621,7 @@ export function DiaperView() {
                 className="w-full"
                 disabled={!selectedType || saving}
               >
-                {saving ? 'Saving...' : 'Save Diaper Change'}
+                {saving ? t('common.saving') : t('diaperScreen.saveChange')}
               </Button>
 
               {/* Expandable details section */}
@@ -610,21 +629,21 @@ export function DiaperView() {
                 onClick={() => setShowDetails(!showDetails)}
                 className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
               >
-                <span>Add details (optional)</span>
+                <span>{t('common.addDetailsOptional')}</span>
                 {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
 
               {showDetails && (
                 <div className="space-y-4 pt-2 border-t border-gray-100">
                   <BabyMoodSelector
-                    label="Baby's mood"
+                    label={t('form.babyMood')}
                     value={babyMood}
                     onChange={setBabyMood}
                   />
 
                   <Textarea
-                    label="Notes (optional)"
-                    placeholder="Any notes about this change..."
+                    label={t('form.notesOptional')}
+                    placeholder={t('diaperScreen.notesPlaceholder')}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={2}
@@ -648,13 +667,13 @@ export function DiaperView() {
                 </span>
               </div>
               <h3 className="font-semibold text-gray-900">
-                {DIAPER_TYPE_CONFIG[selectedType!].label} Diaper
+                {t('diaperScreen.diaperTitle', { type: getDiaperTypeLabel(selectedType!) })}
               </h3>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Source</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('diaperScreen.source')}</label>
                 <SegmentedControl
                   options={diaperSourceOptions}
                   value={diaperSource}
@@ -665,10 +684,10 @@ export function DiaperView() {
 
               <div className="flex gap-3">
                 <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button onClick={handleSave} className="flex-1" disabled={saving}>
-                  {saving ? 'Saving...' : 'Save'}
+                  {saving ? t('common.saving') : t('common.save')}
                 </Button>
               </div>
 
@@ -677,21 +696,21 @@ export function DiaperView() {
                 onClick={() => setShowDetails(!showDetails)}
                 className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
               >
-                <span>Add details (optional)</span>
+                <span>{t('common.addDetailsOptional')}</span>
                 {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
 
               {showDetails && (
                 <div className="space-y-4 pt-2 border-t border-gray-100">
                   <BabyMoodSelector
-                    label="Baby's mood"
+                    label={t('form.babyMood')}
                     value={babyMood}
                     onChange={setBabyMood}
                   />
 
                   <Textarea
-                    label="Notes (optional)"
-                    placeholder="Any notes about this change..."
+                    label={t('form.notesOptional')}
+                    placeholder={t('diaperScreen.notesPlaceholder')}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={2}
@@ -706,13 +725,13 @@ export function DiaperView() {
         {isEditing && (
           <Card>
             <div className="text-center mb-4">
-              <h3 className="font-semibold text-gray-900">Edit Diaper Change</h3>
+              <h3 className="font-semibold text-gray-900">{t('diaperScreen.editChange')}</h3>
             </div>
 
             <div className="space-y-4">
               {/* Diaper Type Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('diaperScreen.type')}</label>
                 <div className="grid grid-cols-2 gap-3">
                   {(['wet', 'full'] as DiaperType[]).map((type) => {
                     const config = DIAPER_TYPE_CONFIG[type];
@@ -739,7 +758,7 @@ export function DiaperView() {
                           className="mt-1 text-sm font-medium"
                           style={{ color: config.color }}
                         >
-                          {config.label}
+                          {getDiaperTypeLabel(type)}
                         </span>
                       </button>
                     );
@@ -750,13 +769,13 @@ export function DiaperView() {
               <div className="grid grid-cols-2 gap-3">
                 <Input
                   type="date"
-                  label="Date"
+                  label={t('common.date')}
                   value={manualDate}
                   onChange={(e) => setManualDate(e.target.value)}
                 />
                 <Input
                   type="time"
-                  label="Time"
+                  label={t('common.time')}
                   value={manualTime}
                   onChange={(e) => setManualTime(e.target.value)}
                 />
@@ -772,10 +791,10 @@ export function DiaperView() {
                   <Trash2 className="w-4 h-4 text-red-500" />
                 </Button>
                 <Button variant="outline" onClick={handleEditCancel} className="flex-1" disabled={saving}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button onClick={handleEditSave} className="flex-1" disabled={saving}>
-                  {saving ? 'Saving...' : 'Save'}
+                  {saving ? t('common.saving') : t('common.save')}
                 </Button>
               </div>
 
@@ -784,21 +803,21 @@ export function DiaperView() {
                 onClick={() => setShowDetails(!showDetails)}
                 className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
               >
-                <span>Add details (optional)</span>
+                <span>{t('common.addDetailsOptional')}</span>
                 {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
 
               {showDetails && (
                 <div className="space-y-4 pt-2 border-t border-gray-100">
                   <BabyMoodSelector
-                    label="Baby's mood"
+                    label={t('form.babyMood')}
                     value={babyMood}
                     onChange={setBabyMood}
                   />
 
                   <Textarea
-                    label="Notes (optional)"
-                    placeholder="Any notes about this change..."
+                    label={t('form.notesOptional')}
+                    placeholder={t('diaperScreen.notesPlaceholder')}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={2}
@@ -814,7 +833,7 @@ export function DiaperView() {
           <div className="grid grid-cols-3 gap-2">
             <Card className="text-center p-3">
               <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              <p className="text-xs text-gray-500">Total</p>
+              <p className="text-xs text-gray-500">{t('diaperScreen.total')}</p>
             </Card>
             <Card className="text-center p-3">
               <p
@@ -823,7 +842,7 @@ export function DiaperView() {
               >
                 {stats.wet}
               </p>
-              <p className="text-xs text-gray-500">Wet</p>
+              <p className="text-xs text-gray-500">{t('activity.wetDiaper')}</p>
             </Card>
             <Card className="text-center p-3">
               <p
@@ -832,7 +851,7 @@ export function DiaperView() {
               >
                 {stats.full}
               </p>
-              <p className="text-xs text-gray-500">Full</p>
+              <p className="text-xs text-gray-500">{t('activity.fullDiaper')}</p>
             </Card>
           </div>
         )}
@@ -841,8 +860,8 @@ export function DiaperView() {
         {changes.length > 0 && !isInDetailForm && !isEditing && (
           <Card padding="none">
             <div className="px-4 py-3 border-b border-gray-100">
-              <h3 className="font-semibold text-gray-900">Recent Changes</h3>
-              <p className="text-xs text-gray-500">Tap to edit</p>
+              <h3 className="font-semibold text-gray-900">{t('diaperScreen.recentChanges')}</h3>
+              <p className="text-xs text-gray-500">{t('diaperScreen.tapToEdit')}</p>
             </div>
             <div className="divide-y divide-gray-50">
               {changes.slice(0, 10).map((change) => {
@@ -864,11 +883,13 @@ export function DiaperView() {
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-gray-900">
-                        {config.label}
+                        {getDiaperTypeLabel(displayType)}
                       </p>
                       <div className="flex items-center gap-2 text-sm text-gray-500">
                         <Clock className="w-3 h-3" />
-                        <span>{format(parseISO(change.timestamp), 'MMM d, h:mm a')}</span>
+                        <span>
+                          {format(parseISO(change.timestamp), compactDateTimeFormat, { locale: dateLocale })}
+                        </span>
                       </div>
                     </div>
                     <MoodIndicator babyMood={change.babyMood} size="sm" />

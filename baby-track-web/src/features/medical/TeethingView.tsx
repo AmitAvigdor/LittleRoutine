@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -12,6 +13,7 @@ import { SmilePlus, X } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export function TeethingView() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { selectedBaby } = useAppStore();
   const [events, setEvents] = useState<TeethingEvent[]>([]);
@@ -117,7 +119,7 @@ export function TeethingView() {
 
   return (
     <div>
-      <Header title="Teething" showBabySwitcher={false} />
+      <Header title={t('features.teething')} showBabySwitcher={false} />
 
       <div className="px-4 py-4 space-y-4">
         {/* Stats */}

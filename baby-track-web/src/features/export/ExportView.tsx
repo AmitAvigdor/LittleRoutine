@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -13,6 +14,7 @@ type ExportFormat = 'json' | 'csv';
 type DateRange = 'all' | 'thisMonth' | 'lastMonth' | 'custom';
 
 export function ExportView() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { selectedBaby } = useAppStore();
   const [format, setFormat] = useState<ExportFormat>('json');
@@ -21,16 +23,16 @@ export function ExportView() {
   const [stats, setStats] = useState<Record<string, number>>({});
 
   const collections = [
-    { id: 'feedingSessions', label: 'Feeding Sessions' },
-    { id: 'pumpSessions', label: 'Pump Sessions' },
-    { id: 'bottleSessions', label: 'Bottle Sessions' },
-    { id: 'sleepSessions', label: 'Sleep Sessions' },
-    { id: 'diaperChanges', label: 'Diaper Changes' },
-    { id: 'growthEntries', label: 'Growth Entries' },
-    { id: 'milestones', label: 'Milestones' },
-    { id: 'vaccinations', label: 'Vaccinations' },
-    { id: 'solidFoods', label: 'Solid Foods' },
-    { id: 'teethingEvents', label: 'Teething Events' },
+    { id: 'feedingSessions', labelKey: 'export.feedingSessions' },
+    { id: 'pumpSessions', labelKey: 'export.pumpSessions' },
+    { id: 'bottleSessions', labelKey: 'export.bottleSessions' },
+    { id: 'sleepSessions', labelKey: 'export.sleepSessions' },
+    { id: 'diaperChanges', labelKey: 'export.diaperChanges' },
+    { id: 'growthEntries', labelKey: 'export.growthEntries' },
+    { id: 'milestones', labelKey: 'export.milestones' },
+    { id: 'vaccinations', labelKey: 'export.vaccinations' },
+    { id: 'solidFoods', labelKey: 'export.solidFoods' },
+    { id: 'teethingEvents', labelKey: 'export.teethingEvents' },
   ];
 
   const getDateFilter = () => {
@@ -163,19 +165,19 @@ export function ExportView() {
   if (!selectedBaby) {
     return (
       <div className="p-4 text-center text-gray-500">
-        Please select a baby first
+        {t('export.selectBaby')}
       </div>
     );
   }
 
   return (
     <div>
-      <Header title="Export Data" showBabySwitcher={false} />
+      <Header title={t('export.title')} showBabySwitcher={false} />
 
       <div className="px-4 py-4 space-y-4">
         {/* Format Selection */}
         <Card>
-          <h3 className="font-semibold text-gray-900 mb-3">Export Format</h3>
+          <h3 className="font-semibold text-gray-900 mb-3">{t('export.format')}</h3>
           <div className="flex gap-3">
             <button
               onClick={() => setFormat('json')}
@@ -188,9 +190,9 @@ export function ExportView() {
             >
               <FileJson className={clsx('w-8 h-8 mb-2', format === 'json' ? 'text-primary-500' : 'text-gray-400')} />
               <span className={clsx('font-medium', format === 'json' ? 'text-primary-700' : 'text-gray-600')}>
-                JSON
+                {t('export.json')}
               </span>
-              <span className="text-xs text-gray-400">Complete data</span>
+              <span className="text-xs text-gray-400">{t('export.jsonDescription')}</span>
             </button>
             <button
               onClick={() => setFormat('csv')}
@@ -203,21 +205,21 @@ export function ExportView() {
             >
               <Table className={clsx('w-8 h-8 mb-2', format === 'csv' ? 'text-primary-500' : 'text-gray-400')} />
               <span className={clsx('font-medium', format === 'csv' ? 'text-primary-700' : 'text-gray-600')}>
-                CSV
+                {t('export.csv')}
               </span>
-              <span className="text-xs text-gray-400">Spreadsheet</span>
+              <span className="text-xs text-gray-400">{t('export.csvDescription')}</span>
             </button>
           </div>
         </Card>
 
         {/* Date Range */}
         <Card>
-          <h3 className="font-semibold text-gray-900 mb-3">Date Range</h3>
+          <h3 className="font-semibold text-gray-900 mb-3">{t('export.dateRange')}</h3>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { id: 'all', label: 'All Time' },
-              { id: 'thisMonth', label: 'This Month' },
-              { id: 'lastMonth', label: 'Last Month' },
+              { id: 'all', label: t('export.allTime') },
+              { id: 'thisMonth', label: t('export.thisMonth') },
+              { id: 'lastMonth', label: t('export.lastMonth') },
             ].map((option) => (
               <button
                 key={option.id}
@@ -238,17 +240,17 @@ export function ExportView() {
         {/* Preview */}
         {Object.keys(stats).length > 0 && (
           <Card>
-            <h3 className="font-semibold text-gray-900 mb-3">Data Preview</h3>
+            <h3 className="font-semibold text-gray-900 mb-3">{t('export.preview')}</h3>
             <div className="space-y-2">
               {collections.map((col) => (
                 <div key={col.id} className="flex justify-between text-sm">
-                  <span className="text-gray-600">{col.label}</span>
-                  <span className="font-medium">{stats[col.id] || 0} records</span>
+                  <span className="text-gray-600">{t(col.labelKey)}</span>
+                  <span className="font-medium">{stats[col.id] || 0} {t('export.records')}</span>
                 </div>
               ))}
               <div className="border-t pt-2 mt-2 flex justify-between font-medium">
-                <span>Total</span>
-                <span>{totalRecords} records</span>
+                <span>{t('export.total')}</span>
+                <span>{totalRecords} {t('export.records')}</span>
               </div>
             </div>
           </Card>
@@ -263,7 +265,7 @@ export function ExportView() {
             disabled={loading}
           >
             <FileText className="w-4 h-4 mr-2" />
-            {loading ? 'Loading...' : 'Preview Data'}
+            {loading ? t('common.loading') : t('export.previewData')}
           </Button>
 
           <Button
@@ -272,12 +274,12 @@ export function ExportView() {
             disabled={loading}
           >
             <Download className="w-4 h-4 mr-2" />
-            {loading ? 'Exporting...' : `Export as ${format.toUpperCase()}`}
+            {loading ? t('export.exporting') : t('export.exportAs', { format: format.toUpperCase() })}
           </Button>
         </div>
 
         <p className="text-xs text-gray-400 text-center">
-          Exporting data for {selectedBaby.name}
+          {t('export.exportingFor', { name: selectedBaby.name })}
         </p>
       </div>
     </div>

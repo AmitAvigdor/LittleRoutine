@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
 import { Play, Pause, Square, RotateCcw } from 'lucide-react';
 import { Button } from './Button';
@@ -32,6 +33,7 @@ export function Timer({
   size = 'lg',
   color,
 }: TimerProps) {
+  const { t } = useTranslation();
   const [seconds, setSeconds] = useState(initialSeconds);
   const [isRunning, setIsRunning] = useState(externalIsRunning ?? false);
 
@@ -148,7 +150,7 @@ export function Timer({
             className="w-2 h-2 rounded-full animate-pulse"
             style={{ backgroundColor: themeColor }}
           />
-          <span className="text-sm font-medium text-gray-500">Recording</span>
+          <span className="text-sm font-medium text-gray-500">{t('timer.recording')}</span>
         </div>
       )}
 

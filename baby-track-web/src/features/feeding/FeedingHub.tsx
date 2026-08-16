@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { format, parseISO } from 'date-fns';
+import { he } from 'date-fns/locale';
 import { Milk, Baby, Clock, Apple } from 'lucide-react';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { SegmentedControl } from '@/components/ui/Select';
@@ -16,13 +18,8 @@ import { FeedingSession, BottleSession, SolidFood, BREAST_SIDE_CONFIG, BOTTLE_CO
 
 type FeedingTab = 'breast' | 'bottle' | 'solids';
 
-const tabOptions = [
-  { value: 'breast', label: 'Breast', icon: <Baby className="w-4 h-4" /> },
-  { value: 'bottle', label: 'Bottle', icon: <Milk className="w-4 h-4" /> },
-  { value: 'solids', label: 'Solids', icon: <Apple className="w-4 h-4" /> },
-];
-
 export function FeedingHub() {
+  const { t, i18n } = useTranslation();
   const { selectedBaby, babies, settings } = useAppStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab') as FeedingTab | null;
@@ -33,6 +30,59 @@ export function FeedingHub() {
   const [selectedBottleSession, setSelectedBottleSession] = useState<BottleSession | null>(null);
   const [selectedSolidFoodId, setSelectedSolidFoodId] = useState<string | null>(null);
   const shouldAutoOpenSolidsAdd = searchParams.get('action') === 'add';
+  const isHebrew = i18n.resolvedLanguage === 'he' || i18n.language === 'he';
+  const dateLocale = isHebrew ? he : undefined;
+  const compactDateTimeFormat = isHebrew ? 'd MMM, HH:mm' : 'MMM d, h:mm a';
+  const compactDateFormat = isHebrew ? 'd MMM' : 'MMM d';
+  const tabOptions = useMemo(
+    () => [
+      { value: 'breast', label: t('feedingScreen.breast'), icon: <Baby className="w-4 h-4" /> },
+      { value: 'bottle', label: t('feedingScreen.bottle'), icon: <Milk className="w-4 h-4" /> },
+      { value: 'solids', label: t('feedingScreen.solids'), icon: <Apple className="w-4 h-4" /> },
+    ],
+    [t]
+  );
+  const getSideLabel = useCallback(
+    (side: FeedingSession['breastSide']) => (side === 'left' ? t('activity.left') : t('activity.right')),
+    [t]
+  );
+  const getSideInitial = useCallback(
+    (side: FeedingSession['breastSide']) => {
+      if (!isHebrew) return side === 'left' ? 'L' : 'R';
+      return side === 'left' ? 'ש' : 'י';
+    },
+    [isHebrew]
+  );
+  const getContentTypeLabel = useCallback(
+    (contentType: BottleSession['contentType']) => {
+      if (contentType === 'breastMilk') return t('activity.breastMilk');
+      if (contentType === 'formula') return t('activity.formula');
+      return t('activity.mixed');
+    },
+    [t]
+  );
+  const getFoodCategoryLabel = useCallback(
+    (category: SolidFood['category']) => t(`foodCategory.${category}`),
+    [t]
+  );
+  const formatLocalizedDuration = useCallback(
+    (seconds: number) => {
+      if (!isHebrew) return formatDuration(seconds);
+
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const remainingSeconds = seconds % 60;
+
+      if (hours > 0) {
+        return minutes > 0 ? `${hours} שע׳ ${minutes} דק׳` : `${hours} שע׳`;
+      }
+      if (minutes > 0) {
+        return remainingSeconds > 0 ? `${minutes} דק׳ ${remainingSeconds} שנ׳` : `${minutes} דק׳`;
+      }
+      return `${remainingSeconds} שנ׳`;
+    },
+    [isHebrew]
+  );
 
   const activeTab: FeedingTab =
     requestedTab === 'breast' || requestedTab === 'bottle' || requestedTab === 'solids'
@@ -124,12 +174,12 @@ export function FeedingHub() {
   return (
     <div>
       <Header
-        title="Feed"
+        title={t('nav.feed')}
         rightAction={activeTab !== 'solids' ? (
           <button
             onClick={() => navigate('/more/milk-stash')}
             className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            title="Milk Stash"
+            title={t('features.milkStash')}
           >
             <Milk className="w-5 h-5 text-gray-600" />
           </button>
@@ -168,7 +218,7 @@ export function FeedingHub() {
         {activeTab !== 'solids' && recentFeedings.length > 0 && (
           <div className="mt-6 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-              <h3 className="font-semibold text-gray-900">Recent Feedings</h3>
+              <h3 className="font-semibold text-gray-900">{t('feedingScreen.recentFeedings')}</h3>
             </div>
             <div className="divide-y divide-gray-50">
               {recentFeedings.map((item) => {
@@ -186,17 +236,19 @@ export function FeedingHub() {
                           background: `linear-gradient(135deg, ${BREAST_SIDE_CONFIG[session.breastSide].color} 0%, ${BREAST_SIDE_CONFIG[session.breastSide].color}cc 100%)`
                         }}
                       >
-                        {session.breastSide === 'left' ? 'L' : 'R'}
+                        {getSideInitial(session.breastSide)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900">
-                          Breast • {BREAST_SIDE_CONFIG[session.breastSide].label}
+                          {t('feedingScreen.breast')} • {getSideLabel(session.breastSide)}
                         </p>
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                           <Clock className="w-3 h-3 flex-shrink-0" />
-                          <span className="font-medium">{formatDuration(session.duration)}</span>
+                          <span className="font-medium">{formatLocalizedDuration(session.duration)}</span>
                           <span>•</span>
-                          <span className="truncate">{format(parseISO(session.startTime), 'MMM d, h:mm a')}</span>
+                          <span className="truncate">
+                            {format(parseISO(session.startTime), compactDateTimeFormat, { locale: dateLocale })}
+                          </span>
                         </div>
                       </div>
                       <MoodIndicator babyMood={session.babyMood} momMood={session.momMood} size="sm" />
@@ -218,13 +270,15 @@ export function FeedingHub() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900">
-                          Bottle • {session.volume} {session.volumeUnit}
+                          {t('feedingScreen.bottle')} • {session.volume} {session.volumeUnit}
                         </p>
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                           <Clock className="w-3 h-3 flex-shrink-0" />
-                          <span className="font-medium">{BOTTLE_CONTENT_CONFIG[session.contentType].label}</span>
+                          <span className="font-medium">{getContentTypeLabel(session.contentType)}</span>
                           <span>•</span>
-                          <span className="truncate">{format(parseISO(session.timestamp), 'MMM d, h:mm a')}</span>
+                          <span className="truncate">
+                            {format(parseISO(session.timestamp), compactDateTimeFormat, { locale: dateLocale })}
+                          </span>
                         </div>
                       </div>
                       <MoodIndicator babyMood={session.babyMood} size="sm" />
@@ -246,12 +300,16 @@ export function FeedingHub() {
                         <Apple className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900">Solids • {food.foodName}</p>
+                        <p className="font-medium text-gray-900">{t('feedingScreen.solids')} • {food.foodName}</p>
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                           <Clock className="w-3 h-3 flex-shrink-0" />
-                          <span className="font-medium">{category.label}</span>
+                          <span className="font-medium">{getFoodCategoryLabel(food.category)}</span>
                           <span>•</span>
-                          <span className="truncate">{format(parseISO(item.timestamp), food.timestamp ? 'MMM d, h:mm a' : 'MMM d')}</span>
+                          <span className="truncate">
+                            {format(parseISO(item.timestamp), food.timestamp ? compactDateTimeFormat : compactDateFormat, {
+                              locale: dateLocale,
+                            })}
+                          </span>
                         </div>
                       </div>
                     </button>

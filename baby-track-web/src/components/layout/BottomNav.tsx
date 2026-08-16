@@ -1,20 +1,23 @@
 import { NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
 import { Home, Droplet, Moon, Leaf, MoreHorizontal } from 'lucide-react';
 
 const navItems = [
-  { to: '/home', label: 'Home', icon: Home, color: '#2196f3', emoji: '🏠' },
-  { to: '/feed', label: 'Feed', icon: Droplet, color: '#e91e63', emoji: '🍼' },
-  { to: '/sleep', label: 'Sleep', icon: Moon, color: '#3f51b5', emoji: '😴' },
-  { to: '/diaper', label: 'Diaper', icon: Leaf, color: '#4caf50', emoji: '🧷' },
-  { to: '/more', label: 'More', icon: MoreHorizontal, color: '#757575', emoji: '⚙️' },
+  { to: '/home', labelKey: 'nav.home', icon: Home, color: '#2196f3', emoji: '🏠' },
+  { to: '/feed', labelKey: 'nav.feed', icon: Droplet, color: '#e91e63', emoji: '🍼' },
+  { to: '/sleep', labelKey: 'nav.sleep', icon: Moon, color: '#3f51b5', emoji: '😴' },
+  { to: '/diaper', labelKey: 'nav.diaper', icon: Leaf, color: '#4caf50', emoji: '🧷' },
+  { to: '/more', labelKey: 'nav.more', icon: MoreHorizontal, color: '#757575', emoji: '⚙️' },
 ];
 
 export function BottomNav() {
+  const { t } = useTranslation();
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-100 bottom-nav z-50 shadow-lg shadow-gray-200/50">
       <div className="bottom-nav-inner max-w-lg mx-auto flex items-center justify-around px-2">
-        {navItems.map(({ to, label, icon: Icon, color }) => (
+        {navItems.map(({ to, labelKey, icon: Icon, color }) => (
           <NavLink
             key={to}
             to={to}
@@ -50,7 +53,7 @@ export function BottomNav() {
                     isActive ? 'text-gray-900' : 'text-gray-400'
                   )}
                 >
-                  {label}
+                  {t(labelKey)}
                 </span>
               </>
             )}

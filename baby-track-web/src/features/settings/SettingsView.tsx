@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/layout/Header';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -7,7 +8,7 @@ import { SegmentedControl } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { useAppStore } from '@/stores/appStore';
 import { updateSettings } from '@/lib/firestore';
-import { VolumeUnit, WeightUnit, LengthUnit, FeedingTypePreference } from '@/types';
+import { VolumeUnit, WeightUnit, LengthUnit, FeedingTypePreference, LanguagePreference } from '@/types';
 import { toast } from '@/stores/toastStore';
 import {
   isNotificationSupported,
@@ -17,6 +18,7 @@ import {
 import { User, Moon, Bell, Scale, Baby, Milk, BellOff } from 'lucide-react';
 
 export function SettingsView() {
+  const { t } = useTranslation();
   const { settings, setSettings } = useAppStore();
   const [saving, setSaving] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState(getNotificationPermission());
@@ -42,14 +44,14 @@ export function SettingsView() {
       setNotificationPermission(result);
 
       if (result !== 'granted') {
-        toast.error('Please enable notifications in your browser settings to use reminders.');
+        toast.error(t('settings.enableNotificationsError'));
         return;
       }
     }
 
     await handleSettingChange(key, enabled);
     if (enabled) {
-      toast.success('Reminder enabled! You\'ll be notified when it\'s time.');
+      toast.success(t('settings.reminderEnabled'));
     }
   };
 
@@ -72,7 +74,7 @@ export function SettingsView() {
       console.error('Error updating settings:', error);
       // Rollback on error
       setSettings({ ...settings, [key]: previousValue });
-      toast.error('Failed to save settings. Please try again.');
+      toast.error(t('settings.saveError'));
     } finally {
       setSaving(false);
     }
@@ -93,7 +95,7 @@ export function SettingsView() {
   if (!settings) {
     return (
       <div>
-        <Header title="Settings" showBabySwitcher={false} />
+        <Header title={t('settings.title')} showBabySwitcher={false} />
         <div className="flex items-center justify-center py-8">
           <div className="w-8 h-8 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
         </div>
@@ -103,27 +105,27 @@ export function SettingsView() {
 
   return (
     <div>
-      <Header title="Settings" showBabySwitcher={false} />
+      <Header title={t('settings.title')} showBabySwitcher={false} />
 
       <div className="px-4 py-4 space-y-4">
         {/* User Info */}
         <Card>
           <CardHeader
-            title="User Info"
-            subtitle="Personalize your experience"
+            title={t('settings.userInfo')}
+            subtitle={t('settings.userInfoSubtitle')}
           />
           <div className="space-y-3">
             <Input
-              label="Your Name"
-              placeholder="Enter your name"
+              label={t('settings.yourName')}
+              placeholder={t('settings.yourNamePlaceholder')}
               value={userName}
               onChange={(e) => setUserName(e.target.value)}
               onBlur={handleNameBlur}
               icon={<User className="w-5 h-5" />}
             />
             <Input
-              label="Partner's Name"
-              placeholder="Enter partner's name"
+              label={t('settings.partnerName')}
+              placeholder={t('settings.partnerNamePlaceholder')}
               value={partnerName}
               onChange={(e) => setPartnerName(e.target.value)}
               onBlur={handlePartnerNameBlur}
@@ -132,16 +134,34 @@ export function SettingsView() {
           </div>
         </Card>
 
+        {/* Language */}
+        <Card>
+          <CardHeader
+            title={t('language.label')}
+            subtitle={t('language.subtitle')}
+          />
+          <SegmentedControl
+            options={[
+              { value: 'system', label: t('language.system') },
+              { value: 'he', label: t('language.hebrew') },
+              { value: 'en', label: t('language.english') },
+            ]}
+            value={settings.languagePreference ?? 'system'}
+            onChange={(value) => handleSettingChange('languagePreference', value as LanguagePreference)}
+            fullWidth
+          />
+        </Card>
+
         {/* Units */}
         <Card>
           <CardHeader
-            title="Preferred Units"
-            subtitle="Set your measurement preferences"
+            title={t('settings.units')}
+            subtitle={t('settings.unitsSubtitle')}
           />
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Volume
+                {t('settings.volume')}
               </label>
               <SegmentedControl
                 options={[
@@ -156,7 +176,7 @@ export function SettingsView() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Weight
+                {t('settings.weight')}
               </label>
               <SegmentedControl
                 options={[
@@ -171,7 +191,7 @@ export function SettingsView() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Length
+                {t('settings.length')}
               </label>
               <SegmentedControl
                 options={[
@@ -189,14 +209,14 @@ export function SettingsView() {
         {/* Feeding Preference */}
         <Card>
           <CardHeader
-            title="Feeding Type"
-            subtitle="Choose your primary feeding method"
+            title={t('settings.feedingType')}
+            subtitle={t('settings.feedingTypeSubtitle')}
           />
           <div>
             <SegmentedControl
               options={[
-                { value: 'breastfeeding', label: 'Breastfeeding', icon: <Baby className="w-4 h-4" /> },
-                { value: 'formula', label: 'Formula', icon: <Milk className="w-4 h-4" /> },
+                { value: 'breastfeeding', label: t('settings.breastfeeding'), icon: <Baby className="w-4 h-4" /> },
+                { value: 'formula', label: t('settings.formula'), icon: <Milk className="w-4 h-4" /> },
               ]}
               value={settings.feedingTypePreference}
               onChange={(value) => handleSettingChange('feedingTypePreference', value as FeedingTypePreference)}
@@ -208,29 +228,32 @@ export function SettingsView() {
         {/* Night Mode */}
         <Card>
           <CardHeader
-            title="Night Mode"
-            subtitle="Reduce eye strain at night"
+            title={t('settings.nightMode')}
+            subtitle={t('settings.nightModeSubtitle')}
           />
           <div className="space-y-4">
             <Toggle
               checked={settings.nightModeEnabled}
               onChange={(checked) => handleSettingChange('nightModeEnabled', checked)}
-              label="Enable Night Mode"
-              description="Use dark colors for the interface"
+              label={t('settings.enableNightMode')}
+              description={t('settings.enableNightModeDescription')}
             />
 
             <Toggle
               checked={settings.nightModeAutoEnabled}
               onChange={(checked) => handleSettingChange('nightModeAutoEnabled', checked)}
-              label="Auto Night Mode"
-              description={`Automatically enable from ${settings.nightModeStartHour}:00 to ${settings.nightModeEndHour}:00`}
+              label={t('settings.autoNightMode')}
+              description={t('settings.autoNightModeDescription', {
+                start: settings.nightModeStartHour,
+                end: settings.nightModeEndHour,
+              })}
             />
 
             <Toggle
               checked={settings.nightModeSilent}
               onChange={(checked) => handleSettingChange('nightModeSilent', checked)}
-              label="Silent Mode at Night"
-              description="Mute notifications during night hours"
+              label={t('settings.silentNight')}
+              description={t('settings.silentNightDescription')}
             />
           </div>
         </Card>
@@ -238,8 +261,8 @@ export function SettingsView() {
         {/* Reminders */}
         <Card>
           <CardHeader
-            title="Reminders"
-            subtitle="Get notified about activities"
+            title={t('settings.reminders')}
+            subtitle={t('settings.remindersSubtitle')}
           />
           <div className="space-y-4">
             {/* Permission warning banner */}
@@ -247,8 +270,8 @@ export function SettingsView() {
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-3">
                 <BellOff className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                 <div className="text-sm">
-                  <p className="font-medium text-amber-800">Notifications blocked</p>
-                  <p className="text-amber-700">Enable notifications in your browser settings to use reminders.</p>
+                  <p className="font-medium text-amber-800">{t('settings.notificationsBlocked')}</p>
+                  <p className="text-amber-700">{t('settings.notificationsBlockedDescription')}</p>
                 </div>
               </div>
             )}
@@ -257,8 +280,8 @@ export function SettingsView() {
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-start gap-3">
                 <BellOff className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
                 <div className="text-sm">
-                  <p className="font-medium text-gray-700">Notifications not supported</p>
-                  <p className="text-gray-600">Your browser doesn't support notifications.</p>
+                  <p className="font-medium text-gray-700">{t('settings.notificationsUnsupported')}</p>
+                  <p className="text-gray-600">{t('settings.notificationsUnsupportedDescription')}</p>
                 </div>
               </div>
             )}
@@ -266,14 +289,14 @@ export function SettingsView() {
             <Toggle
               checked={settings.feedingReminderEnabled}
               onChange={(checked) => handleReminderToggle('feedingReminderEnabled', checked)}
-              label="Feeding Reminders"
-              description={`Remind if no feeding in ${settings.feedingReminderInterval} hours`}
+              label={t('settings.feedingReminders')}
+              description={t('settings.feedingRemindersDescription', { hours: settings.feedingReminderInterval })}
             />
 
             {settings.feedingReminderEnabled && (
               <div className="ml-4 pl-4 border-l-2 border-gray-200">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Reminder interval (hours)
+                  {t('settings.reminderInterval')}
                 </label>
                 <SegmentedControl
                   options={[
@@ -290,14 +313,14 @@ export function SettingsView() {
             <Toggle
               checked={settings.diaperReminderEnabled}
               onChange={(checked) => handleReminderToggle('diaperReminderEnabled', checked)}
-              label="Diaper Reminders"
-              description={`Remind if no change in ${settings.diaperReminderInterval} hours`}
+              label={t('settings.diaperReminders')}
+              description={t('settings.diaperRemindersDescription', { hours: settings.diaperReminderInterval })}
             />
 
             {settings.diaperReminderEnabled && (
               <div className="ml-4 pl-4 border-l-2 border-gray-200">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Reminder interval (hours)
+                  {t('settings.reminderInterval')}
                 </label>
                 <SegmentedControl
                   options={[
@@ -314,15 +337,15 @@ export function SettingsView() {
             <Toggle
               checked={settings.medicineReminderEnabled}
               onChange={(checked) => handleReminderToggle('medicineReminderEnabled', checked)}
-              label="Medicine Reminders"
-              description={`Remind ${settings.medicineReminderMinutesBefore} min before medicine is due`}
+              label={t('settings.medicineReminders')}
+              description={t('settings.medicineRemindersDescription', { minutes: settings.medicineReminderMinutesBefore })}
             />
           </div>
         </Card>
 
         {/* Version */}
         <p className="text-xs text-center text-gray-400 pt-4">
-          LittleRoutine v1.0.0 • Made by Amit Avigdor
+          {t('settings.version')}
         </p>
       </div>
     </div>

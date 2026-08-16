@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { format, isToday, parseISO } from 'date-fns';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -19,6 +20,7 @@ const WALK_COLOR = '#8bc34a';
 const QUICK_DURATIONS = [10, 15, 20, 30, 45, 60];
 
 export function WalksView() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { selectedBaby, babies } = useAppStore();
 
@@ -123,7 +125,7 @@ export function WalksView() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-      <Header title="Walks" />
+      <Header title={t('features.walks')} />
 
       <div className="px-4 py-4 space-y-5">
         {/* Quick Log Card */}

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { onSnapshotsInSync } from 'firebase/firestore';
+import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -10,6 +11,7 @@ import { OfflineIndicator } from '@/components/ui/OfflineIndicator';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useAppStore } from '@/stores/appStore';
 import { db } from '@/lib/firebase';
+import { changeAppLanguage } from '@/i18n';
 import { FeedingHub } from '@/features/feeding/FeedingHub';
 import { PumpPage } from '@/features/feeding/PumpPage';
 import { SleepView } from '@/features/sleep/SleepView';
@@ -63,7 +65,18 @@ function ConnectivityMonitor() {
   return null;
 }
 
+function LanguageMonitor() {
+  const languagePreference = useAppStore((state) => state.settings?.languagePreference);
+
+  useEffect(() => {
+    changeAppLanguage(languagePreference);
+  }, [languagePreference]);
+
+  return null;
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -71,7 +84,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen flex items-center justify-center gradient-primary">
         <div className="text-white text-center">
           <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-lg">Loading...</p>
+          <p className="text-lg">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -160,6 +173,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
+          <LanguageMonitor />
           <ConnectivityMonitor />
           <OfflineIndicator />
           <AppRoutes />

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/layout/Header';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -12,6 +13,7 @@ import { toast } from '@/stores/toastStore';
 import { Plus, Edit, Check, UserPlus, Users } from 'lucide-react';
 
 export function BabyManagement() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { babies, selectedBaby, setSelectedBabyId } = useAppStore();
@@ -29,12 +31,12 @@ export function BabyManagement() {
     setJoining(true);
     try {
       const baby = await joinBabyByShareCode(user.uid, joinCode);
-      toast.success(`You now have access to ${baby.name}`);
+      toast.success(t('baby.joined', { name: baby.name }));
       setShowJoinForm(false);
       setJoinCode('');
       setSelectedBabyId(baby.id);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to join';
+      const message = error instanceof Error ? error.message : t('baby.joinError');
       toast.error(message);
     } finally {
       setJoining(false);
@@ -44,7 +46,7 @@ export function BabyManagement() {
   return (
     <div>
       <Header
-        title="Babies"
+        title={t('baby.babies')}
         showBabySwitcher={false}
         rightAction={
           <Button
@@ -52,7 +54,7 @@ export function BabyManagement() {
             onClick={() => navigate('/more/babies/new')}
           >
             <Plus className="w-4 h-4 mr-1" />
-            Add
+            {t('common.add')}
           </Button>
         }
       />
@@ -60,10 +62,10 @@ export function BabyManagement() {
       <div className="px-4 py-4 space-y-3">
         {babies.length === 0 ? (
           <Card className="text-center py-8">
-            <p className="text-gray-500 mb-4">No babies added yet</p>
+            <p className="text-gray-500 mb-4">{t('baby.noBabies')}</p>
             <Button onClick={() => navigate('/more/babies/new')}>
               <Plus className="w-4 h-4 mr-2" />
-              Add Your First Baby
+              {t('baby.addFirstBaby')}
             </Button>
           </Card>
         ) : (
@@ -113,7 +115,7 @@ export function BabyManagement() {
                       <p className="text-sm text-gray-500">{age.text}</p>
                     )}
                     {isShared && (
-                      <p className="text-xs text-blue-600">Shared with you</p>
+                      <p className="text-xs text-blue-600">{t('baby.sharedWithYou')}</p>
                     )}
                   </div>
 
@@ -146,16 +148,16 @@ export function BabyManagement() {
               className="w-full flex items-center justify-center gap-2 py-2 text-gray-600 hover:text-gray-900"
             >
               <UserPlus className="w-5 h-5" />
-              <span>Join a shared baby</span>
+              <span>{t('baby.joinShared')}</span>
             </button>
           ) : (
             <div className="space-y-3">
               <CardHeader
-                title="Join a Baby"
-                subtitle="Enter the share code from your partner"
+                title={t('baby.joinTitle')}
+                subtitle={t('baby.joinSubtitle')}
               />
               <Input
-                placeholder="Enter 6-letter code"
+                placeholder={t('baby.joinCodePlaceholder')}
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                 maxLength={6}
@@ -170,14 +172,14 @@ export function BabyManagement() {
                     setJoinCode('');
                   }}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   className="flex-1"
                   onClick={handleJoinBaby}
                   disabled={joinCode.length !== 6 || joining}
                 >
-                  {joining ? 'Joining...' : 'Join'}
+                  {joining ? t('baby.joining') : t('baby.join')}
                 </Button>
               </div>
             </div>

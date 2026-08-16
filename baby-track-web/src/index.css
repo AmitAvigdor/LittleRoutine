@@ -91,6 +91,29 @@ body {
   background-color: #fafafa;
 }
 
+[dir="rtl"] .input-leading-icon {
+  left: auto;
+  right: 0.75rem;
+}
+
+[dir="rtl"] .input-with-leading-icon {
+  padding-left: 0.75rem;
+  padding-right: 2.5rem;
+}
+
+[dir="rtl"] .select-chevron {
+  left: 0.75rem;
+  right: auto;
+}
+
+[dir="rtl"] .text-left {
+  text-align: right;
+}
+
+[dir="rtl"] .text-right {
+  text-align: left;
+}
+
 /* Night mode */
 .night-mode-root,
 .night-mode-root body {

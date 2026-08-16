@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { format, isToday, parseISO } from 'date-fns';
+import { he } from 'date-fns/locale';
 import { clsx } from 'clsx';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -21,13 +23,8 @@ import { Moon, Sun, Clock, Bed, Timer as TimerIcon, Edit3, Trash2, ChevronDown, 
 
 type EntryMode = 'timer' | 'manual';
 
-const entryModeOptions = [
-  { value: 'timer', label: 'Timer', icon: <TimerIcon className="w-4 h-4" /> },
-  { value: 'manual', label: 'Manual', icon: <Edit3 className="w-4 h-4" /> },
-];
-
-
 export function SleepView() {
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { selectedBaby, babies } = useAppStore();
   const upsertSleepSession = useHomeStore((state) => state.upsertSleepSession);
@@ -65,6 +62,37 @@ export function SleepView() {
   // Stale timer modal state
   const [showStaleModal, setShowStaleModal] = useState(false);
   const staleModalDismissedRef = useRef(false);
+  const isHebrew = i18n.resolvedLanguage === 'he' || i18n.language === 'he';
+  const dateLocale = isHebrew ? he : undefined;
+  const compactDateTimeFormat = isHebrew ? 'd MMM, HH:mm' : 'MMM d, h:mm a';
+
+  const entryModeOptions = useMemo(
+    () => [
+      { value: 'timer', label: t('common.timer'), icon: <TimerIcon className="w-4 h-4" /> },
+      { value: 'manual', label: t('common.manual'), icon: <Edit3 className="w-4 h-4" /> },
+    ],
+    [t]
+  );
+
+  const getSleepTypeLabel = useCallback(
+    (type: SleepType) => (type === 'nap' ? t('activity.nap') : t('activity.night')),
+    [t]
+  );
+
+  const formatLocalizedSleepDuration = useCallback(
+    (seconds: number) => {
+      if (!isHebrew) return formatSleepDuration(seconds);
+
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+
+      if (hours > 0) {
+        return `${hours} שע׳ ${minutes} דק׳`;
+      }
+      return `${minutes} דק׳`;
+    },
+    [isHebrew]
+  );
 
   // Subscribe to sessions
   useEffect(() => {
@@ -169,10 +197,10 @@ export function SleepView() {
         setActiveSessionId(null);
         setTimerSeconds(0);
         setIsTimerRunning(false);
-        toast.info('Sleep session discarded');
+        toast.info(t('sleepScreen.discarded'));
       } catch (error) {
         console.error('Error discarding sleep session:', error);
-        toast.error('Failed to discard session');
+        toast.error(t('sleepScreen.discardError'));
       }
     }
   };
@@ -211,11 +239,11 @@ export function SleepView() {
     } catch (error) {
       removeSleepSession(optimisticId);
       console.error('Error starting sleep session:', error);
-      toast.error('Failed to start sleep tracking. Please try again.');
+      toast.error(t('sleepScreen.startError'));
     } finally {
       setStarting(false);
     }
-  }, [user, selectedBaby, sleepType, starting, upsertSleepSession, removeSleepSession]);
+  }, [user, selectedBaby, sleepType, starting, upsertSleepSession, removeSleepSession, t]);
 
   const handleStop = useCallback(async (totalSeconds: number) => {
     setIsTimerRunning(false);
@@ -271,10 +299,13 @@ export function SleepView() {
       setShowDetails(false);
       setEditedStartTime(null);
 
-      toast.success(`${formatSleepDuration(savedDuration)} ${savedType} logged`);
+      toast.success(t('sleepScreen.logged', {
+        duration: formatLocalizedSleepDuration(savedDuration),
+        type: getSleepTypeLabel(savedType),
+      }));
     } catch (error) {
       console.error('Error saving sleep session:', error);
-      toast.error('Failed to save sleep session. Please try again.');
+      toast.error(t('sleepScreen.saveError'));
     } finally {
       setSaving(false);
     }
@@ -285,13 +316,13 @@ export function SleepView() {
 
     const durationMinutes = parseInt(manualDuration, 10);
     if (isNaN(durationMinutes) || durationMinutes <= 0 || durationMinutes > 720) {
-      toast.error('Please enter a valid duration (1-720 minutes).');
+      toast.error(t('validation.validDurationRange', { min: 1, max: 720 }));
       return;
     }
 
     // Validate date and time inputs
     if (!manualDate || !manualTime) {
-      toast.error('Please enter a valid date and time.');
+      toast.error(t('validation.validDateTime'));
       return;
     }
 
@@ -299,13 +330,13 @@ export function SleepView() {
 
     // Check if date is valid
     if (isNaN(startTime.getTime())) {
-      toast.error('Invalid date or time. Please check your input.');
+      toast.error(t('validation.invalidDateTime'));
       return;
     }
 
     // Check if date is not in the future
     if (startTime > new Date()) {
-      toast.error('Start time cannot be in the future.');
+      toast.error(t('validation.startTimeFuture'));
       return;
     }
 
@@ -330,10 +361,13 @@ export function SleepView() {
       setNotes('');
       setBabyMood(null);
 
-      toast.success(`${formatSleepDuration(durationMinutes * 60)} ${savedType} logged`);
+      toast.success(t('sleepScreen.logged', {
+        duration: formatLocalizedSleepDuration(durationMinutes * 60),
+        type: getSleepTypeLabel(savedType),
+      }));
     } catch (error) {
       console.error('Error saving sleep session:', error);
-      toast.error('Failed to save sleep session. Please try again.');
+      toast.error(t('sleepScreen.saveError'));
     } finally {
       setSaving(false);
     }
@@ -367,17 +401,17 @@ export function SleepView() {
   const handleApplyEdit = () => {
     const durationMinutes = parseInt(editDuration, 10);
     if (isNaN(durationMinutes) || durationMinutes <= 0) {
-      toast.error('Please enter a valid duration');
+      toast.error(t('validation.validDuration'));
       return;
     }
     // Validate and store the edited start time
     const parsedStartTime = new Date(editStartTime);
     if (isNaN(parsedStartTime.getTime())) {
-      toast.error('Please enter a valid start time');
+      toast.error(t('validation.validStartTime'));
       return;
     }
     if (parsedStartTime > new Date()) {
-      toast.error('Start time cannot be in the future');
+      toast.error(t('validation.startTimeFuture'));
       return;
     }
     setEditedStartTime(parsedStartTime.toISOString());
@@ -421,10 +455,10 @@ export function SleepView() {
       setShowForm(false);
       setShowDetails(false);
       setEditedStartTime(null);
-      toast.info('Sleep session discarded');
+      toast.info(t('sleepScreen.discarded'));
     } catch (error) {
       console.error('Error discarding sleep session:', error);
-      toast.error('Failed to discard session. Please try again.');
+      toast.error(t('sleepScreen.discardError'));
     } finally {
       setSaving(false);
     }
@@ -449,7 +483,7 @@ export function SleepView() {
 
   return (
     <div>
-      <Header title="Sleep" />
+      <Header title={t('nav.sleep')} />
 
       <div className="px-4 py-4 space-y-4">
         {/* Entry Mode Toggle */}
@@ -488,7 +522,7 @@ export function SleepView() {
                 } : undefined}
               >
                 <Icon className={clsx('w-5 h-5', isSelected ? 'text-white' : 'text-gray-400')} />
-                <span>{config.label}</span>
+                <span>{getSleepTypeLabel(type)}</span>
               </button>
             );
           })}
@@ -536,10 +570,10 @@ export function SleepView() {
                     )}
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    Start {sleepType === 'nap' ? 'Nap' : 'Night Sleep'}
+                    {t('sleepScreen.startSleepTitle', { type: getSleepTypeLabel(sleepType) })}
                   </h3>
                   <p className="text-sm text-gray-500 mb-6">
-                    Tap the button to begin tracking
+                    {t('sleepScreen.tapToBegin')}
                   </p>
                   <Button
                     onClick={handleStart}
@@ -551,7 +585,7 @@ export function SleepView() {
                     disabled={starting}
                   >
                     <Bed className="w-5 h-5 mr-2" />
-                    {starting ? 'Starting...' : 'Start Sleep'}
+                    {starting ? t('sleepScreen.starting') : t('sleepScreen.startSleep')}
                   </Button>
                 </div>
               ) : (
@@ -572,21 +606,21 @@ export function SleepView() {
         {entryMode === 'manual' && (
           <Card>
             <CardHeader
-              title="Log Past Sleep"
-              subtitle={sleepType === 'nap' ? 'Nap' : 'Night Sleep'}
+              title={t('sleepScreen.logPastSleep')}
+              subtitle={getSleepTypeLabel(sleepType)}
             />
 
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <Input
                   type="date"
-                  label="Date"
+                  label={t('common.date')}
                   value={manualDate}
                   onChange={(e) => setManualDate(e.target.value)}
                 />
                 <Input
                   type="time"
-                  label="Time"
+                  label={t('common.time')}
                   value={manualTime}
                   onChange={(e) => setManualTime(e.target.value)}
                 />
@@ -594,8 +628,8 @@ export function SleepView() {
 
               <Input
                 type="number"
-                label="Duration (minutes)"
-                placeholder="e.g. 45"
+                label={t('form.durationMinutes')}
+                placeholder={t('sleepScreen.durationPlaceholder')}
                 value={manualDuration}
                 onChange={(e) => setManualDuration(e.target.value)}
                 min="1"
@@ -608,7 +642,7 @@ export function SleepView() {
                 disabled={!manualDuration || saving}
                 style={{ backgroundColor: SLEEP_TYPE_CONFIG[sleepType].color }}
               >
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? t('common.saving') : t('common.save')}
               </Button>
 
               {/* Expandable details section */}
@@ -616,21 +650,21 @@ export function SleepView() {
                 onClick={() => setShowDetails(!showDetails)}
                 className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
               >
-                <span>Add details (optional)</span>
+                <span>{t('common.addDetailsOptional')}</span>
                 {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
 
               {showDetails && (
                 <div className="space-y-4 pt-2 border-t border-gray-100">
                   <BabyMoodSelector
-                    label="Baby's mood when waking"
+                    label={t('form.babyMoodWhenWaking')}
                     value={babyMood}
                     onChange={setBabyMood}
                   />
 
                   <Textarea
-                    label="Notes (optional)"
-                    placeholder="Any notes about this sleep..."
+                    label={t('form.notesOptional')}
+                    placeholder={t('sleepScreen.notesPlaceholder')}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={2}
@@ -645,8 +679,11 @@ export function SleepView() {
         {showForm && entryMode === 'timer' && (
           <Card>
             <CardHeader
-              title="Sleep Ended"
-              subtitle={`${formatSleepDuration(timerSeconds)} of ${sleepType === 'nap' ? 'napping' : 'night sleep'}`}
+              title={t('sleepScreen.sleepEnded')}
+              subtitle={t('sleepScreen.sleepEndedSubtitle', {
+                duration: formatLocalizedSleepDuration(timerSeconds),
+                type: sleepType === 'nap' ? t('activity.napping') : t('activity.nightSleep'),
+              })}
             />
 
             <div className="space-y-4">
@@ -669,10 +706,10 @@ export function SleepView() {
                   <Edit3 className="w-4 h-4 text-blue-500" />
                 </Button>
                 <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
-                  Resume
+                  {t('sleepScreen.resume')}
                 </Button>
                 <Button onClick={handleSave} className="flex-1" disabled={saving}>
-                  {saving ? 'Saving...' : 'Save'}
+                  {saving ? t('common.saving') : t('common.save')}
                 </Button>
               </div>
 
@@ -681,21 +718,21 @@ export function SleepView() {
                 onClick={() => setShowDetails(!showDetails)}
                 className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
               >
-                <span>Add details (optional)</span>
+                <span>{t('common.addDetailsOptional')}</span>
                 {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
 
               {showDetails && (
                 <div className="space-y-4 pt-2 border-t border-gray-100">
                   <BabyMoodSelector
-                    label="Baby's mood when waking"
+                    label={t('form.babyMoodWhenWaking')}
                     value={babyMood}
                     onChange={setBabyMood}
                   />
 
                   <Textarea
-                    label="Notes (optional)"
-                    placeholder="Any notes about this sleep..."
+                    label={t('form.notesOptional')}
+                    placeholder={t('sleepScreen.notesPlaceholder')}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={2}
@@ -712,17 +749,21 @@ export function SleepView() {
             <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center mx-auto mb-2">
               <Sun className="w-5 h-5 text-orange-500" />
             </div>
-            <p className="text-sm text-gray-500 mb-0.5">Naps</p>
+            <p className="text-sm text-gray-500 mb-0.5">{t('sleepScreen.naps')}</p>
             <p className="text-2xl font-bold text-gray-900">{todayNaps.length}</p>
-            <p className="text-xs text-gray-500 mt-1">{formatSleepDuration(todayNapTime)} total</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {t('sleepScreen.total', { duration: formatLocalizedSleepDuration(todayNapTime) })}
+            </p>
           </div>
           <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-4 text-center border border-indigo-100">
             <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center mx-auto mb-2">
               <Moon className="w-5 h-5 text-indigo-500" />
             </div>
-            <p className="text-sm text-gray-500 mb-0.5">Night</p>
+            <p className="text-sm text-gray-500 mb-0.5">{t('sleepScreen.night')}</p>
             <p className="text-2xl font-bold text-gray-900">{todayNightGroups.length}</p>
-            <p className="text-xs text-gray-500 mt-1">{formatSleepDuration(todayNightTime)} total</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {t('sleepScreen.total', { duration: formatLocalizedSleepDuration(todayNightTime) })}
+            </p>
           </div>
         </div>
 
@@ -730,7 +771,7 @@ export function SleepView() {
         {sessions.filter(s => !s.isActive).length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-              <h3 className="font-semibold text-gray-900">Recent Sleep</h3>
+              <h3 className="font-semibold text-gray-900">{t('sleepScreen.recentSleep')}</h3>
             </div>
             <div className="divide-y divide-gray-50">
               {sessions.filter(s => !s.isActive).slice(0, 5).map((session) => (
@@ -753,13 +794,15 @@ export function SleepView() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900">
-                      {SLEEP_TYPE_CONFIG[session.type].label}
+                      {getSleepTypeLabel(session.type)}
                     </p>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <Clock className="w-3 h-3 flex-shrink-0" />
-                      <span className="font-medium">{formatSleepDuration(session.duration)}</span>
+                      <span className="font-medium">{formatLocalizedSleepDuration(session.duration)}</span>
                       <span>•</span>
-                      <span className="truncate">{format(parseISO(session.startTime), 'MMM d, h:mm a')}</span>
+                      <span className="truncate">
+                        {format(parseISO(session.startTime), compactDateTimeFormat, { locale: dateLocale })}
+                      </span>
                     </div>
                   </div>
                   <MoodIndicator babyMood={session.babyMood} size="sm" />
@@ -783,7 +826,7 @@ export function SleepView() {
         <StaleTimerModal
           isOpen={showStaleModal}
           duration={timerSeconds}
-          activityName="sleep"
+          activityName={t('activity.sleeping')}
           onContinue={handleStaleTimerContinue}
           onStopAndSave={handleStaleTimerStopAndSave}
           onDiscard={handleStaleTimerDiscard}
@@ -794,7 +837,7 @@ export function SleepView() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <Card className="w-full max-w-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Edit Before Saving</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t('sleepScreen.editBeforeSaving')}</h3>
                 <button
                   onClick={() => setShowEditBeforeSave(false)}
                   className="p-1 rounded-full hover:bg-gray-100"
@@ -805,13 +848,13 @@ export function SleepView() {
               <div className="space-y-4">
                 <Input
                   type="datetime-local"
-                  label="Start Time"
+                  label={t('form.startTime')}
                   value={editStartTime}
                   onChange={(e) => setEditStartTime(e.target.value)}
                 />
                 <Input
                   type="number"
-                  label="Duration (minutes)"
+                  label={t('form.durationMinutes')}
                   value={editDuration}
                   onChange={(e) => setEditDuration(e.target.value)}
                   min="1"
@@ -822,10 +865,10 @@ export function SleepView() {
                     onClick={() => setShowEditBeforeSave(false)}
                     className="flex-1"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </Button>
                   <Button onClick={handleApplyEdit} className="flex-1">
-                    Apply
+                    {t('common.apply')}
                   </Button>
                 </div>
               </div>

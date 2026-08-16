@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { format, parseISO } from 'date-fns';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -53,6 +54,7 @@ interface EditSessionModalProps {
 }
 
 export function EditSessionModal({ isOpen, onClose, sessionType, session }: EditSessionModalProps) {
+  const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -178,19 +180,19 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
     allowOvernight: boolean = false
   ): { startTime: Date; endTime: Date | null } | null => {
     if (!date || !startTimeStr) {
-      toast.error('Please enter a valid date and time.');
+      toast.error(t('validation.validDateTime'));
       return null;
     }
 
     const startTime = new Date(`${date}T${startTimeStr}`);
     if (isNaN(startTime.getTime())) {
-      toast.error('Invalid start date or time.');
+      toast.error(t('validation.invalidStartDateTime'));
       return null;
     }
 
     if (!endTimeStr) {
       if (requireEnd) {
-        toast.error('Please enter an end time.');
+        toast.error(t('validation.validEndTime'));
         return null;
       }
       return { startTime, endTime: null };
@@ -198,7 +200,7 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
 
     const endTime = new Date(`${date}T${endTimeStr}`);
     if (isNaN(endTime.getTime())) {
-      toast.error('Invalid end date or time.');
+      toast.error(t('validation.invalidEndDateTime'));
       return null;
     }
 
@@ -208,7 +210,7 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
 
     // Check if end time is after start time
     if (endTime <= startTime) {
-      toast.error('End time must be after start time.');
+      toast.error(t('validation.endTimeAfterStart'));
       return null;
     }
 
@@ -256,7 +258,7 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
         // Validate volume
         const volume = parseFloat(pumpVolume);
         if (pumpVolume && (isNaN(volume) || volume < 0)) {
-          toast.error('Please enter a valid volume.');
+          toast.error(t('validation.validVolume'));
           setSaving(false);
           return;
         }
@@ -271,20 +273,20 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
         });
       } else if (sessionType === 'bottle') {
         if (!bottleDate || !bottleTime) {
-          toast.error('Please enter a valid date and time.');
+          toast.error(t('validation.validDateTime'));
           setSaving(false);
           return;
         }
         const timestamp = new Date(`${bottleDate}T${bottleTime}`);
         if (isNaN(timestamp.getTime())) {
-          toast.error('Invalid date or time.');
+          toast.error(t('validation.invalidDateTime'));
           setSaving(false);
           return;
         }
         // Validate volume
         const volume = parseFloat(bottleVolume);
         if (bottleVolume && (isNaN(volume) || volume < 0)) {
-          toast.error('Please enter a valid volume.');
+          toast.error(t('validation.validVolume'));
           setSaving(false);
           return;
         }
@@ -325,7 +327,7 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
       onClose();
     } catch (error) {
       console.error('Error updating session:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to update session. Please try again.');
+      toast.error(error instanceof Error ? error.message : t('editSession.updateError'));
     } finally {
       setSaving(false);
     }
@@ -361,42 +363,42 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
   const getTitle = () => {
     switch (sessionType) {
       case 'sleep':
-        return 'Edit Sleep Session';
+        return t('editSession.sleep');
       case 'breastfeeding':
-        return 'Edit Breastfeeding Session';
+        return t('editSession.breastfeeding');
       case 'pump':
-        return 'Edit Pump Session';
+        return t('editSession.pump');
       case 'bottle':
-        return 'Edit Bottle Feeding';
+        return t('editSession.bottle');
       case 'play':
-        return 'Edit Play Session';
+        return t('editSession.play');
       case 'walk':
-        return 'Edit Walk';
+        return t('editSession.walk');
       default:
-        return 'Edit Session';
+        return t('editSession.title');
     }
   };
 
   const sleepTypeOptions = [
-    { value: 'nap', label: 'Nap', icon: <Sun className="w-4 h-4" />, color: SLEEP_TYPE_CONFIG.nap.color },
-    { value: 'night', label: 'Night', icon: <Moon className="w-4 h-4" />, color: SLEEP_TYPE_CONFIG.night.color },
+    { value: 'nap', label: t('activity.nap'), icon: <Sun className="w-4 h-4" />, color: SLEEP_TYPE_CONFIG.nap.color },
+    { value: 'night', label: t('activity.night'), icon: <Moon className="w-4 h-4" />, color: SLEEP_TYPE_CONFIG.night.color },
   ];
 
   const breastSideOptions = [
-    { value: 'left', label: 'Left', color: BREAST_SIDE_CONFIG.left.color },
-    { value: 'right', label: 'Right', color: BREAST_SIDE_CONFIG.right.color },
+    { value: 'left', label: t('activity.left'), color: BREAST_SIDE_CONFIG.left.color },
+    { value: 'right', label: t('activity.right'), color: BREAST_SIDE_CONFIG.right.color },
   ];
 
   const pumpSideOptions = [
-    { value: 'left', label: 'Left', color: PUMP_SIDE_CONFIG.left.color },
-    { value: 'right', label: 'Right', color: PUMP_SIDE_CONFIG.right.color },
-    { value: 'both', label: 'Both', color: PUMP_SIDE_CONFIG.both.color },
+    { value: 'left', label: t('activity.left'), color: PUMP_SIDE_CONFIG.left.color },
+    { value: 'right', label: t('activity.right'), color: PUMP_SIDE_CONFIG.right.color },
+    { value: 'both', label: t('activity.both'), color: PUMP_SIDE_CONFIG.both.color },
   ];
 
   const contentTypeOptions = [
-    { value: 'breastMilk', label: 'Breast Milk', color: BOTTLE_CONTENT_CONFIG.breastMilk.color },
-    { value: 'formula', label: 'Formula', color: BOTTLE_CONTENT_CONFIG.formula.color },
-    { value: 'mixed', label: 'Mixed', color: BOTTLE_CONTENT_CONFIG.mixed.color },
+    { value: 'breastMilk', label: t('activity.breastMilk'), color: BOTTLE_CONTENT_CONFIG.breastMilk.color },
+    { value: 'formula', label: t('activity.formula'), color: BOTTLE_CONTENT_CONFIG.formula.color },
+    { value: 'mixed', label: t('activity.mixed'), color: BOTTLE_CONTENT_CONFIG.mixed.color },
   ];
 
   const playTypeOptions = Object.entries(PLAY_TYPE_CONFIG).map(([value, config]) => ({
@@ -425,8 +427,8 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
             <div className="flex items-center gap-3 p-4 bg-red-50 rounded-lg">
               <AlertTriangle className="w-6 h-6 text-red-500 flex-shrink-0" />
               <div>
-                <p className="font-medium text-red-900">Delete this session?</p>
-                <p className="text-sm text-red-700">This action cannot be undone.</p>
+                <p className="font-medium text-red-900">{t('editSession.deleteTitle')}</p>
+                <p className="text-sm text-red-700">{t('editSession.deleteDescription')}</p>
               </div>
             </div>
             <div className="flex gap-3">
@@ -436,7 +438,7 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
                 className="flex-1"
                 disabled={saving}
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 variant="danger"
@@ -444,7 +446,7 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
                 className="flex-1"
                 disabled={saving}
               >
-                {saving ? 'Deleting...' : 'Delete'}
+                {saving ? t('common.deleting') : t('common.delete')}
               </Button>
             </div>
           </div>
@@ -463,26 +465,26 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
                 </div>
                 <Input
                   type="date"
-                  label="Date"
+                  label={t('common.date')}
                   value={sleepDate}
                   onChange={(e) => setSleepDate(e.target.value)}
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <Input
                     type="time"
-                    label="Start Time"
+                    label={t('form.startTime')}
                     value={sleepStartTime}
                     onChange={(e) => setSleepStartTime(e.target.value)}
                   />
                   <Input
                     type="time"
-                    label="End Time"
+                    label={t('form.endTime')}
                     value={sleepEndTime}
                     onChange={(e) => setSleepEndTime(e.target.value)}
                   />
                 </div>
                 <BabyMoodSelector
-                  label="Baby's mood when waking"
+                  label={t('form.babyMoodWhenWaking')}
                   value={babyMood}
                   onChange={setBabyMood}
                 />
@@ -492,7 +494,7 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
             {/* Breastfeeding fields */}
             {sessionType === 'breastfeeding' && (
               <>
-                <div className="flex justify-center">
+                <div className="flex justify-center" dir="ltr">
                   <SegmentedControl
                     options={breastSideOptions}
                     value={breastSide}
@@ -501,31 +503,31 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
                 </div>
                 <Input
                   type="date"
-                  label="Date"
+                  label={t('common.date')}
                   value={feedingDate}
                   onChange={(e) => setFeedingDate(e.target.value)}
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <Input
                     type="time"
-                    label="Start Time"
+                    label={t('form.startTime')}
                     value={feedingStartTime}
                     onChange={(e) => setFeedingStartTime(e.target.value)}
                   />
                   <Input
                     type="time"
-                    label="End Time"
+                    label={t('form.endTime')}
                     value={feedingEndTime}
                     onChange={(e) => setFeedingEndTime(e.target.value)}
                   />
                 </div>
                 <BabyMoodSelector
-                  label="Baby's mood"
+                  label={t('form.babyMood')}
                   value={babyMood}
                   onChange={setBabyMood}
                 />
                 <MomMoodSelector
-                  label="Your mood"
+                  label={t('form.yourMood')}
                   value={momMood}
                   onChange={setMomMood}
                 />
@@ -535,7 +537,7 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
             {/* Pump fields */}
             {sessionType === 'pump' && (
               <>
-                <div className="flex justify-center">
+                <div className="flex justify-center" dir="ltr">
                   <SegmentedControl
                     options={pumpSideOptions}
                     value={pumpSide}
@@ -544,20 +546,20 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
                 </div>
                 <Input
                   type="date"
-                  label="Date"
+                  label={t('common.date')}
                   value={pumpDate}
                   onChange={(e) => setPumpDate(e.target.value)}
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <Input
                     type="time"
-                    label="Start Time"
+                    label={t('form.startTime')}
                     value={pumpStartTime}
                     onChange={(e) => setPumpStartTime(e.target.value)}
                   />
                   <Input
                     type="time"
-                    label="End Time"
+                    label={t('form.endTime')}
                     value={pumpEndTime}
                     onChange={(e) => setPumpEndTime(e.target.value)}
                   />
@@ -565,7 +567,7 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
                 <div className="flex gap-3">
                   <Input
                     type="number"
-                    label="Volume"
+                    label={t('form.volume')}
                     value={pumpVolume}
                     onChange={(e) => setPumpVolume(e.target.value)}
                     className="flex-1"
@@ -585,7 +587,7 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
                   </div>
                 </div>
                 <MomMoodSelector
-                  label="Your mood"
+                  label={t('form.yourMood')}
                   value={momMood}
                   onChange={setMomMood}
                 />
@@ -605,13 +607,13 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
                 <div className="grid grid-cols-2 gap-3">
                   <Input
                     type="date"
-                    label="Date"
+                    label={t('common.date')}
                     value={bottleDate}
                     onChange={(e) => setBottleDate(e.target.value)}
                   />
                   <Input
                     type="time"
-                    label="Time"
+                    label={t('common.time')}
                     value={bottleTime}
                     onChange={(e) => setBottleTime(e.target.value)}
                   />
@@ -619,7 +621,7 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
                 <div className="flex gap-3">
                   <Input
                     type="number"
-                    label="Volume"
+                    label={t('form.volume')}
                     value={bottleVolume}
                     onChange={(e) => setBottleVolume(e.target.value)}
                     className="flex-1"
@@ -639,7 +641,7 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
                   </div>
                 </div>
                 <BabyMoodSelector
-                  label="Baby's mood"
+                  label={t('form.babyMood')}
                   value={babyMood}
                   onChange={setBabyMood}
                 />
@@ -658,26 +660,26 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
                 </div>
                 <Input
                   type="date"
-                  label="Date"
+                  label={t('common.date')}
                   value={playDate}
                   onChange={(e) => setPlayDate(e.target.value)}
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <Input
                     type="time"
-                    label="Start Time"
+                    label={t('form.startTime')}
                     value={playStartTime}
                     onChange={(e) => setPlayStartTime(e.target.value)}
                   />
                   <Input
                     type="time"
-                    label="End Time"
+                    label={t('form.endTime')}
                     value={playEndTime}
                     onChange={(e) => setPlayEndTime(e.target.value)}
                   />
                 </div>
                 <BabyMoodSelector
-                  label="Baby's mood"
+                  label={t('form.babyMood')}
                   value={babyMood}
                   onChange={setBabyMood}
                 />
@@ -694,30 +696,30 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
                   >
                     <Footprints className="w-5 h-5" style={{ color: '#8bc34a' }} />
                   </div>
-                  <span className="font-medium text-gray-700">Walk</span>
+                  <span className="font-medium text-gray-700">{t('activity.walk')}</span>
                 </div>
                 <Input
                   type="date"
-                  label="Date"
+                  label={t('common.date')}
                   value={walkDate}
                   onChange={(e) => setWalkDate(e.target.value)}
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <Input
                     type="time"
-                    label="Start Time"
+                    label={t('form.startTime')}
                     value={walkStartTime}
                     onChange={(e) => setWalkStartTime(e.target.value)}
                   />
                   <Input
                     type="time"
-                    label="End Time"
+                    label={t('form.endTime')}
                     value={walkEndTime}
                     onChange={(e) => setWalkEndTime(e.target.value)}
                   />
                 </div>
                 <BabyMoodSelector
-                  label="Baby's mood"
+                  label={t('form.babyMood')}
                   value={babyMood}
                   onChange={setBabyMood}
                 />
@@ -726,8 +728,8 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
 
             {/* Notes field (common to all) */}
             <Textarea
-              label="Notes (optional)"
-              placeholder="Any notes about this session..."
+              label={t('form.notesOptional')}
+              placeholder={t('feedingScreen.notesPlaceholder')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
@@ -744,10 +746,10 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
                 <Trash2 className="w-4 h-4" />
               </Button>
               <Button variant="outline" onClick={onClose} className="flex-1" disabled={saving}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button onClick={handleSave} className="flex-1" disabled={saving}>
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? t('common.saving') : t('common.save')}
               </Button>
             </div>
           </div>

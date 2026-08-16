@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
 import { useAppStore } from '@/stores/appStore';
@@ -18,7 +19,27 @@ import {
   Star,
 } from 'lucide-react';
 
+const FEATURE_LABEL_KEYS: Record<FeatureId, string> = {
+  feed: 'features.feedGeneric',
+  pump: 'features.pump',
+  sleep: 'features.sleep',
+  diaper: 'features.diaper',
+  bag: 'features.bag',
+  'milk-stash': 'features.milkStash',
+  stats: 'features.stats',
+  play: 'features.play',
+  walks: 'features.walks',
+  growth: 'features.growth',
+  'solid-foods': 'features.solidFoods',
+  vaccinations: 'features.vaccinations',
+  medicine: 'features.medicine',
+  teething: 'features.teething',
+  pediatrician: 'features.pediatrician',
+  milestones: 'features.milestones',
+};
+
 export function MoreView() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { selectedBaby, babies, settings, favoriteFeatureIds, toggleFavoriteFeature } = useAppStore();
   const { logout } = useAuth();
@@ -44,7 +65,7 @@ export function MoreView() {
   const handleToggleFavorite = (featureId: FeatureId) => {
     const isFavorite = favoriteFeatureIds.includes(featureId);
     if (!isFavorite && favoriteFeatureIds.length >= MAX_FAVORITES) {
-      toast.error(`You can pin up to ${MAX_FAVORITES} favorites.`);
+      toast.error(t('more.maxFavorites', { max: MAX_FAVORITES }));
       return;
     }
 
@@ -53,7 +74,7 @@ export function MoreView() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-      <Header title="More" showBabySwitcher={false} />
+      <Header title={t('more.title')} showBabySwitcher={false} />
 
       <div className="px-4 py-4 space-y-5">
         {/* Current Baby Card */}
@@ -99,7 +120,7 @@ export function MoreView() {
               className="w-full mt-4 flex items-center justify-center gap-2 py-3 border-t border-gray-200/50 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
             >
               <Users className="w-4 h-4" />
-              Manage All Babies
+              {t('baby.manageAll')}
             </button>
           </Card>
         )}
@@ -109,9 +130,9 @@ export function MoreView() {
           <div className="flex items-center gap-2 mb-3 px-1">
             <span className="text-base">🧰</span>
             <div>
-              <h3 className="text-sm font-bold text-gray-700">Features</h3>
+              <h3 className="text-sm font-bold text-gray-700">{t('more.features')}</h3>
               <p className="text-xs text-gray-500 mt-0.5">
-                Tap the star to pin up to {MAX_FAVORITES} favorites on Home
+                {t('more.featuresSubtitle', { max: MAX_FAVORITES })}
               </p>
             </div>
           </div>
@@ -148,7 +169,7 @@ export function MoreView() {
                     <Icon className="w-6 h-6 text-white" />
                   </div>
                   <span className="text-[11px] text-center text-gray-700 font-semibold leading-tight">
-                    {label}
+                    {t(FEATURE_LABEL_KEYS[id])}
                   </span>
                 </button>
               </div>
@@ -160,7 +181,7 @@ export function MoreView() {
         <div>
           <div className="flex items-center gap-2 mb-3 px-1">
             <span className="text-base">⚙️</span>
-            <h3 className="text-sm font-bold text-gray-700">Settings</h3>
+            <h3 className="text-sm font-bold text-gray-700">{t('more.settings')}</h3>
           </div>
           <Card padding="none">
             <button
@@ -170,7 +191,7 @@ export function MoreView() {
               <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-sm">
                 <Settings className="w-5 h-5 text-gray-600" />
               </div>
-              <span className="flex-1 text-left font-semibold text-gray-900">Settings</span>
+              <span className="flex-1 text-left font-semibold text-gray-900">{t('more.settings')}</span>
               <ChevronRight className="w-5 h-5 text-gray-400" />
             </button>
 
@@ -183,7 +204,7 @@ export function MoreView() {
               <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center shadow-sm">
                 <FileText className="w-5 h-5 text-blue-600" />
               </div>
-              <span className="flex-1 text-left font-semibold text-gray-900">Export Data</span>
+              <span className="flex-1 text-left font-semibold text-gray-900">{t('more.exportData')}</span>
               <ChevronRight className="w-5 h-5 text-gray-400" />
             </button>
 
@@ -196,14 +217,14 @@ export function MoreView() {
               <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center shadow-sm">
                 <LogOut className="w-5 h-5 text-red-500" />
               </div>
-              <span className="flex-1 text-left font-semibold text-red-600">Sign Out</span>
+              <span className="flex-1 text-left font-semibold text-red-600">{t('common.signOut')}</span>
             </button>
           </Card>
         </div>
 
         {/* Version info */}
         <p className="text-xs text-center text-gray-400 pb-4">
-          LittleRoutine v1.0.0 • Made with ❤️
+          {t('more.version')}
         </p>
       </div>
     </div>

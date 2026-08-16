@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -51,6 +52,7 @@ function createCustomItem(id: string, label: string, quantity = 0): ChecklistIte
 }
 
 export function DiaperBagChecklistView() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [items, setItems] = useState<ChecklistItem[]>(DIAPER_BAG_PRESET_ITEMS);
   const [customItemName, setCustomItemName] = useState('');
@@ -215,7 +217,7 @@ export function DiaperBagChecklistView() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-amber-50/40 to-white">
-      <Header title="Diaper Bag" showBabySwitcher={false} />
+      <Header title={t('features.diaperBag')} showBabySwitcher={false} />
 
       <div
         className="px-4 py-4 space-y-5"

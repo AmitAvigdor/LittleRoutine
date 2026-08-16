@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { formatDuration } from '@/types';
@@ -20,6 +21,24 @@ export function StaleTimerModal({
   onStopAndSave,
   onDiscard,
 }: StaleTimerModalProps) {
+  const { t, i18n } = useTranslation();
+  const isHebrew = i18n.resolvedLanguage === 'he' || i18n.language === 'he';
+  const formattedDuration = (() => {
+    if (!isHebrew) return formatDuration(duration);
+
+    const hours = Math.floor(duration / 3600);
+    const minutes = Math.floor((duration % 3600) / 60);
+    const seconds = duration % 60;
+
+    if (hours > 0) {
+      return minutes > 0 ? `${hours} שע׳ ${minutes} דק׳` : `${hours} שע׳`;
+    }
+    if (minutes > 0) {
+      return seconds > 0 ? `${minutes} דק׳ ${seconds} שנ׳` : `${minutes} דק׳`;
+    }
+    return `${seconds} שנ׳`;
+  })();
+
   if (!isOpen) return null;
 
   return (
@@ -31,14 +50,14 @@ export function StaleTimerModal({
             <AlertTriangle className="w-6 h-6 text-amber-600" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Long Running Timer</h3>
-            <p className="text-sm text-gray-500">{formatDuration(duration)}</p>
+            <h3 className="text-lg font-semibold text-gray-900">{t('staleTimer.title')}</h3>
+            <p className="text-sm text-gray-500">{formattedDuration}</p>
           </div>
         </div>
 
         {/* Message */}
         <p className="text-gray-600 mb-6">
-          This {activityName} timer has been running for over 5 hours. Is it still active?
+          {t('staleTimer.message', { activity: activityName })}
         </p>
 
         {/* Actions */}
@@ -48,7 +67,7 @@ export function StaleTimerModal({
             className="w-full justify-center"
           >
             <Square className="w-4 h-4 mr-2" />
-            Stop & Save
+            {t('staleTimer.stopAndSave')}
           </Button>
 
           <Button
@@ -57,7 +76,7 @@ export function StaleTimerModal({
             className="w-full justify-center"
           >
             <Play className="w-4 h-4 mr-2" />
-            Continue Timer
+            {t('staleTimer.continueTimer')}
           </Button>
 
           <Button
@@ -66,7 +85,7 @@ export function StaleTimerModal({
             className="w-full justify-center text-red-600 hover:bg-red-50"
           >
             <Trash2 className="w-4 h-4 mr-2" />
-            Discard
+            {t('staleTimer.discard')}
           </Button>
         </div>
       </Card>

@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { format, isToday, parseISO } from 'date-fns';
+import { he } from 'date-fns/locale';
 import { clsx } from 'clsx';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Timer } from '@/components/ui/Timer';
@@ -21,16 +23,12 @@ type MilkDestination = 'fridge' | 'freezer' | 'use' | 'takeWithMe' | null;
 
 type EntryMode = 'timer' | 'manual';
 
-const entryModeOptions = [
-  { value: 'timer', label: 'Timer', icon: <TimerIcon className="w-4 h-4" /> },
-  { value: 'manual', label: 'Manual', icon: <Edit3 className="w-4 h-4" /> },
-];
-
 interface PumpViewProps {
   baby: Baby;
 }
 
 export function PumpView({ baby }: PumpViewProps) {
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { settings } = useAppStore();
   const [sessions, setSessions] = useState<PumpSession[]>([]);
@@ -77,6 +75,45 @@ export function PumpView({ baby }: PumpViewProps) {
   // Stale timer modal state
   const [showStaleModal, setShowStaleModal] = useState(false);
   const staleModalDismissedRef = useRef(false);
+  const isHebrew = i18n.resolvedLanguage === 'he' || i18n.language === 'he';
+  const dateLocale = isHebrew ? he : undefined;
+  const compactDateTimeFormat = isHebrew ? 'd MMM, HH:mm' : 'MMM d, h:mm a';
+
+  const entryModeOptions = useMemo(
+    () => [
+      { value: 'timer', label: t('common.timer'), icon: <TimerIcon className="w-4 h-4" /> },
+      { value: 'manual', label: t('common.manual'), icon: <Edit3 className="w-4 h-4" /> },
+    ],
+    [t]
+  );
+
+  const getPumpSideLabel = useCallback(
+    (side: PumpSide) => {
+      if (side === 'left') return t('activity.left');
+      if (side === 'right') return t('activity.right');
+      return t('activity.both');
+    },
+    [t]
+  );
+
+  const formatLocalizedDuration = useCallback(
+    (seconds: number) => {
+      if (!isHebrew) return formatDuration(seconds);
+
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const remainingSeconds = seconds % 60;
+
+      if (hours > 0) {
+        return minutes > 0 ? `${hours} שע׳ ${minutes} דק׳` : `${hours} שע׳`;
+      }
+      if (minutes > 0) {
+        return remainingSeconds > 0 ? `${minutes} דק׳ ${remainingSeconds} שנ׳` : `${minutes} דק׳`;
+      }
+      return `${remainingSeconds} שנ׳`;
+    },
+    [isHebrew]
+  );
 
   // Subscribe to sessions
   useEffect(() => {
@@ -196,10 +233,10 @@ export function PumpView({ baby }: PumpViewProps) {
         setActiveSessionId(null);
         setTimerSeconds(0);
         setIsTimerRunning(false);
-        toast.info('Pump session discarded');
+        toast.info(t('pumpScreen.discarded'));
       } catch (error) {
         console.error('Error discarding pump session:', error);
-        toast.error('Failed to discard session');
+        toast.error(t('pumpScreen.discardError'));
       }
     }
   };
@@ -221,11 +258,11 @@ export function PumpView({ baby }: PumpViewProps) {
       setShowForm(false);
     } catch (error) {
       console.error('Error starting pump session:', error);
-      toast.error('Failed to start pump session. Please try again.');
+      toast.error(t('pumpScreen.startError'));
     } finally {
       setStarting(false);
     }
-  }, [user, baby.id, selectedSide, volumeUnit, starting]);
+  }, [user, baby.id, selectedSide, volumeUnit, starting, t]);
 
   const handlePause = useCallback(async () => {
     setIsTimerRunning(false);
@@ -253,13 +290,13 @@ export function PumpView({ baby }: PumpViewProps) {
         setIsPaused(false);
       } catch (error) {
         console.error('Error resuming session:', error);
-        toast.error('Failed to resume session');
+        toast.error(t('pumpScreen.resumeError'));
       }
     } else {
       setIsTimerRunning(true);
       setIsPaused(false);
     }
-  }, [activeSessionId]);
+  }, [activeSessionId, t]);
 
   const handleStop = useCallback((totalSeconds: number) => {
     setIsTimerRunning(false);
@@ -307,10 +344,10 @@ export function PumpView({ baby }: PumpViewProps) {
     try {
       await deletePumpSession(sessionIdToDelete);
       handleReset();
-      toast.info('Pump session discarded');
+      toast.info(t('pumpScreen.discarded'));
     } catch (error) {
       console.error('Error discarding pump session:', error);
-      toast.error('Failed to discard session. Please try again.');
+      toast.error(t('pumpScreen.discardError'));
     } finally {
       setSaving(false);
     }
@@ -337,17 +374,17 @@ export function PumpView({ baby }: PumpViewProps) {
   const handleApplyEdit = () => {
     const durationMinutes = parseInt(editDuration, 10);
     if (isNaN(durationMinutes) || durationMinutes <= 0) {
-      toast.error('Please enter a valid duration');
+      toast.error(t('validation.validDuration'));
       return;
     }
     // Validate and store the edited start time
     const parsedStartTime = new Date(editStartTime);
     if (isNaN(parsedStartTime.getTime())) {
-      toast.error('Please enter a valid start time');
+      toast.error(t('validation.validStartTime'));
       return;
     }
     if (parsedStartTime > new Date()) {
-      toast.error('Start time cannot be in the future');
+      toast.error(t('validation.startTimeFuture'));
       return;
     }
     setEditedStartTime(parsedStartTime.toISOString());
@@ -367,7 +404,7 @@ export function PumpView({ baby }: PumpViewProps) {
     // Validate volume if provided
     const parsedVolume = parseFloat(volume);
     if (volume && (isNaN(parsedVolume) || parsedVolume < 0)) {
-      toast.error('Please enter a valid volume (0 or greater).');
+      toast.error(t('pumpScreen.validVolumeNonNegative'));
       return;
     }
     const volumeValue = parsedVolume || 0;
@@ -430,7 +467,7 @@ export function PumpView({ baby }: PumpViewProps) {
         handleReset();
       } catch (error) {
         console.error('Error saving pump session:', error);
-        toast.error('Failed to save pump session. Please try again.');
+        toast.error(t('pumpScreen.saveError'));
       } finally {
         setSaving(false);
       }
@@ -440,13 +477,13 @@ export function PumpView({ baby }: PumpViewProps) {
 
       const durationMinutes = parseInt(manualDuration, 10);
       if (isNaN(durationMinutes) || durationMinutes <= 0 || durationMinutes > 120) {
-        toast.error('Please enter a valid duration (1-120 minutes).');
+        toast.error(t('validation.validDurationRange', { min: 1, max: 120 }));
         return;
       }
 
       // Validate date and time inputs
       if (!manualDate || !manualTime) {
-        toast.error('Please enter a valid date and time.');
+        toast.error(t('validation.validDateTime'));
         return;
       }
 
@@ -454,13 +491,13 @@ export function PumpView({ baby }: PumpViewProps) {
 
       // Check if date is valid
       if (isNaN(sessionStartTime.getTime())) {
-        toast.error('Invalid date or time. Please check your input.');
+        toast.error(t('validation.invalidDateTime'));
         return;
       }
 
       // Check if date is not in the future
       if (sessionStartTime > new Date()) {
-        toast.error('Start time cannot be in the future.');
+        toast.error(t('validation.startTimeFuture'));
         return;
       }
 
@@ -468,7 +505,7 @@ export function PumpView({ baby }: PumpViewProps) {
       if (volume) {
         const parsedVolume = parseFloat(volume);
         if (isNaN(parsedVolume) || parsedVolume < 0) {
-          toast.error('Please enter a valid volume (0 or greater).');
+          toast.error(t('pumpScreen.validVolumeNonNegative'));
           return;
         }
       }
@@ -500,7 +537,7 @@ export function PumpView({ baby }: PumpViewProps) {
         handleReset();
       } catch (error) {
         console.error('Error saving pump session:', error);
-        toast.error('Failed to save pump session. Please try again.');
+        toast.error(t('pumpScreen.saveError'));
       } finally {
         setSaving(false);
       }
@@ -535,7 +572,7 @@ export function PumpView({ baby }: PumpViewProps) {
           notes: 'On the go',
         });
         await markMilkStashInUse(stashId, true);
-        toast.success('4-hour countdown started! Check Milk Stash for timer.');
+        toast.success(t('pumpScreen.countdownStarted'));
       } else if (destination === 'use') {
         // Create bottle feeding session with the pumped milk
         await createBottleSession(baby.id, user.uid, {
@@ -550,7 +587,7 @@ export function PumpView({ baby }: PumpViewProps) {
       // If destination is null (skip), do nothing
     } catch (error) {
       console.error('Error handling milk destination:', error);
-      toast.error('Failed to save milk destination. Please try again.');
+      toast.error(t('pumpScreen.destinationError'));
     } finally {
       setShowMilkDestination(false);
       setSavedSessionData(null);
@@ -581,7 +618,7 @@ export function PumpView({ baby }: PumpViewProps) {
       )}
 
       {/* Side Selector */}
-      <div className="flex justify-center gap-3">
+      <div className="flex justify-center gap-3" dir="ltr">
         {(['left', 'right', 'both'] as PumpSide[]).map((side) => {
           const config = PUMP_SIDE_CONFIG[side];
           const isSelected = selectedSide === side;
@@ -604,7 +641,7 @@ export function PumpView({ baby }: PumpViewProps) {
                 boxShadow: `0 8px 20px -8px ${config.color}80`
               } : undefined}
             >
-              <span className="relative z-10">{config.label}</span>
+              <span className="relative z-10">{getPumpSideLabel(side)}</span>
               {isSelected && (
                 <Droplet
                   className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30"
@@ -657,26 +694,29 @@ export function PumpView({ baby }: PumpViewProps) {
       {/* Manual Entry Mode */}
       {entryMode === 'manual' && !showForm && (
         <Card>
-          <CardHeader title="Log Past Session" subtitle={`${PUMP_SIDE_CONFIG[selectedSide].label} side`} />
+          <CardHeader
+            title={t('pumpScreen.logPastSession')}
+            subtitle={t('pumpScreen.sideSubtitle', { side: getPumpSideLabel(selectedSide) })}
+          />
 
           <div className="space-y-4">
             <Input
               type="date"
-              label="Date"
+              label={t('common.date')}
               value={manualDate}
               onChange={(e) => setManualDate(e.target.value)}
             />
             <Input
               type="time"
-              label="Start Time"
+              label={t('form.startTime')}
               value={manualTime}
               onChange={(e) => setManualTime(e.target.value)}
             />
 
             <Input
               type="number"
-              label="Duration (minutes)"
-              placeholder="e.g. 20"
+              label={t('form.durationMinutes')}
+              placeholder={t('pumpScreen.durationPlaceholder')}
               value={manualDuration}
               onChange={(e) => setManualDuration(e.target.value)}
               min="1"
@@ -686,7 +726,7 @@ export function PumpView({ baby }: PumpViewProps) {
             <div className="flex gap-3">
               <Input
                 type="number"
-                label="Volume"
+                label={t('form.volume')}
                 placeholder="0"
                 value={volume}
                 onChange={(e) => setVolume(e.target.value)}
@@ -712,7 +752,7 @@ export function PumpView({ baby }: PumpViewProps) {
               className="w-full"
               disabled={!manualDuration || saving}
             >
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? t('common.saving') : t('common.save')}
             </Button>
 
             {/* Expandable details section */}
@@ -720,21 +760,21 @@ export function PumpView({ baby }: PumpViewProps) {
               onClick={() => setShowDetails(!showDetails)}
               className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
             >
-              <span>Add details (optional)</span>
+              <span>{t('common.addDetailsOptional')}</span>
               {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
 
             {showDetails && (
               <div className="space-y-4 pt-2 border-t border-gray-100">
                 <MomMoodSelector
-                  label="Your mood"
+                  label={t('form.yourMood')}
                   value={momMood}
                   onChange={setMomMood}
                 />
 
                 <Textarea
-                  label="Notes (optional)"
-                  placeholder="Any notes about this session..."
+                  label={t('form.notesOptional')}
+                  placeholder={t('feedingScreen.notesPlaceholder')}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={2}
@@ -749,15 +789,18 @@ export function PumpView({ baby }: PumpViewProps) {
       {showForm && (
         <Card>
           <CardHeader
-            title="Session Complete"
-            subtitle={`${formatDuration(timerSeconds)} - ${PUMP_SIDE_CONFIG[selectedSide].label} side`}
+            title={t('pumpScreen.sessionComplete')}
+            subtitle={t('pumpScreen.sessionCompleteSubtitle', {
+              duration: formatLocalizedDuration(timerSeconds),
+              side: getPumpSideLabel(selectedSide),
+            })}
           />
 
           <div className="space-y-4">
             <div className="flex gap-3">
               <Input
                 type="number"
-                label="Volume"
+                label={t('form.volume')}
                 placeholder="0"
                 value={volume}
                 onChange={(e) => setVolume(e.target.value)}
@@ -779,14 +822,14 @@ export function PumpView({ baby }: PumpViewProps) {
             </div>
 
             <MomMoodSelector
-              label="Your mood"
+              label={t('form.yourMood')}
               value={momMood}
               onChange={setMomMood}
             />
 
             <Textarea
-              label="Notes (optional)"
-              placeholder="Any notes about this session..."
+              label={t('form.notesOptional')}
+              placeholder={t('feedingScreen.notesPlaceholder')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
@@ -810,10 +853,10 @@ export function PumpView({ baby }: PumpViewProps) {
                 <Edit3 className="w-4 h-4 text-blue-500" />
               </Button>
               <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
-                Resume
+                {t('feedingScreen.resume')}
               </Button>
               <Button onClick={handleSave} className="flex-1" disabled={saving}>
-                {saving ? 'Saving...' : 'Save Session'}
+                {saving ? t('common.saving') : t('common.saveSession')}
               </Button>
             </div>
           </div>
@@ -827,7 +870,7 @@ export function PumpView({ baby }: PumpViewProps) {
             <TimerIcon className="w-5 h-5 text-blue-600" />
           </div>
           <p className="text-3xl font-bold text-blue-600">{todaySessions.length}</p>
-          <p className="text-sm text-gray-500 mt-1">Sessions today</p>
+          <p className="text-sm text-gray-500 mt-1">{t('pumpScreen.sessionsToday')}</p>
         </div>
         <div className="bg-gradient-to-br from-cyan-50 to-cyan-100/50 rounded-2xl p-4 text-center border border-cyan-100">
           <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center mx-auto mb-2">
@@ -836,7 +879,7 @@ export function PumpView({ baby }: PumpViewProps) {
           <p className="text-3xl font-bold text-cyan-600">
             {todayTotalVolume.toFixed(1)} {volumeUnit}
           </p>
-          <p className="text-sm text-gray-500 mt-1">Total volume</p>
+          <p className="text-sm text-gray-500 mt-1">{t('pumpScreen.totalVolume')}</p>
         </div>
       </div>
 
@@ -845,7 +888,7 @@ export function PumpView({ baby }: PumpViewProps) {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">What would you like to do with the milk?</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{t('pumpScreen.milkDestinationTitle')}</h3>
               <button
                 onClick={() => handleMilkDestination(null)}
                 className="p-1 rounded-full hover:bg-gray-100"
@@ -854,7 +897,10 @@ export function PumpView({ baby }: PumpViewProps) {
               </button>
             </div>
             <p className="text-sm text-gray-600 mb-4">
-              {savedSessionData.volume} {savedSessionData.volumeUnit} pumped
+              {t('pumpScreen.pumpedAmount', {
+                volume: savedSessionData.volume,
+                unit: savedSessionData.volumeUnit,
+              })}
             </p>
             <div className="space-y-2">
               <Button
@@ -866,8 +912,8 @@ export function PumpView({ baby }: PumpViewProps) {
                   <Refrigerator className="w-5 h-5 text-blue-600" />
                 </div>
                 <div className="text-left">
-                  <p className="font-medium">Store in Fridge</p>
-                  <p className="text-xs text-gray-500">Add to milk stash</p>
+                  <p className="font-medium">{t('pumpScreen.storeFridge')}</p>
+                  <p className="text-xs text-gray-500">{t('pumpScreen.addToMilkStash')}</p>
                 </div>
               </Button>
               <Button
@@ -879,8 +925,8 @@ export function PumpView({ baby }: PumpViewProps) {
                   <Snowflake className="w-5 h-5 text-cyan-600" />
                 </div>
                 <div className="text-left">
-                  <p className="font-medium">Store in Freezer</p>
-                  <p className="text-xs text-gray-500">Add to milk stash</p>
+                  <p className="font-medium">{t('pumpScreen.storeFreezer')}</p>
+                  <p className="text-xs text-gray-500">{t('pumpScreen.addToMilkStash')}</p>
                 </div>
               </Button>
               <Button
@@ -892,8 +938,8 @@ export function PumpView({ baby }: PumpViewProps) {
                   <BabyIcon className="w-5 h-5 text-purple-600" />
                 </div>
                 <div className="text-left">
-                  <p className="font-medium">Use Now</p>
-                  <p className="text-xs text-gray-500">Log as bottle feeding</p>
+                  <p className="font-medium">{t('pumpScreen.useNow')}</p>
+                  <p className="text-xs text-gray-500">{t('pumpScreen.logAsBottle')}</p>
                 </div>
               </Button>
               <Button
@@ -905,8 +951,8 @@ export function PumpView({ baby }: PumpViewProps) {
                   <Briefcase className="w-5 h-5 text-orange-600" />
                 </div>
                 <div className="text-left">
-                  <p className="font-medium">Take With Me</p>
-                  <p className="text-xs text-gray-500">Start 4-hour countdown</p>
+                  <p className="font-medium">{t('pumpScreen.takeWithMe')}</p>
+                  <p className="text-xs text-gray-500">{t('pumpScreen.startCountdown')}</p>
                 </div>
               </Button>
               <Button
@@ -914,7 +960,7 @@ export function PumpView({ baby }: PumpViewProps) {
                 className="w-full text-gray-500"
                 onClick={() => handleMilkDestination(null)}
               >
-                Skip for now
+                {t('pumpScreen.skipForNow')}
               </Button>
             </div>
           </Card>
@@ -925,7 +971,7 @@ export function PumpView({ baby }: PumpViewProps) {
       {completedSessions.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-            <h3 className="font-semibold text-gray-900">Recent Sessions</h3>
+            <h3 className="font-semibold text-gray-900">{t('pumpScreen.recentSessions')}</h3>
           </div>
           <div className="divide-y divide-gray-50">
             {completedSessions.slice(0, 5).map((session) => (
@@ -944,13 +990,15 @@ export function PumpView({ baby }: PumpViewProps) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-900">
-                    {session.volume} {session.volumeUnit} • {PUMP_SIDE_CONFIG[session.side].label}
+                    {session.volume} {session.volumeUnit} • {getPumpSideLabel(session.side)}
                   </p>
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <Clock className="w-3 h-3 flex-shrink-0" />
-                    <span className="font-medium">{formatDuration(session.duration)}</span>
+                    <span className="font-medium">{formatLocalizedDuration(session.duration)}</span>
                     <span>•</span>
-                    <span className="truncate">{format(parseISO(session.startTime), 'MMM d, h:mm a')}</span>
+                    <span className="truncate">
+                      {format(parseISO(session.startTime), compactDateTimeFormat, { locale: dateLocale })}
+                    </span>
                   </div>
                 </div>
                 <MoodIndicator momMood={session.momMood} size="sm" />
@@ -974,7 +1022,7 @@ export function PumpView({ baby }: PumpViewProps) {
       <StaleTimerModal
         isOpen={showStaleModal}
         duration={timerSeconds}
-        activityName="pump"
+        activityName={t('activity.pumping')}
         onContinue={handleStaleTimerContinue}
         onStopAndSave={handleStaleTimerStopAndSave}
         onDiscard={handleStaleTimerDiscard}
@@ -985,7 +1033,7 @@ export function PumpView({ baby }: PumpViewProps) {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Edit Before Saving</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{t('pumpScreen.editBeforeSaving')}</h3>
               <button
                 onClick={() => setShowEditBeforeSave(false)}
                 className="p-1 rounded-full hover:bg-gray-100"
@@ -996,13 +1044,13 @@ export function PumpView({ baby }: PumpViewProps) {
             <div className="space-y-4">
               <Input
                 type="datetime-local"
-                label="Start Time"
+                label={t('form.startTime')}
                 value={editStartTime}
                 onChange={(e) => setEditStartTime(e.target.value)}
               />
               <Input
                 type="number"
-                label="Duration (minutes)"
+                label={t('form.durationMinutes')}
                 value={editDuration}
                 onChange={(e) => setEditDuration(e.target.value)}
                 min="1"
@@ -1013,10 +1061,10 @@ export function PumpView({ baby }: PumpViewProps) {
                   onClick={() => setShowEditBeforeSave(false)}
                   className="flex-1"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button onClick={handleApplyEdit} className="flex-1">
-                  Apply
+                    {t('common.apply')}
                 </Button>
               </div>
             </div>

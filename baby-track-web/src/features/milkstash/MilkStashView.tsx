@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -12,6 +13,7 @@ import { Milk, Plus, X, Clock, Check, AlertTriangle, Trash2, Pencil, Thermometer
 import { clsx } from 'clsx';
 
 export function MilkStashView() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { settings, babies, selectedBaby } = useAppStore();
   const activeBaby = selectedBaby || babies[0] || null;
@@ -257,12 +259,12 @@ export function MilkStashView() {
   return (
     <div>
       <Header
-        title="Milk Stash"
+        title={t('features.milkStash')}
         showBabySwitcher={false}
         rightAction={
           <Button size="sm" onClick={() => setShowForm(true)}>
             <Plus className="w-4 h-4 mr-1" />
-            Add
+            {t('common.add')}
           </Button>
         }
       />

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -11,6 +12,7 @@ import { Stethoscope, Plus, X, Check, AlertCircle, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export function PediatricianNotesView() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { selectedBaby } = useAppStore();
   const [notes, setNotes] = useState<PediatricianNote[]>([]);
@@ -91,12 +93,12 @@ export function PediatricianNotesView() {
   return (
     <div>
       <Header
-        title="Pediatrician Notes"
+        title={t('features.pediatricianNotes')}
         showBabySwitcher={false}
         rightAction={
           <Button size="sm" onClick={() => setShowForm(true)}>
             <Plus className="w-4 h-4 mr-1" />
-            Add
+            {t('common.add')}
           </Button>
         }
       />

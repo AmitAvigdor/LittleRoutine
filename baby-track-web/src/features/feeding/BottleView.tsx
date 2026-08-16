@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { format, isToday, parseISO } from 'date-fns';
+import { he } from 'date-fns/locale';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
@@ -15,22 +17,12 @@ import { Milk, Plus, Zap, Edit3 } from 'lucide-react';
 
 type EntryMode = 'quick' | 'manual';
 
-const entryModeOptions = [
-  { value: 'quick', label: 'Quick', icon: <Zap className="w-4 h-4" /> },
-  { value: 'manual', label: 'Manual', icon: <Edit3 className="w-4 h-4" /> },
-];
-
 interface BottleViewProps {
   baby: Baby;
 }
 
-const contentOptions = [
-  { value: 'breastMilk', label: 'Breast Milk', color: BOTTLE_CONTENT_CONFIG.breastMilk.color },
-  { value: 'formula', label: 'Formula', color: BOTTLE_CONTENT_CONFIG.formula.color },
-  { value: 'mixed', label: 'Mixed', color: BOTTLE_CONTENT_CONFIG.mixed.color },
-];
-
 export function BottleView({ baby }: BottleViewProps) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { settings } = useAppStore();
   const [sessions, setSessions] = useState<BottleSession[]>([]);
@@ -56,6 +48,29 @@ export function BottleView({ baby }: BottleViewProps) {
   const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
   const [manualTime, setManualTime] = useState(format(new Date(), 'HH:mm'));
   const [selectedMilkStashId, setSelectedMilkStashId] = useState<string | null>(null);
+
+  const entryModeOptions = useMemo(
+    () => [
+      { value: 'quick', label: t('diaperScreen.quick'), icon: <Zap className="w-4 h-4" /> },
+      { value: 'manual', label: t('common.manual'), icon: <Edit3 className="w-4 h-4" /> },
+    ],
+    [t]
+  );
+
+  const contentOptions = useMemo(
+    () => [
+      { value: 'breastMilk', label: t('activity.breastMilk'), color: BOTTLE_CONTENT_CONFIG.breastMilk.color },
+      { value: 'formula', label: t('activity.formula'), color: BOTTLE_CONTENT_CONFIG.formula.color },
+      { value: 'mixed', label: t('activity.mixed'), color: BOTTLE_CONTENT_CONFIG.mixed.color },
+    ],
+    [t]
+  );
+
+  const getContentTypeLabel = (type: BottleContentType) => {
+    if (type === 'breastMilk') return t('activity.breastMilk');
+    if (type === 'formula') return t('activity.formula');
+    return t('activity.mixed');
+  };
 
   // Subscribe to sessions
   useEffect(() => {
@@ -137,7 +152,7 @@ export function BottleView({ baby }: BottleViewProps) {
     const volumeValue = parseFloat(volume);
     const maxVolume = volumeUnit === 'ml' ? 500 : 50;
     if (isNaN(volumeValue) || volumeValue <= 0 || volumeValue > maxVolume) {
-      toast.error(`Please enter a valid volume (0.1-${maxVolume} ${volumeUnit}).`);
+      toast.error(t('validation.validVolumeRange', { min: '0.1', max: maxVolume, unit: volumeUnit }));
       return;
     }
 
@@ -150,7 +165,10 @@ export function BottleView({ baby }: BottleViewProps) {
     if (selectedMilkStash && contentType === 'breastMilk') {
       const availableVolume = convertVolume(selectedMilkStash.volume, selectedMilkStash.volumeUnit, volumeUnit);
       if (savedVolume > availableVolume + 0.0001) {
-        toast.error(`Selected bottle only has ${availableVolume.toFixed(1)} ${volumeUnit} available.`);
+        toast.error(t('bottleScreen.selectedBottleAvailable', {
+          volume: availableVolume.toFixed(1),
+          unit: volumeUnit,
+        }));
         return;
       }
     }
@@ -190,10 +208,10 @@ export function BottleView({ baby }: BottleViewProps) {
       setManualTime(format(new Date(), 'HH:mm'));
       setSelectedMilkStashId(null);
 
-      toast.success(`Bottle ${savedVolume} ${savedUnit} logged`);
+      toast.success(t('bottleScreen.logged', { volume: savedVolume, unit: savedUnit }));
     } catch (error) {
       console.error('Error saving bottle session:', error);
-      toast.error('Failed to save bottle feeding. Please try again.');
+      toast.error(t('bottleScreen.saveError'));
     } finally {
       setSaving(false);
     }
@@ -245,7 +263,7 @@ export function BottleView({ baby }: BottleViewProps) {
       {!showForm && entryMode === 'quick' && (
         <>
           <Card>
-            <CardHeader title="Quick Add" subtitle="Tap to log a feeding" />
+            <CardHeader title={t('bottleScreen.quickAdd')} subtitle={t('bottleScreen.tapToLog')} />
             <div className="flex flex-wrap gap-2">
               {quickAmounts.map((amount) => (
                 <button
@@ -270,7 +288,7 @@ export function BottleView({ baby }: BottleViewProps) {
                 )}
               >
                 <Plus className="w-6 h-6 mx-auto text-gray-400" />
-                <p className="text-xs text-gray-500 mt-1">Custom</p>
+                <p className="text-xs text-gray-500 mt-1">{t('bottleScreen.custom')}</p>
               </button>
             </div>
           </Card>
@@ -291,20 +309,20 @@ export function BottleView({ baby }: BottleViewProps) {
       {!showForm && entryMode === 'manual' && (
         <Card>
           <CardHeader
-            title="Log Past Feeding"
-            subtitle={BOTTLE_CONTENT_CONFIG[contentType].label}
+            title={t('bottleScreen.logPastFeeding')}
+            subtitle={getContentTypeLabel(contentType)}
           />
 
           <div className="space-y-4">
             <Input
               type="date"
-              label="Date"
+              label={t('common.date')}
               value={manualDate}
               onChange={(e) => setManualDate(e.target.value)}
             />
             <Input
               type="time"
-              label="Time"
+              label={t('common.time')}
               value={manualTime}
               onChange={(e) => setManualTime(e.target.value)}
             />
@@ -312,7 +330,7 @@ export function BottleView({ baby }: BottleViewProps) {
             <div className="flex gap-3">
               <Input
                 type="number"
-                label="Volume"
+                label={t('form.volume')}
                 placeholder="0"
                 value={volume}
                 onChange={(e) => setVolume(e.target.value)}
@@ -344,21 +362,21 @@ export function BottleView({ baby }: BottleViewProps) {
             )}
 
             <BabyMoodSelector
-              label="Baby's mood"
+              label={t('form.babyMood')}
               value={babyMood}
               onChange={setBabyMood}
             />
 
             <Textarea
-              label="Notes (optional)"
-              placeholder="Any notes about this feeding..."
+              label={t('form.notesOptional')}
+              placeholder={t('feedingScreen.notesPlaceholder')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
             />
 
             <Button onClick={handleSave} className="w-full" disabled={!volume || saving}>
-              {saving ? 'Saving...' : 'Save Feeding'}
+              {saving ? t('common.saving') : t('bottleScreen.saveFeeding')}
             </Button>
           </div>
         </Card>
@@ -368,15 +386,15 @@ export function BottleView({ baby }: BottleViewProps) {
       {showForm && entryMode === 'quick' && (
         <Card>
           <CardHeader
-            title="Log Bottle Feeding"
-            subtitle={BOTTLE_CONTENT_CONFIG[contentType].label}
+            title={t('bottleScreen.logBottleFeeding')}
+            subtitle={getContentTypeLabel(contentType)}
           />
 
           <div className="space-y-4">
             <div className="flex gap-3">
               <Input
                 type="number"
-                label="Volume"
+                label={t('form.volume')}
                 placeholder="0"
                 value={volume}
                 onChange={(e) => setVolume(e.target.value)}
@@ -409,14 +427,14 @@ export function BottleView({ baby }: BottleViewProps) {
             )}
 
             <BabyMoodSelector
-              label="Baby's mood"
+              label={t('form.babyMood')}
               value={babyMood}
               onChange={setBabyMood}
             />
 
             <Textarea
-              label="Notes (optional)"
-              placeholder="Any notes about this feeding..."
+              label={t('form.notesOptional')}
+              placeholder={t('feedingScreen.notesPlaceholder')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
@@ -424,10 +442,10 @@ export function BottleView({ baby }: BottleViewProps) {
 
             <div className="flex gap-3">
               <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button onClick={handleSave} className="flex-1" disabled={!volume || saving}>
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? t('common.saving') : t('common.save')}
               </Button>
             </div>
           </div>
@@ -438,13 +456,13 @@ export function BottleView({ baby }: BottleViewProps) {
       <div className="grid grid-cols-2 gap-3">
         <Card className="text-center">
           <p className="text-3xl font-bold text-primary-600">{todaySessions.length}</p>
-          <p className="text-sm text-gray-500">Feedings today</p>
+          <p className="text-sm text-gray-500">{t('bottleScreen.feedingsToday')}</p>
         </Card>
         <Card className="text-center">
           <p className="text-3xl font-bold text-primary-600">
             {todayTotalVolume.toFixed(1)} {volumeUnit}
           </p>
-          <p className="text-sm text-gray-500">Total volume</p>
+          <p className="text-sm text-gray-500">{t('bottleScreen.totalVolume')}</p>
         </Card>
       </div>
 
@@ -465,6 +483,11 @@ function FridgeMilkPicker({
   onSelect: (id: string | null) => void;
   onUseAll: (item: MilkStash) => void;
 }) {
+  const { t, i18n } = useTranslation();
+  const isHebrew = i18n.resolvedLanguage === 'he' || i18n.language === 'he';
+  const dateLocale = isHebrew ? he : undefined;
+  const compactDateTimeFormat = isHebrew ? 'd MMM, HH:mm' : 'MMM d, h:mm a';
+  const compactDateFormat = isHebrew ? 'd MMM' : 'MMM d';
   const totalVolume = stash.reduce((sum, item) => sum + convertVolume(item.volume, item.volumeUnit, volumeUnit), 0);
   const selectedMilkStash = stash.find((item) => item.id === selectedMilkStashId) ?? null;
 
@@ -472,9 +495,16 @@ function FridgeMilkPicker({
     <Card className="border border-blue-100 bg-blue-50/50">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
-          <p className="text-sm font-medium text-blue-900">Available breast milk</p>
+          <p className="text-sm font-medium text-blue-900">{t('bottleScreen.availableBreastMilk')}</p>
           <p className="text-xs text-blue-700 mt-1">
-            {stash.length} bottle{stash.length === 1 ? '' : 's'} available • {totalVolume.toFixed(1)} {volumeUnit}
+            {t('bottleScreen.bottlesAvailable', {
+              count: stash.length,
+              plural: isHebrew
+                ? stash.length === 1 ? '' : 'ים'
+                : stash.length === 1 ? '' : 's',
+              volume: totalVolume.toFixed(1),
+              unit: volumeUnit,
+            })}
           </p>
         </div>
         <Milk className="w-5 h-5 text-blue-500 shrink-0" />
@@ -482,7 +512,7 @@ function FridgeMilkPicker({
 
       {stash.length === 0 ? (
         <p className="text-sm text-blue-700">
-          No available breast milk to link. You can still log this feeding without selecting one.
+          {t('bottleScreen.noAvailableMilk')}
         </p>
       ) : (
         <div className="space-y-2">
@@ -496,7 +526,7 @@ function FridgeMilkPicker({
                 : 'border-blue-100 bg-white/70 text-blue-800 hover:border-blue-300'
             )}
           >
-            Do not link a milk bottle
+            {t('bottleScreen.doNotLink')}
           </button>
 
           {stash.map((item) => {
@@ -504,14 +534,18 @@ function FridgeMilkPicker({
             const isSelected = selectedMilkStashId === item.id;
             const pumpedDateLabel = format(
               parseISO(item.pumpedDate),
-              item.pumpedDate.includes('T') ? 'MMM d, h:mm a' : 'MMM d'
+              item.pumpedDate.includes('T') ? compactDateTimeFormat : compactDateFormat,
+              { locale: dateLocale }
             );
             const roomTempMinutesLeft = item.isInUse && item.inUseStartDate
               ? Math.floor(getRoomTempExpirationMinutes(item.inUseStartDate))
               : null;
             const roomTempLabel = roomTempMinutesLeft === null
               ? null
-              : `${Math.floor(roomTempMinutesLeft / 60)}h ${roomTempMinutesLeft % 60}m left`;
+              : t('bottleScreen.timeLeft', {
+                  hours: Math.floor(roomTempMinutesLeft / 60),
+                  minutes: roomTempMinutesLeft % 60,
+                });
 
             return (
               <button
@@ -531,11 +565,11 @@ function FridgeMilkPicker({
                       {displayVolume.toFixed(1)} {volumeUnit}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Pumped {pumpedDateLabel}
+                      {t('bottleScreen.pumped', { date: pumpedDateLabel })}
                     </p>
                     {item.isInUse && (
                       <p className="mt-1 text-xs font-medium text-amber-600">
-                        On the go{roomTempLabel ? ` • ${roomTempLabel}` : ''}
+                        {t('bottleScreen.onTheGo')}{roomTempLabel ? ` • ${roomTempLabel}` : ''}
                       </p>
                     )}
                   </div>
@@ -558,11 +592,14 @@ function FridgeMilkPicker({
               onClick={() => onUseAll(selectedMilkStash)}
             >
               <Milk className="w-4 h-4 mr-2" />
-              Use all {convertVolume(
-                selectedMilkStash.volume,
-                selectedMilkStash.volumeUnit,
-                volumeUnit
-              ).toFixed(1)} {volumeUnit}
+              {t('bottleScreen.useAll', {
+                volume: convertVolume(
+                  selectedMilkStash.volume,
+                  selectedMilkStash.volumeUnit,
+                  volumeUnit
+                ).toFixed(1),
+                unit: volumeUnit,
+              })}
             </Button>
           )}
         </div>

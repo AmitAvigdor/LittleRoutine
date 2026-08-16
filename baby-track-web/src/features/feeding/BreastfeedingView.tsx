@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { format, isToday, parseISO } from 'date-fns';
+import { he } from 'date-fns/locale';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Timer } from '@/components/ui/Timer';
 import { Button } from '@/components/ui/Button';
@@ -17,16 +19,12 @@ import { Clock, Timer as TimerIcon, Edit3, Trash2, ChevronDown, ChevronUp } from
 
 type EntryMode = 'timer' | 'manual';
 
-const entryModeOptions = [
-  { value: 'timer', label: 'Timer', icon: <TimerIcon className="w-4 h-4" /> },
-  { value: 'manual', label: 'Manual', icon: <Edit3 className="w-4 h-4" /> },
-];
-
 interface BreastfeedingViewProps {
   baby: Baby;
 }
 
 export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const upsertFeedingSession = useHomeStore((state) => state.upsertFeedingSession);
   const removeFeedingSession = useHomeStore((state) => state.removeFeedingSession);
@@ -64,6 +62,49 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
   const [showStaleModal, setShowStaleModal] = useState(false);
   const staleModalDismissedRef = useRef(false);
   const manualSideSelectionRef = useRef(false);
+  const isHebrew = i18n.resolvedLanguage === 'he' || i18n.language === 'he';
+  const dateLocale = isHebrew ? he : undefined;
+  const clockFormat = isHebrew ? 'HH:mm' : 'h:mm a';
+
+  const entryModeOptions = useMemo(
+    () => [
+      { value: 'timer', label: t('common.timer'), icon: <TimerIcon className="w-4 h-4" /> },
+      { value: 'manual', label: t('common.manual'), icon: <Edit3 className="w-4 h-4" /> },
+    ],
+    [t]
+  );
+
+  const getShortSideLabel = useCallback(
+    (side: BreastSide) => (side === 'left' ? t('activity.left') : t('activity.right')),
+    [t]
+  );
+
+  const getSideInitial = useCallback(
+    (side: BreastSide) => {
+      if (!isHebrew) return side === 'left' ? 'L' : 'R';
+      return side === 'left' ? 'ש' : 'י';
+    },
+    [isHebrew]
+  );
+
+  const formatLocalizedDuration = useCallback(
+    (seconds: number) => {
+      if (!isHebrew) return formatDuration(seconds);
+
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const remainingSeconds = seconds % 60;
+
+      if (hours > 0) {
+        return minutes > 0 ? `${hours} שע׳ ${minutes} דק׳` : `${hours} שע׳`;
+      }
+      if (minutes > 0) {
+        return remainingSeconds > 0 ? `${minutes} דק׳ ${remainingSeconds} שנ׳` : `${minutes} דק׳`;
+      }
+      return `${remainingSeconds} שנ׳`;
+    },
+    [isHebrew]
+  );
 
   // Subscribe to sessions
   useEffect(() => {
@@ -184,10 +225,10 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
         setActiveSessionId(null);
         setTimerSeconds(0);
         setIsTimerRunning(false);
-        toast.info('Feeding session discarded');
+        toast.info(t('feedingScreen.discarded'));
       } catch (error) {
         console.error('Error discarding feeding session:', error);
-        toast.error('Failed to discard session');
+        toast.error(t('feedingScreen.discardError'));
       }
     }
   };
@@ -249,11 +290,11 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
     } catch (error) {
       removeFeedingSession(optimisticId);
       console.error('Error starting feeding session:', error);
-      toast.error('Failed to start feeding session. Please try again.');
+      toast.error(t('feedingScreen.startError'));
     } finally {
       setStarting(false);
     }
-  }, [user, starting, upsertFeedingSession, baby.id, selectedSide, removeFeedingSession]);
+  }, [user, starting, upsertFeedingSession, baby.id, selectedSide, removeFeedingSession, t]);
 
   const handlePause = useCallback(async () => {
     setIsTimerRunning(false);
@@ -281,13 +322,13 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
         setIsPaused(false);
       } catch (error) {
         console.error('Error resuming session:', error);
-        toast.error('Failed to resume session');
+        toast.error(t('feedingScreen.resumeError'));
       }
     } else {
       setIsTimerRunning(true);
       setIsPaused(false);
     }
-  }, [activeSessionId]);
+  }, [activeSessionId, t]);
 
   const handleStop = useCallback((totalSeconds: number) => {
     setIsTimerRunning(false);
@@ -337,10 +378,10 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
     try {
       await deleteFeedingSession(sessionIdToDelete);
       handleReset();
-      toast.info('Feeding session discarded');
+      toast.info(t('feedingScreen.discarded'));
     } catch (error) {
       console.error('Error discarding feeding session:', error);
-      toast.error('Failed to discard session. Please try again.');
+      toast.error(t('feedingScreen.discardError'));
     } finally {
       setSaving(false);
     }
@@ -367,17 +408,17 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
   const handleApplyEdit = () => {
     const durationMinutes = parseInt(editDuration, 10);
     if (isNaN(durationMinutes) || durationMinutes <= 0) {
-      toast.error('Please enter a valid duration');
+      toast.error(t('validation.validDuration'));
       return;
     }
     // Validate and store the edited start time
     const parsedStartTime = new Date(editStartTime);
     if (isNaN(parsedStartTime.getTime())) {
-      toast.error('Please enter a valid start time');
+      toast.error(t('validation.validStartTime'));
       return;
     }
     if (parsedStartTime > new Date()) {
-      toast.error('Start time cannot be in the future');
+      toast.error(t('validation.startTimeFuture'));
       return;
     }
     setEditedStartTime(parsedStartTime.toISOString());
@@ -437,10 +478,13 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
         }
         handleReset();
 
-        toast.success(`${formatDuration(savedDuration)} ${BREAST_SIDE_CONFIG[savedSide].label} side logged`);
+        toast.success(t('feedingScreen.logged', {
+          duration: formatLocalizedDuration(savedDuration),
+          side: getShortSideLabel(savedSide),
+        }));
       } catch (error) {
         console.error('Error saving feeding session:', error);
-        toast.error('Failed to save feeding session. Please try again.');
+        toast.error(t('feedingScreen.saveError'));
       } finally {
         setSaving(false);
       }
@@ -450,13 +494,13 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
 
       const durationMinutes = parseInt(manualDuration, 10);
       if (isNaN(durationMinutes) || durationMinutes <= 0 || durationMinutes > 120) {
-        toast.error('Please enter a valid duration (1-120 minutes).');
+        toast.error(t('validation.validDurationRange', { min: 1, max: 120 }));
         return;
       }
 
       // Validate date and time inputs
       if (!manualDate || !manualTime) {
-        toast.error('Please enter a valid date and time.');
+        toast.error(t('validation.validDateTime'));
         return;
       }
 
@@ -464,13 +508,13 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
 
       // Check if date is valid
       if (isNaN(sessionStartTime.getTime())) {
-        toast.error('Invalid date or time. Please check your input.');
+        toast.error(t('validation.invalidDateTime'));
         return;
       }
 
       // Check if date is not in the future
       if (sessionStartTime > new Date()) {
-        toast.error('Start time cannot be in the future.');
+        toast.error(t('validation.startTimeFuture'));
         return;
       }
 
@@ -489,10 +533,13 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
 
         const savedSide = selectedSide;
         handleReset();
-        toast.success(`${durationMinutes}min ${BREAST_SIDE_CONFIG[savedSide].label} side logged`);
+        toast.success(t('feedingScreen.logged', {
+          duration: formatLocalizedDuration(durationMinutes * 60),
+          side: getShortSideLabel(savedSide),
+        }));
       } catch (error) {
         console.error('Error saving feeding session:', error);
-        toast.error('Failed to save feeding session. Please try again.');
+        toast.error(t('feedingScreen.saveError'));
       } finally {
         setSaving(false);
       }
@@ -525,21 +572,29 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
             borderColor: `${BREAST_SIDE_CONFIG[suggestedSide].color}20`
           }}
         >
-          <p className="text-sm text-gray-500 mb-1">Start with</p>
+          <p className="text-sm text-gray-500 mb-1">{t('feedingScreen.startWith')}</p>
           <p
             className="text-2xl font-bold"
             style={{ color: BREAST_SIDE_CONFIG[suggestedSide].color }}
           >
-            {BREAST_SIDE_CONFIG[suggestedSide].label} Side
+            {t('feedingScreen.side', { side: getShortSideLabel(suggestedSide) })}
           </p>
           <p className="text-xs text-gray-400 mt-2">
-            Last {lastBreastActivity.source === 'pump' ? 'pumped' : 'fed'}: {BREAST_SIDE_CONFIG[lastBreastActivity.side].label} • {format(parseISO(lastBreastActivity.timestamp), 'h:mm a')}
+            {lastBreastActivity.source === 'pump'
+              ? t('feedingScreen.lastPumped', {
+                  side: getShortSideLabel(lastBreastActivity.side),
+                  time: format(parseISO(lastBreastActivity.timestamp), clockFormat, { locale: dateLocale }),
+                })
+              : t('feedingScreen.lastFed', {
+                  side: getShortSideLabel(lastBreastActivity.side),
+                  time: format(parseISO(lastBreastActivity.timestamp), clockFormat, { locale: dateLocale }),
+                })}
           </p>
         </div>
       )}
 
       {/* Side Selector */}
-      <div className="flex justify-center gap-6">
+      <div className="flex justify-center gap-6" dir="ltr">
         {(['left', 'right'] as BreastSide[]).map((side) => {
           const config = BREAST_SIDE_CONFIG[side];
           const isSelected = selectedSide === side;
@@ -571,7 +626,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
                   isSelected ? 'text-white' : 'text-gray-400'
                 )}
               >
-                {side === 'left' ? 'L' : 'R'}
+                {getSideInitial(side)}
               </span>
               <span
                 className={clsx(
@@ -579,7 +634,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
                   isSelected ? 'text-white/90' : 'text-gray-400'
                 )}
               >
-                {config.label}
+                {getShortSideLabel(side)}
               </span>
               {isSelected && (
                 <div
@@ -630,26 +685,29 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
       {/* Manual Entry Mode */}
       {entryMode === 'manual' && !showForm && (
         <Card>
-          <CardHeader title="Log Past Feeding" subtitle={`${BREAST_SIDE_CONFIG[selectedSide].label} side`} />
+          <CardHeader
+            title={t('feedingScreen.logPastFeeding')}
+            subtitle={t('feedingScreen.sideSubtitle', { side: getShortSideLabel(selectedSide) })}
+          />
 
           <div className="space-y-4">
             <Input
               type="date"
-              label="Date"
+              label={t('common.date')}
               value={manualDate}
               onChange={(e) => setManualDate(e.target.value)}
             />
             <Input
               type="time"
-              label="Start Time"
+              label={t('form.startTime')}
               value={manualTime}
               onChange={(e) => setManualTime(e.target.value)}
             />
 
             <Input
               type="number"
-              label="Duration (minutes)"
-              placeholder="e.g. 15"
+              label={t('form.durationMinutes')}
+              placeholder={t('feedingScreen.durationPlaceholder')}
               value={manualDuration}
               onChange={(e) => setManualDuration(e.target.value)}
               min="1"
@@ -661,7 +719,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
               className="w-full"
               disabled={!manualDuration || saving}
             >
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? t('common.saving') : t('common.save')}
             </Button>
 
             {/* Expandable details section */}
@@ -669,27 +727,27 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
               onClick={() => setShowDetails(!showDetails)}
               className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
             >
-              <span>Add details (optional)</span>
+              <span>{t('common.addDetailsOptional')}</span>
               {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
 
             {showDetails && (
               <div className="space-y-4 pt-2 border-t border-gray-100">
                 <BabyMoodSelector
-                  label="Baby's mood"
+                  label={t('form.babyMood')}
                   value={babyMood}
                   onChange={setBabyMood}
                 />
 
                 <MomMoodSelector
-                  label="Your mood"
+                  label={t('form.yourMood')}
                   value={momMood}
                   onChange={setMomMood}
                 />
 
                 <Textarea
-                  label="Notes (optional)"
-                  placeholder="Any notes about this session..."
+                  label={t('form.notesOptional')}
+                  placeholder={t('feedingScreen.notesPlaceholder')}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={2}
@@ -703,7 +761,13 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
       {/* Save Form */}
       {showForm && (
         <Card>
-          <CardHeader title="Session Complete" subtitle={`${formatDuration(timerSeconds)} on ${BREAST_SIDE_CONFIG[selectedSide].label} side`} />
+          <CardHeader
+            title={t('feedingScreen.sessionComplete')}
+            subtitle={t('feedingScreen.sessionCompleteSubtitle', {
+              duration: formatLocalizedDuration(timerSeconds),
+              side: getShortSideLabel(selectedSide),
+            })}
+          />
 
           <div className="space-y-4">
             {/* Action buttons at top */}
@@ -725,10 +789,10 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
                 <Edit3 className="w-4 h-4 text-gray-600" />
               </Button>
               <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={saving}>
-                Resume
+                {t('feedingScreen.resume')}
               </Button>
               <Button onClick={handleSave} className="flex-1" disabled={saving}>
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? t('common.saving') : t('common.save')}
               </Button>
             </div>
 
@@ -737,27 +801,27 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
               onClick={() => setShowDetails(!showDetails)}
               className="w-full flex items-center justify-between py-2 text-sm text-gray-500 hover:text-gray-700"
             >
-              <span>Add details (optional)</span>
+              <span>{t('common.addDetailsOptional')}</span>
               {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
 
             {showDetails && (
               <div className="space-y-4 pt-2 border-t border-gray-100">
                 <BabyMoodSelector
-                  label="Baby's mood"
+                  label={t('form.babyMood')}
                   value={babyMood}
                   onChange={setBabyMood}
                 />
 
                 <MomMoodSelector
-                  label="Your mood"
+                  label={t('form.yourMood')}
                   value={momMood}
                   onChange={setMomMood}
                 />
 
                 <Textarea
-                  label="Notes (optional)"
-                  placeholder="Any notes about this session..."
+                  label={t('form.notesOptional')}
+                  placeholder={t('feedingScreen.notesPlaceholder')}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={2}
@@ -775,14 +839,14 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
             <TimerIcon className="w-5 h-5 text-primary-600" />
           </div>
           <p className="text-3xl font-bold text-primary-600">{todaySessions.length}</p>
-          <p className="text-sm text-gray-500 mt-1">Sessions today</p>
+          <p className="text-sm text-gray-500 mt-1">{t('feedingScreen.sessionsToday')}</p>
         </div>
         <div className="bg-gradient-to-br from-secondary-50 to-secondary-100/50 rounded-2xl p-4 text-center border border-secondary-100">
           <div className="w-10 h-10 rounded-full bg-secondary-500/10 flex items-center justify-center mx-auto mb-2">
             <Clock className="w-5 h-5 text-secondary-600" />
           </div>
-          <p className="text-3xl font-bold text-secondary-600">{formatDuration(todayTotalSeconds)}</p>
-          <p className="text-sm text-gray-500 mt-1">Total time</p>
+          <p className="text-3xl font-bold text-secondary-600">{formatLocalizedDuration(todayTotalSeconds)}</p>
+          <p className="text-sm text-gray-500 mt-1">{t('feedingScreen.totalTime')}</p>
         </div>
       </div>
 
@@ -790,7 +854,7 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
       <StaleTimerModal
         isOpen={showStaleModal}
         duration={timerSeconds}
-        activityName="feeding"
+        activityName={t('activity.breastfeeding')}
         onContinue={handleStaleTimerContinue}
         onStopAndSave={handleStaleTimerStopAndSave}
         onDiscard={handleStaleTimerDiscard}
@@ -800,17 +864,17 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
       {showEditBeforeSave && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-sm">
-            <CardHeader title="Edit Session" subtitle="Adjust the time before saving" />
+            <CardHeader title={t('feedingScreen.editSession')} subtitle={t('feedingScreen.adjustBeforeSaving')} />
             <div className="space-y-4">
               <Input
                 type="datetime-local"
-                label="Start Time"
+                label={t('form.startTime')}
                 value={editStartTime}
                 onChange={(e) => setEditStartTime(e.target.value)}
               />
               <Input
                 type="number"
-                label="Duration (minutes)"
+                label={t('form.durationMinutes')}
                 value={editDuration}
                 onChange={(e) => setEditDuration(e.target.value)}
                 min="1"
@@ -822,10 +886,10 @@ export function BreastfeedingView({ baby }: BreastfeedingViewProps) {
                   onClick={() => setShowEditBeforeSave(false)}
                   className="flex-1"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button onClick={handleApplyEdit} className="flex-1">
-                  Apply
+                  {t('common.apply')}
                 </Button>
               </div>
             </div>

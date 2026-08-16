@@ -26,6 +26,7 @@ export const mockSettings: AppSettings = {
   preferredWeightUnit: 'lbs',
   preferredLengthUnit: 'in',
   feedingTypePreference: 'breastfeeding',
+  languagePreference: 'system',
   nightModeEnabled: false,
   nightModeAutoEnabled: false,
   nightModeStartHour: 20,

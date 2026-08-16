@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
 import { ChevronDown, Plus, Baby as BabyIcon, Check, RefreshCw, UserPlus } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
@@ -24,6 +25,7 @@ export function Header({
   gradient = false,
   subtitle,
 }: HeaderProps) {
+  const { t } = useTranslation();
   const [showDropdown, setShowDropdown] = useState(false);
   const { selectedBaby, babies, setSelectedBabyId, userId, isOnline, requestDataRefresh } = useAppStore();
   const navigate = useNavigate();
@@ -37,13 +39,13 @@ export function Header({
     if (!userId || !selectedBaby) return;
 
     if (!isOnline) {
-      toast.error('Connect to the internet to refresh data');
+      toast.error(t('header.refreshOffline'));
       return;
     }
 
     refreshHomeDataSync({ userId, babyId: selectedBaby.id });
     requestDataRefresh();
-    toast.success('Refreshing data...');
+    toast.success(t('header.refreshing'));
   };
 
   const babyColor = selectedBaby?.color
@@ -148,7 +150,7 @@ export function Header({
                         <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
                           <Plus className="w-4 h-4 text-gray-500" />
                         </div>
-                        <span className="text-gray-600">Add Baby</span>
+                        <span className="text-gray-600">{t('baby.addBaby')}</span>
                       </button>
                     </div>
                   </div>
@@ -172,8 +174,8 @@ export function Header({
                   : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:ring-primary-500',
                 !isOnline && 'cursor-not-allowed opacity-40'
               )}
-              aria-label="Refresh data"
-              title="Refresh data"
+              aria-label={t('header.refreshData')}
+              title={t('header.refreshData')}
             >
               <RefreshCw className="h-4 w-4" />
             </button>
@@ -189,6 +191,7 @@ export function Header({
 
 // Empty state when no babies
 export function NoBabiesHeader() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { setSelectedBabyId } = useAppStore();
@@ -202,12 +205,12 @@ export function NoBabiesHeader() {
     setJoining(true);
     try {
       const baby = await joinBabyByShareCode(user.uid, joinCode);
-      toast.success(`You now have access to ${baby.name}`);
+      toast.success(t('baby.joined', { name: baby.name }));
       setShowJoinForm(false);
       setJoinCode('');
       setSelectedBabyId(baby.id);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to join';
+      const message = error instanceof Error ? error.message : t('baby.joinError');
       toast.error(message);
     } finally {
       setJoining(false);
@@ -221,14 +224,14 @@ export function NoBabiesHeader() {
           <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center mx-auto mb-3">
             <BabyIcon className="w-8 h-8 text-primary-600" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-900">Welcome to LittleRoutine</h2>
-          <p className="text-sm text-gray-500 mt-1">Add your first baby to get started</p>
+          <h2 className="text-lg font-semibold text-gray-900">{t('baby.welcomeTitle')}</h2>
+          <p className="text-sm text-gray-500 mt-1">{t('baby.addFirst')}</p>
           <button
             onClick={() => navigate('/more/babies/new')}
             className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Add Baby
+            {t('baby.addBaby')}
           </button>
 
           {/* Join a shared baby option */}
@@ -239,14 +242,14 @@ export function NoBabiesHeader() {
                 className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
               >
                 <UserPlus className="w-4 h-4" />
-                <span>Or join a shared baby</span>
+                <span>{t('baby.joinSharedInline')}</span>
               </button>
             ) : (
               <div className="max-w-xs mx-auto space-y-3">
-                <p className="text-sm text-gray-600">Enter the share code from your partner</p>
+                <p className="text-sm text-gray-600">{t('baby.joinSubtitle')}</p>
                 <input
                   type="text"
-                  placeholder="Enter 6-letter code"
+                  placeholder={t('baby.joinCodePlaceholder')}
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                   maxLength={6}
@@ -260,14 +263,14 @@ export function NoBabiesHeader() {
                     }}
                     className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleJoinBaby}
                     disabled={joinCode.length !== 6 || joining}
                     className="flex-1 px-4 py-2 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {joining ? 'Joining...' : 'Join'}
+                  {joining ? t('baby.joining') : t('baby.join')}
                   </button>
                 </div>
               </div>

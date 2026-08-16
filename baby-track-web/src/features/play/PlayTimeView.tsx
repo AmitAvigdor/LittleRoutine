@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { format, isToday, parseISO } from 'date-fns';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -23,6 +24,7 @@ const playTypeOptions = Object.entries(PLAY_TYPE_CONFIG).map(([value, config]) =
 const QUICK_DURATIONS = [5, 10, 15, 20, 30];
 
 export function PlayTimeView() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { selectedBaby, babies } = useAppStore();
 
@@ -135,7 +137,7 @@ export function PlayTimeView() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-      <Header title="Play Time" />
+      <Header title={t('features.playTime')} />
 
       <div className="px-4 py-4 space-y-5">
         {/* Play Type Selector */}

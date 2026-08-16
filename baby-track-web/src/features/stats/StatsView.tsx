@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { format, parseISO } from 'date-fns';
 import { clsx } from 'clsx';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
@@ -854,6 +855,7 @@ function SleepDurationByTimeOfDayList({ periods }: { periods: SleepDurationByTim
 }
 
 export function StatsView() {
+  const { t } = useTranslation();
   useAuth();
   const { selectedBaby, babies, settings } = useAppStore();
   const [, startViewTransition] = useTransition();
@@ -992,7 +994,7 @@ export function StatsView() {
 
   return (
     <div>
-      <Header title="Stats" />
+      <Header title={t('nav.stats')} />
 
       <div className="px-4 py-4 space-y-4">
         <div className="flex justify-center">

@@ -1,19 +1,19 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { format, parseISO, differenceInMinutes, isToday as isTodayFns } from 'date-fns';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { useAppStore } from '@/stores/appStore';
 import { useHomeStore } from '@/stores/homeStore';
 import {
-  BREAST_SIDE_CONFIG,
-  DIAPER_TYPE_CONFIG,
-  SLEEP_TYPE_CONFIG,
   calculateBabyAge,
   getSuggestedBreastSide,
   getRoomTempExpirationMinutes,
 } from '@/types';
 import { MedicationFrequency } from '@/types/enums';
 import { resolveFavoriteFeatures } from '@/features/featureCatalog';
+import type { FeatureId } from '@/features/featureCatalog';
 import { startFeedingSession, createSleepSession } from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { toast } from '@/stores/toastStore';
@@ -42,6 +42,25 @@ import { findNightSleepGroup, groupNightSleepSessions } from '@/features/sleep/s
 import { getSolidFoodTimelineTimestamp } from '@/features/nutrition/solidFoodUtils';
 
 type DashboardIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>;
+
+const FEATURE_LABEL_KEYS: Record<FeatureId, string> = {
+  feed: 'features.feed',
+  pump: 'features.pump',
+  sleep: 'features.sleep',
+  diaper: 'features.diaper',
+  bag: 'features.bag',
+  'milk-stash': 'features.milkStash',
+  stats: 'features.stats',
+  play: 'features.play',
+  walks: 'features.walks',
+  growth: 'features.growth',
+  'solid-foods': 'features.solidFoods',
+  vaccinations: 'features.vaccinations',
+  medicine: 'features.medicine',
+  teething: 'features.teething',
+  pediatrician: 'features.pediatrician',
+  milestones: 'features.milestones',
+};
 
 // Format remaining time for countdown timers (e.g., "3:45:00" for 3h 45m remaining)
 function formatRemainingTime(minutesRemaining: number): string {
@@ -91,23 +110,27 @@ function formatElapsedTime(
 }
 
 // Format duration for display (e.g., "2h 15m ago")
-function formatTimeSince(timestamp: string): string {
+function formatTimeSince(timestamp: string, t: TFunction): string {
   const date = parseISO(timestamp);
   const minutes = differenceInMinutes(new Date(), date);
 
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1) return t('dashboard.justNow');
+  if (minutes < 60) return t('dashboard.minutesAgo', { count: minutes });
 
   const hours = Math.floor(minutes / 60);
   const remainingMins = minutes % 60;
 
   if (hours < 24) {
-    return remainingMins > 0 ? `${hours}h ${remainingMins}m ago` : `${hours}h ago`;
+    return remainingMins > 0
+      ? t('dashboard.hoursMinutesAgo', { hours, minutes: remainingMins })
+      : t('dashboard.hoursAgo', { hours });
   }
 
   const days = Math.floor(hours / 24);
   const remainingHours = hours % 24;
-  return remainingHours > 0 ? `${days}d ${remainingHours}h ago` : `${days}d ago`;
+  return remainingHours > 0
+    ? t('dashboard.daysHoursAgo', { days, hours: remainingHours })
+    : t('dashboard.daysAgo', { days });
 }
 
 // Get urgency color based on time elapsed
@@ -122,8 +145,8 @@ function getSleepWakeTime(session: { startTime: string; duration: number }): str
   return new Date(parseISO(session.startTime).getTime() + session.duration * 1000).toISOString();
 }
 
-function formatMedicineLastGiven(timestamp: string | null): string {
-  if (!timestamp) return 'Never';
+function formatMedicineLastGiven(timestamp: string | null, t: TFunction): string {
+  if (!timestamp) return t('dashboard.never');
   return format(parseISO(timestamp), 'MMM d, yyyy HH:mm');
 }
 
@@ -159,6 +182,8 @@ interface StatusCardProps {
 }
 
 const StatusCard = memo(function StatusCard({ title, Icon, iconBg, timeSince, subtitle, urgencyColor, onClick }: StatusCardProps) {
+  const { t } = useTranslation();
+
   return (
     <button
       className="w-full flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] border border-gray-100"
@@ -177,7 +202,7 @@ const StatusCard = memo(function StatusCard({ title, Icon, iconBg, timeSince, su
             {timeSince}
           </p>
         ) : (
-          <p className="text-sm text-gray-400 italic">No data yet</p>
+          <p className="text-sm text-gray-400 italic">{t('dashboard.noDataYet')}</p>
         )}
         {subtitle && timeSince && <p className="text-xs text-gray-500 truncate mt-0.5">{subtitle}</p>}
       </div>
@@ -225,6 +250,8 @@ interface ActiveTimerCardProps {
 }
 
 const ActiveTimerCard = memo(function ActiveTimerCard({ icon, iconBg, title, subtitle, elapsedTime, isPaused, isCountdown, isExpiringSoon, onClick }: ActiveTimerCardProps) {
+  const { t } = useTranslation();
+
   return (
     <button
       onClick={onClick}
@@ -266,9 +293,9 @@ const ActiveTimerCard = memo(function ActiveTimerCard({ icon, iconBg, title, sub
           isCountdown ? 'text-orange-600' :
           'text-gray-900'
         )}>{elapsedTime}</p>
-        {isPaused && <p className="text-xs text-yellow-600 font-semibold">Paused</p>}
-        {isCountdown && !isExpiringSoon && <p className="text-xs text-orange-600 font-semibold">Time left</p>}
-        {isCountdown && isExpiringSoon && <p className="text-xs text-red-600 font-semibold">Expiring!</p>}
+        {isPaused && <p className="text-xs text-yellow-600 font-semibold">{t('dashboard.paused')}</p>}
+        {isCountdown && !isExpiringSoon && <p className="text-xs text-orange-600 font-semibold">{t('dashboard.timeLeft')}</p>}
+        {isCountdown && isExpiringSoon && <p className="text-xs text-red-600 font-semibold">{t('dashboard.expiring')}</p>}
       </div>
     </button>
   );
@@ -334,7 +361,7 @@ interface ActiveTimerInfo {
   isCountdown?: boolean;
 }
 
-function buildTimerPresentation(timer: ActiveTimerInfo, nowMs: number) {
+function buildTimerPresentation(timer: ActiveTimerInfo, nowMs: number, t: TFunction) {
   const minutesRemaining = timer.isCountdown
     ? getRoomTempExpirationMinutes(timer.startTime)
     : 0;
@@ -344,7 +371,7 @@ function buildTimerPresentation(timer: ActiveTimerInfo, nowMs: number) {
   return {
     iconBg: timer.isCountdown && isExpiringSoon ? '#f44336' : timer.iconBg,
     subtitle: timer.isCountdown
-      ? (minutesRemaining <= 0 ? 'Expired!' : `${timer.subtitle} remaining`)
+      ? (minutesRemaining <= 0 ? t('dashboard.expired') : t('dashboard.remaining', { value: timer.subtitle }))
       : timer.subtitle,
     elapsedTime: timer.isCountdown
       ? formatRemainingTime(minutesRemaining)
@@ -361,8 +388,9 @@ function buildTimerPresentation(timer: ActiveTimerInfo, nowMs: number) {
 }
 
 const LiveTimerCard = memo(function LiveTimerCard({ timer, onClick }: { timer: ActiveTimerInfo; onClick: () => void }) {
+  const { t } = useTranslation();
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const presentation = useMemo(() => buildTimerPresentation(timer, nowMs), [timer, nowMs]);
+  const presentation = useMemo(() => buildTimerPresentation(timer, nowMs, t), [timer, nowMs, t]);
 
   useEffect(() => {
     if (timer.isPaused && !timer.isCountdown) {
@@ -452,6 +480,7 @@ const SmartSuggestionCard = memo(function SmartSuggestionCard({
   actionBusy: boolean;
   onAction?: () => void;
 }) {
+  const { t } = useTranslation();
   const styles = getSmartSuggestionStyles(suggestion.kind, suggestion.isOverdue);
 
   return (
@@ -466,9 +495,9 @@ const SmartSuggestionCard = memo(function SmartSuggestionCard({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Smart Suggestion</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">{t('dashboard.smartSuggestion')}</span>
               <span className={clsx('text-[11px] font-semibold px-2.5 py-1 rounded-full', styles.badge)}>
-                {suggestion.isOverdue ? 'Overdue' : suggestion.kind === 'learning' ? 'Learning' : 'On Deck'}
+                {suggestion.isOverdue ? t('dashboard.overdue') : suggestion.kind === 'learning' ? t('dashboard.learning') : t('dashboard.onDeck')}
               </span>
             </div>
             <h3 className="text-xl font-bold text-gray-900 mt-2">{suggestion.title}</h3>
@@ -491,7 +520,7 @@ const SmartSuggestionCard = memo(function SmartSuggestionCard({
               styles.button
             )}
           >
-            {actionBusy ? 'Working...' : actionLabel}
+            {actionBusy ? t('common.working') : actionLabel}
           </button>
         </div>
       )}
@@ -500,6 +529,7 @@ const SmartSuggestionCard = memo(function SmartSuggestionCard({
 });
 
 export function DashboardView() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const selectedBaby = useAppStore((state) => state.selectedBaby);
@@ -550,8 +580,8 @@ export function DashboardView() {
       timers.push({
         id: s.id,
         type: 'feeding',
-        title: 'Breastfeeding',
-        subtitle: `${BREAST_SIDE_CONFIG[s.breastSide].label} side`,
+        title: t('activity.breastfeeding'),
+        subtitle: s.breastSide === 'left' ? t('activity.leftSide') : t('activity.rightSide'),
         startTime: s.startTime,
         isPaused: s.isPaused,
         pausedAt: s.pausedAt,
@@ -567,8 +597,13 @@ export function DashboardView() {
       timers.push({
         id: s.id,
         type: 'pump',
-        title: 'Pumping',
-        subtitle: `${s.side === 'both' ? 'Both sides' : `${s.side.charAt(0).toUpperCase() + s.side.slice(1)} side`}`,
+        title: t('activity.pumping'),
+        subtitle:
+          s.side === 'both'
+            ? t('activity.bothSides')
+            : s.side === 'left'
+              ? t('activity.leftSide')
+              : t('activity.rightSide'),
         startTime: s.startTime,
         isPaused: s.isPaused,
         pausedAt: s.pausedAt,
@@ -585,8 +620,8 @@ export function DashboardView() {
       timers.push({
         id: s.id,
         type: 'sleep',
-        title: 'Sleeping',
-        subtitle: `${SLEEP_TYPE_CONFIG[s.type].label} · ${formatSleepStartedAt(nightGroup?.startTime ?? s.startTime)}`,
+        title: t('activity.sleeping'),
+        subtitle: `${s.type === 'night' ? t('activity.night') : t('activity.nap')} · ${formatSleepStartedAt(nightGroup?.startTime ?? s.startTime)}`,
         startTime: s.startTime,
         elapsedOffsetSeconds: nightGroup?.completedDuration ?? 0,
         icon: <Moon className="w-6 h-6 text-white" />,
@@ -600,7 +635,7 @@ export function DashboardView() {
       timers.push({
         id: s.id,
         type: 'milk',
-        title: 'Milk On The Go',
+        title: t('activity.milkOnTheGo'),
         subtitle: `${s.volume} ${s.volumeUnit}`,
         startTime: s.inUseStartDate!,
         icon: <Briefcase className="w-6 h-6 text-white" />,
@@ -614,11 +649,23 @@ export function DashboardView() {
     timers.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
     return timers;
-  }, [feedingSessions, pumpSessions, sleepSessions, milkStash]);
+  }, [feedingSessions, pumpSessions, sleepSessions, milkStash, t]);
 
   const { features: favoriteFeatures, usesDefault: usesDefaultFavorites } = useMemo(
     () => resolveFavoriteFeatures(favoriteFeatureIds, settings?.feedingTypePreference),
     [favoriteFeatureIds, settings?.feedingTypePreference]
+  );
+
+  const translatedFavoriteFeatures = useMemo(
+    () =>
+      favoriteFeatures.map((feature) => ({
+        ...feature,
+        label:
+          feature.id === 'feed' && settings?.feedingTypePreference === 'formula'
+            ? t('features.formulaFeed')
+            : t(FEATURE_LABEL_KEYS[feature.id]),
+      })),
+    [favoriteFeatures, settings?.feedingTypePreference, t]
   );
 
   const lastFeeding = useMemo(
@@ -635,9 +682,9 @@ export function DashboardView() {
     return {
       timestamp: latest.timestamp,
       type: displayType,
-      details: DIAPER_TYPE_CONFIG[displayType].label,
+      details: displayType === 'wet' ? t('activity.wetDiaper') : t('activity.fullDiaper'),
     };
-  }, [diaperChanges]);
+  }, [diaperChanges, t]);
 
   // Get current sleep status
   const sleepStatus = useMemo(() => {
@@ -647,11 +694,15 @@ export function DashboardView() {
       const nightGroup = activeSleep.type === 'night'
         ? findNightSleepGroup(sleepSessions, activeSleep.id)
         : null;
+      const typeLabel = activeSleep.type === 'night' ? t('activity.night') : t('activity.nap');
       return {
         isAsleep: true,
         timestamp: activeSleep.startTime,
         type: activeSleep.type,
-        details: `${SLEEP_TYPE_CONFIG[activeSleep.type].label} in progress · ${formatSleepStartedAt(nightGroup?.startTime ?? activeSleep.startTime)}`,
+        details: t('dashboard.sleepInProgress', {
+          type: typeLabel,
+          time: formatSleepStartedAt(nightGroup?.startTime ?? activeSleep.startTime),
+        }),
       };
     }
 
@@ -663,13 +714,17 @@ export function DashboardView() {
 
     const latest = completedSleep[0];
     const wakeTime = getSleepWakeTime(latest);
+    const typeLabel = latest.type === 'night' ? t('activity.night') : t('activity.nap');
     return {
       isAsleep: false,
       timestamp: wakeTime,
       type: latest.type,
-      details: `Woke at ${format(parseISO(wakeTime), 'h:mm a')} from ${SLEEP_TYPE_CONFIG[latest.type].label.toLowerCase()}`,
+      details: t('dashboard.wokeAtFrom', {
+        time: format(parseISO(wakeTime), 'h:mm a'),
+        type: typeLabel.toLowerCase(),
+      }),
     };
-  }, [sleepSessions]);
+  }, [sleepSessions, t]);
 
   // Get medicine todo items
   const medicineTodos = useMemo(() => {
@@ -694,37 +749,37 @@ export function DashboardView() {
   }, [medicines, medicineLogs]);
 
   const feedingStatusCard = useMemo(() => ({
-    title: 'Last Feeding',
+    title: t('dashboard.lastFeeding'),
     Icon: lastFeeding?.type === 'bottle' ? Milk : lastFeeding?.type === 'solid' ? Apple : Baby,
     iconBg: lastFeeding?.type === 'solid' ? '#4caf50' : '#e91e63',
-    timeSince: lastFeeding ? formatTimeSince(lastFeeding.timestamp) : null,
+    timeSince: lastFeeding ? formatTimeSince(lastFeeding.timestamp, t) : null,
     subtitle: lastFeeding?.details,
     urgencyColor: lastFeeding ? getUrgencyColor(lastFeeding.timestamp, 120, 180) : undefined,
     route: '/feed',
-  }), [lastFeeding]);
+  }), [lastFeeding, t]);
 
   const sleepStatusCard = useMemo(() => ({
-    title: sleepStatus?.isAsleep ? 'Sleeping' : 'Last Woke Up',
+    title: sleepStatus?.isAsleep ? t('dashboard.sleeping') : t('dashboard.lastWokeUp'),
     Icon: sleepStatus?.isAsleep ? Moon : Sun,
     iconBg: sleepStatus?.isAsleep ? '#3f51b5' : '#ff9800',
-    timeSince: sleepStatus ? formatTimeSince(sleepStatus.timestamp) : null,
+    timeSince: sleepStatus ? formatTimeSince(sleepStatus.timestamp, t) : null,
     subtitle: sleepStatus?.details,
     urgencyColor:
       sleepStatus && !sleepStatus.isAsleep
         ? getUrgencyColor(sleepStatus.timestamp, 120, 180)
         : undefined,
     route: '/sleep',
-  }), [sleepStatus]);
+  }), [sleepStatus, t]);
 
   const diaperStatusCard = useMemo(() => ({
-    title: 'Last Diaper',
+    title: t('dashboard.lastDiaper'),
     Icon: Leaf,
     iconBg: '#4caf50',
-    timeSince: lastDiaper ? formatTimeSince(lastDiaper.timestamp) : null,
+    timeSince: lastDiaper ? formatTimeSince(lastDiaper.timestamp, t) : null,
     subtitle: lastDiaper?.details,
     urgencyColor: lastDiaper ? getUrgencyColor(lastDiaper.timestamp, 120, 180) : undefined,
     route: '/diaper',
-  }), [lastDiaper]);
+  }), [lastDiaper, t]);
 
   const todaySummary = useMemo(() => ({
     feedings:
@@ -768,17 +823,17 @@ export function DashboardView() {
 
     switch (smartSuggestion?.actionKind) {
       case 'start-feeding':
-        return 'Start Feed';
+        return t('dashboard.startFeed');
       case 'open-feed':
-        return 'Log Bottle';
+        return t('dashboard.logBottle');
       case 'start-sleep':
-        return smartSuggestion?.sleepType === 'night' ? 'Start Bedtime' : 'Start Nap';
+        return smartSuggestion?.sleepType === 'night' ? t('dashboard.startBedtime') : t('dashboard.startNap');
       case 'check-diaper':
-        return 'Check Now';
+        return t('dashboard.checkNow');
       default:
         return null;
     }
-  }, [smartSuggestion?.actionKind, smartSuggestion?.actionLabel, smartSuggestion?.sleepType]);
+  }, [smartSuggestion?.actionKind, smartSuggestion?.actionLabel, smartSuggestion?.sleepType, t]);
 
   const handleSmartSuggestionAction = useCallback(async () => {
     if (!smartSuggestion?.actionKind) {
@@ -834,8 +889,8 @@ export function DashboardView() {
         removeFeedingSession(optimisticFeedingId);
         toast.success(
           smartSuggestion.sleepType === 'night'
-            ? 'Feeding timer started. Bedtime can come next.'
-            : 'Feeding timer started'
+            ? t('dashboard.feedingStartedBedtime')
+            : t('dashboard.feedingStarted')
         );
         navigate('/feed');
         return;
@@ -865,7 +920,7 @@ export function DashboardView() {
           type: sleepType,
         });
         removeSleepSession(optimisticSleepId);
-        toast.success(sleepType === 'night' ? 'Night sleep timer started' : 'Nap timer started');
+        toast.success(sleepType === 'night' ? t('dashboard.nightSleepStarted') : t('dashboard.napStarted'));
         navigate('/sleep');
       }
     } catch (error) {
@@ -876,7 +931,7 @@ export function DashboardView() {
         removeSleepSession(optimisticSleepId);
       }
       console.error('Error handling smart suggestion action:', error);
-      toast.error('Failed to start suggestion action. Please try again.');
+      toast.error(t('dashboard.suggestionFailed'));
     } finally {
       setSmartActionBusy(null);
     }
@@ -889,6 +944,7 @@ export function DashboardView() {
     selectedBaby,
     smartSuggestion?.actionKind,
     smartSuggestion?.sleepType,
+    t,
     upsertFeedingSession,
     upsertSleepSession,
     user,
@@ -906,7 +962,7 @@ export function DashboardView() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-      <Header title="Home" subtitle={babyAge?.text} />
+      <Header title={t('nav.home')} subtitle={babyAge?.text} />
 
       <div className="px-4 py-4 space-y-5">
         {/* Active Timers */}
@@ -914,7 +970,7 @@ export function DashboardView() {
           <div>
             <div className="flex items-center gap-2 mb-3 px-1">
               <span className="text-base">⏱️</span>
-              <h3 className="text-sm font-bold text-gray-700">Active Timers</h3>
+              <h3 className="text-sm font-bold text-gray-700">{t('dashboard.activeTimers')}</h3>
             </div>
             <div className="space-y-2">
               {activeTimers.map((timer) => {
@@ -945,9 +1001,9 @@ export function DashboardView() {
             <div className="flex items-center gap-2">
               <span className="text-base">⭐</span>
               <div>
-                <h3 className="text-sm font-bold text-gray-700">Favorites</h3>
+                <h3 className="text-sm font-bold text-gray-700">{t('dashboard.favorites')}</h3>
                 {usesDefaultFavorites && (
-                  <p className="text-xs text-gray-500 mt-0.5">Showing default shortcuts</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{t('dashboard.showingDefaultShortcuts')}</p>
                 )}
               </div>
             </div>
@@ -955,11 +1011,11 @@ export function DashboardView() {
               onClick={() => navigate('/more')}
               className="text-xs font-semibold text-primary-600 hover:text-primary-700"
             >
-              Customize
+              {t('common.customize')}
             </button>
           </div>
-          <div className={clsx('grid gap-2', favoriteFeatures.length <= 4 ? 'grid-cols-4' : 'grid-cols-3')}>
-            {favoriteFeatures.map((feature) => (
+          <div className={clsx('grid gap-2', translatedFavoriteFeatures.length <= 4 ? 'grid-cols-4' : 'grid-cols-3')}>
+            {translatedFavoriteFeatures.map((feature) => (
               <QuickAction
                 key={feature.id}
                 label={feature.label}
@@ -977,11 +1033,11 @@ export function DashboardView() {
             <div className="flex items-center justify-between mb-3 px-1">
               <div className="flex items-center gap-2">
                 <span className="text-base">✅</span>
-                <h3 className="text-sm font-bold text-gray-700">Today's To Do</h3>
+                <h3 className="text-sm font-bold text-gray-700">{t('dashboard.todayToDo')}</h3>
               </div>
               {incompleteMedicineTodos.length > 0 && (
                 <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full">
-                  {incompleteMedicineTodos.length} pending
+                  {t('dashboard.pending', { count: incompleteMedicineTodos.length })}
                 </span>
               )}
             </div>
@@ -994,8 +1050,15 @@ export function DashboardView() {
                   title={todo.medicine.name}
                   subtitle={
                     todo.maxDoses
-                      ? `${todo.dosesGiven}/${todo.maxDoses} doses given - Last given: ${formatMedicineLastGiven(todo.lastGivenAt)}`
-                      : `${todo.dosesGiven} doses given - Last given: ${formatMedicineLastGiven(todo.lastGivenAt)}`
+                      ? t('dashboard.dosesGiven', {
+                          given: todo.dosesGiven,
+                          max: todo.maxDoses,
+                          last: formatMedicineLastGiven(todo.lastGivenAt, t),
+                        })
+                      : t('dashboard.dosesGivenNoMax', {
+                          given: todo.dosesGiven,
+                          last: formatMedicineLastGiven(todo.lastGivenAt, t),
+                        })
                   }
                   done={todo.isComplete}
                   onClick={() => navigate('/more/medicine')}
@@ -1009,7 +1072,7 @@ export function DashboardView() {
         <div>
           <div className="flex items-center gap-2 mb-3 px-1">
             <span className="text-base">📊</span>
-            <h3 className="text-sm font-bold text-gray-700">Status</h3>
+            <h3 className="text-sm font-bold text-gray-700">{t('dashboard.status')}</h3>
           </div>
           <div className="space-y-2">
             {/* Last Feeding */}
@@ -1051,7 +1114,7 @@ export function DashboardView() {
         <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-base">📈</span>
-            <h3 className="text-sm font-bold text-gray-700">Today's Summary</h3>
+            <h3 className="text-sm font-bold text-gray-700">{t('dashboard.todaySummary')}</h3>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-2xl p-4 text-center shadow-sm">
@@ -1059,21 +1122,21 @@ export function DashboardView() {
               <p className="text-3xl font-bold text-pink-600">
                 {todaySummary.feedings}
               </p>
-              <p className="text-xs text-pink-600/80 font-semibold mt-1">Feedings</p>
+              <p className="text-xs text-pink-600/80 font-semibold mt-1">{t('dashboard.feedings')}</p>
             </div>
             <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-4 text-center shadow-sm">
               <span className="text-2xl mb-1 block">😴</span>
               <p className="text-3xl font-bold text-indigo-600">
                 {todaySummary.sleeps}
               </p>
-              <p className="text-xs text-indigo-600/80 font-semibold mt-1">Sleeps</p>
+              <p className="text-xs text-indigo-600/80 font-semibold mt-1">{t('dashboard.sleeps')}</p>
             </div>
             <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 text-center shadow-sm">
               <span className="text-2xl mb-1 block">🧷</span>
               <p className="text-3xl font-bold text-green-600">
                 {todaySummary.diapers}
               </p>
-              <p className="text-xs text-green-600/80 font-semibold mt-1">Diapers</p>
+              <p className="text-xs text-green-600/80 font-semibold mt-1">{t('dashboard.diapers')}</p>
             </div>
           </div>
         </div>

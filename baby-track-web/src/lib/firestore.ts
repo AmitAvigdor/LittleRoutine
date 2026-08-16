@@ -1507,6 +1507,14 @@ export function subscribeToPediatricianNotes(
 }
 
 // ============ APP SETTINGS ============
+function normalizeSettings(docId: string, data: Record<string, unknown>): AppSettings {
+  return {
+    id: docId,
+    ...DEFAULT_SETTINGS,
+    ...convertTimestamps(data),
+  } as AppSettings;
+}
+
 export async function getOrCreateSettings(userId: string): Promise<AppSettings> {
   const settingsQuery = query(
     collection(db, 'appSettings'),
@@ -1516,7 +1524,7 @@ export async function getOrCreateSettings(userId: string): Promise<AppSettings> 
 
   if (!snapshot.empty) {
     const doc = snapshot.docs[0];
-    return { id: doc.id, ...convertTimestamps(doc.data()) } as AppSettings;
+    return normalizeSettings(doc.id, doc.data());
   }
 
   // Create default settings
@@ -1558,7 +1566,7 @@ export function subscribeToSettings(
       return;
     }
     const docSnap = snapshot.docs[0];
-    callback({ id: docSnap.id, ...convertTimestamps(docSnap.data()) } as AppSettings);
+    callback(normalizeSettings(docSnap.id, docSnap.data()));
   }, (error) => {
     console.error('Error subscribing to settings:', error);
     callback(null);

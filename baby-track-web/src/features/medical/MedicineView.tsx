@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { isToday, parseISO } from 'date-fns';
 import { Header } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
@@ -75,6 +76,7 @@ function formatMedicineDateTime(timestamp: string): string {
 }
 
 export function MedicineView() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { selectedBaby } = useAppStore();
   const medicines = useHomeStore((state) => state.medicines);
@@ -382,12 +384,12 @@ export function MedicineView() {
   return (
     <div>
       <Header
-        title="Medicine"
+        title={t('features.medicine')}
         showBabySwitcher={false}
         rightAction={
           <Button size="sm" onClick={openAddForm}>
             <Plus className="w-4 h-4 mr-1" />
-            Add
+            {t('common.add')}
           </Button>
         }
       />
