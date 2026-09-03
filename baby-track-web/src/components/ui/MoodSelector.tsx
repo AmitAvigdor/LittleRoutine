@@ -1,4 +1,5 @@
 import { clsx } from 'clsx';
+import { useTranslation } from 'react-i18next';
 import {
   Smile,
   Frown,
@@ -41,6 +42,7 @@ interface BabyMoodSelectorProps {
 }
 
 export function BabyMoodSelector({ value, onChange, label }: BabyMoodSelectorProps) {
+  const { t } = useTranslation();
   const moods = Object.keys(BABY_MOOD_CONFIG) as BabyMood[];
 
   return (
@@ -74,7 +76,7 @@ export function BabyMoodSelector({ value, onChange, label }: BabyMoodSelectorPro
               <span style={isSelected ? { color: config.color } : { color: '#9ca3af' }}>
                 {BABY_MOOD_ICONS[mood]}
               </span>
-              {config.label}
+              {t(`moods.baby.${mood}`)}
             </button>
           );
         })}
@@ -90,6 +92,7 @@ interface MomMoodSelectorProps {
 }
 
 export function MomMoodSelector({ value, onChange, label }: MomMoodSelectorProps) {
+  const { t } = useTranslation();
   const moods = Object.keys(MOM_MOOD_CONFIG) as MomMood[];
 
   return (
@@ -123,7 +126,7 @@ export function MomMoodSelector({ value, onChange, label }: MomMoodSelectorProps
               <span style={isSelected ? { color: config.color } : { color: '#9ca3af' }}>
                 {MOM_MOOD_ICONS[mood]}
               </span>
-              {config.label}
+              {t(`moods.mom.${mood}`)}
             </button>
           );
         })}
@@ -140,6 +143,7 @@ interface MoodIndicatorProps {
 }
 
 export function MoodIndicator({ babyMood, momMood, size = 'md' }: MoodIndicatorProps) {
+  const { t } = useTranslation();
   if (!babyMood && !momMood) return null;
 
   const iconSize = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
@@ -160,7 +164,7 @@ export function MoodIndicator({ babyMood, momMood, size = 'md' }: MoodIndicatorP
           <span className={iconSize}>
             {BABY_MOOD_ICONS[babyMood]}
           </span>
-          {size === 'md' && BABY_MOOD_CONFIG[babyMood].label}
+          {size === 'md' && t(`moods.baby.${babyMood}`)}
         </span>
       )}
       {momMood && (
@@ -177,7 +181,7 @@ export function MoodIndicator({ babyMood, momMood, size = 'md' }: MoodIndicatorP
           <span className={iconSize}>
             {MOM_MOOD_ICONS[momMood]}
           </span>
-          {size === 'md' && MOM_MOOD_CONFIG[momMood].label}
+          {size === 'md' && t(`moods.mom.${momMood}`)}
         </span>
       )}
     </div>

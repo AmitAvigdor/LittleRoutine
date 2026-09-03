@@ -11,6 +11,7 @@ import {
   FeedingSession,
   PumpSession,
   BottleSession,
+  DiaperChange,
   PlaySession,
   WalkSession,
   SleepType,
@@ -18,6 +19,7 @@ import {
   PumpSide,
   BottleContentType,
   VolumeUnit,
+  DiaperType,
   BabyMood,
   MomMood,
   PlayType,
@@ -32,25 +34,27 @@ import {
   updateFeedingSession,
   updatePumpSession,
   updateBottleSession,
+  updateDiaperChange,
   updatePlaySession,
   updateWalkSession,
   deleteSleepSession,
   deleteFeedingSession,
   deletePumpSession,
   deleteBottleSession,
+  deleteDiaperChange,
   deletePlaySession,
   deleteWalkSession,
 } from '@/lib/firestore';
-import { X, Trash2, AlertTriangle, Moon, Sun, Footprints } from 'lucide-react';
+import { X, Trash2, AlertTriangle, Moon, Sun, Footprints, Droplet, Circle } from 'lucide-react';
 import { toast } from '@/stores/toastStore';
 
-type SessionType = 'sleep' | 'breastfeeding' | 'pump' | 'bottle' | 'play' | 'walk';
+type SessionType = 'sleep' | 'breastfeeding' | 'pump' | 'bottle' | 'diaper' | 'play' | 'walk';
 
 interface EditSessionModalProps {
   isOpen: boolean;
   onClose: () => void;
   sessionType: SessionType;
-  session: SleepSession | FeedingSession | PumpSession | BottleSession | PlaySession | WalkSession;
+  session: SleepSession | FeedingSession | PumpSession | BottleSession | DiaperChange | PlaySession | WalkSession;
 }
 
 export function EditSessionModal({ isOpen, onClose, sessionType, session }: EditSessionModalProps) {
@@ -84,6 +88,11 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
   const [bottleVolume, setBottleVolume] = useState('');
   const [bottleVolumeUnit, setBottleVolumeUnit] = useState<VolumeUnit>('oz');
   const [contentType, setContentType] = useState<BottleContentType>('breastMilk');
+
+  // Diaper fields
+  const [diaperType, setDiaperType] = useState<DiaperType>('wet');
+  const [diaperDate, setDiaperDate] = useState('');
+  const [diaperTime, setDiaperTime] = useState('');
 
   // Play fields
   const [playType, setPlayType] = useState<PlayType>('tummy_time');
@@ -149,6 +158,13 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
       setBottleVolume(s.volume.toString());
       setBottleVolumeUnit(s.volumeUnit);
       setContentType(s.contentType);
+    } else if (sessionType === 'diaper') {
+      const s = session as DiaperChange;
+      const timestamp = parseISO(s.timestamp);
+      setDiaperType(s.type === 'wet' ? 'wet' : 'full');
+      setDiaperDate(format(timestamp, 'yyyy-MM-dd'));
+      setDiaperTime(format(timestamp, 'HH:mm'));
+      setBabyMood(s.babyMood);
     } else if (sessionType === 'play') {
       const s = session as PlaySession;
       setPlayType(s.type);
@@ -298,6 +314,29 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
           notes: notes || null,
           babyMood,
         });
+      } else if (sessionType === 'diaper') {
+        if (!diaperDate || !diaperTime) {
+          toast.error(t('validation.validDateTime'));
+          setSaving(false);
+          return;
+        }
+        const timestamp = new Date(`${diaperDate}T${diaperTime}`);
+        if (isNaN(timestamp.getTime())) {
+          toast.error(t('validation.invalidDateTime'));
+          setSaving(false);
+          return;
+        }
+        if (timestamp > new Date()) {
+          toast.error(t('validation.timeFuture'));
+          setSaving(false);
+          return;
+        }
+        await updateDiaperChange(session.id, {
+          type: diaperType,
+          timestamp: timestamp.toISOString(),
+          notes: notes || null,
+          babyMood,
+        });
       } else if (sessionType === 'play') {
         const times = validateTimes(playDate, playStartTime, playEndTime, false);
         if (!times) {
@@ -344,6 +383,8 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
         await deletePumpSession(session.id);
       } else if (sessionType === 'bottle') {
         await deleteBottleSession(session.id);
+      } else if (sessionType === 'diaper') {
+        await deleteDiaperChange(session.id);
       } else if (sessionType === 'play') {
         await deletePlaySession(session.id);
       } else if (sessionType === 'walk') {
@@ -370,6 +411,8 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
         return t('editSession.pump');
       case 'bottle':
         return t('editSession.bottle');
+      case 'diaper':
+        return t('editSession.diaper');
       case 'play':
         return t('editSession.play');
       case 'walk':
@@ -399,6 +442,11 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
     { value: 'breastMilk', label: t('activity.breastMilk'), color: BOTTLE_CONTENT_CONFIG.breastMilk.color },
     { value: 'formula', label: t('activity.formula'), color: BOTTLE_CONTENT_CONFIG.formula.color },
     { value: 'mixed', label: t('activity.mixed'), color: BOTTLE_CONTENT_CONFIG.mixed.color },
+  ];
+
+  const diaperTypeOptions = [
+    { value: 'wet', label: t('activity.wetDiaper'), icon: <Droplet className="w-4 h-4" /> },
+    { value: 'full', label: t('activity.fullDiaper'), icon: <Circle className="w-4 h-4" /> },
   ];
 
   const playTypeOptions = Object.entries(PLAY_TYPE_CONFIG).map(([value, config]) => ({
@@ -648,6 +696,38 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
               </>
             )}
 
+            {/* Diaper fields */}
+            {sessionType === 'diaper' && (
+              <>
+                <div className="flex justify-center">
+                  <SegmentedControl
+                    options={diaperTypeOptions}
+                    value={diaperType}
+                    onChange={(value) => setDiaperType(value as DiaperType)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    type="date"
+                    label={t('common.date')}
+                    value={diaperDate}
+                    onChange={(e) => setDiaperDate(e.target.value)}
+                  />
+                  <Input
+                    type="time"
+                    label={t('common.time')}
+                    value={diaperTime}
+                    onChange={(e) => setDiaperTime(e.target.value)}
+                  />
+                </div>
+                <BabyMoodSelector
+                  label={t('form.babyMood')}
+                  value={babyMood}
+                  onChange={setBabyMood}
+                />
+              </>
+            )}
+
             {/* Play fields */}
             {sessionType === 'play' && (
               <>
@@ -729,7 +809,7 @@ export function EditSessionModal({ isOpen, onClose, sessionType, session }: Edit
             {/* Notes field (common to all) */}
             <Textarea
               label={t('form.notesOptional')}
-              placeholder={t('feedingScreen.notesPlaceholder')}
+              placeholder={t('editSession.notesPlaceholder')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}

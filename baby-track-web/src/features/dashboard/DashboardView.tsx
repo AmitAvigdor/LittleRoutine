@@ -14,7 +14,10 @@ import {
 import { MedicationFrequency } from '@/types/enums';
 import { resolveFavoriteFeatures } from '@/features/featureCatalog';
 import type { FeatureId } from '@/features/featureCatalog';
-import { startFeedingSession, createSleepSession } from '@/lib/firestore';
+import {
+  createSleepSession,
+  startFeedingSession,
+} from '@/lib/firestore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { toast } from '@/stores/toastStore';
 import {
@@ -30,6 +33,10 @@ import {
   Droplets,
   Briefcase,
   Apple,
+  LoaderCircle,
+  Pencil,
+  Undo2,
+  Zap,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import {
@@ -40,6 +47,16 @@ import {
 import { formatSleepStartedAt, getLatestFeedingStatus } from './dashboardFormatting';
 import { findNightSleepGroup, groupNightSleepSessions } from '@/features/sleep/sleepGrouping';
 import { getSolidFoodTimelineTimestamp } from '@/features/nutrition/solidFoodUtils';
+import { EditSessionModal } from '@/components/ui/EditSessionModal';
+import {
+  getLatestEditableActivity,
+  type DashboardRecentActivity,
+} from './recentActivity';
+import {
+  deleteDashboardRecentActivity,
+  restoreDashboardRecentActivity,
+} from './recentActivityActions';
+import { UndoActivityDialog } from './UndoActivityDialog';
 
 type DashboardIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -110,9 +127,9 @@ function formatElapsedTime(
 }
 
 // Format duration for display (e.g., "2h 15m ago")
-function formatTimeSince(timestamp: string, t: TFunction): string {
+function formatTimeSince(timestamp: string, t: TFunction, now: Date = new Date()): string {
   const date = parseISO(timestamp);
-  const minutes = differenceInMinutes(new Date(), date);
+  const minutes = differenceInMinutes(now, date);
 
   if (minutes < 1) return t('dashboard.justNow');
   if (minutes < 60) return t('dashboard.minutesAgo', { count: minutes });
@@ -469,19 +486,66 @@ function getSmartSuggestionStyles(kind: SmartSuggestion['kind'], isOverdue: bool
   };
 }
 
+interface RecentActivityPresentation {
+  label: string;
+  timeSince: string;
+  Icon: DashboardIcon;
+  iconBg: string;
+}
+
+function getRecentActivityPresentation(
+  activity: DashboardRecentActivity,
+  t: TFunction,
+  now: Date
+): RecentActivityPresentation {
+  const timeSince = formatTimeSince(activity.timestamp, t, now);
+
+  switch (activity.sessionType) {
+    case 'breastfeeding':
+      return { label: t('activity.breastfeeding'), timeSince, Icon: Baby, iconBg: '#e91e63' };
+    case 'pump':
+      return { label: t('activity.pumping'), timeSince, Icon: Droplets, iconBg: '#2196f3' };
+    case 'bottle':
+      return { label: t('activity.bottle'), timeSince, Icon: Milk, iconBg: '#ec4899' };
+    case 'sleep':
+      return {
+        label: activity.session.type === 'night' ? t('activity.nightSleep') : t('activity.nap'),
+        timeSince,
+        Icon: Moon,
+        iconBg: '#3f51b5',
+      };
+    case 'diaper':
+      return {
+        label: activity.session.type === 'wet' ? t('activity.wetDiaper') : t('activity.fullDiaper'),
+        timeSince,
+        Icon: Leaf,
+        iconBg: '#4caf50',
+      };
+  }
+}
+
 const SmartSuggestionCard = memo(function SmartSuggestionCard({
   suggestion,
   actionLabel,
   actionBusy,
   onAction,
+  recentActivity,
+  undoBusy,
+  onEditRecent,
+  onUndoRecent,
 }: {
   suggestion: SmartSuggestion;
   actionLabel: string | null;
   actionBusy: boolean;
   onAction?: () => void;
+  recentActivity: RecentActivityPresentation | null;
+  undoBusy: boolean;
+  onEditRecent?: () => void;
+  onUndoRecent?: () => void;
 }) {
   const { t } = useTranslation();
   const styles = getSmartSuggestionStyles(suggestion.kind, suggestion.isOverdue);
+  const RecentActivityIcon = recentActivity?.Icon;
 
   return (
     <div className={clsx('rounded-3xl border bg-gradient-to-br p-5 shadow-sm', styles.card)}>
@@ -516,12 +580,59 @@ const SmartSuggestionCard = memo(function SmartSuggestionCard({
             onClick={onAction}
             disabled={actionBusy}
             className={clsx(
-              'inline-flex items-center justify-center rounded-2xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed',
+              'flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-base font-bold text-white shadow-md transition-all active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60',
               styles.button
             )}
           >
-            {actionBusy ? t('common.working') : actionLabel}
+            {actionBusy ? (
+              <LoaderCircle className="h-5 w-5 animate-spin" />
+            ) : (
+              <Zap className="h-5 w-5" />
+            )}
+            <span>{actionBusy ? t('common.working') : actionLabel}</span>
           </button>
+        </div>
+      )}
+
+      {recentActivity && (
+        <div className="mt-4 flex items-center gap-3 border-t border-gray-200/70 pt-4">
+          <div
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl shadow-sm"
+            style={{ backgroundColor: recentActivity.iconBg }}
+          >
+            {RecentActivityIcon && <RecentActivityIcon className="h-4 w-4 text-white" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-gray-500">{t('dashboard.recentActivity')}</p>
+            <p className="truncate text-sm font-semibold text-gray-900">
+              {recentActivity.label} <span className="font-normal text-gray-500">· {recentActivity.timeSince}</span>
+            </p>
+          </div>
+          <div className="flex flex-shrink-0 items-center gap-2" dir="ltr">
+            <button
+              type="button"
+              onClick={onEditRecent}
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm transition-colors hover:bg-gray-50 active:scale-95"
+              aria-label={t('dashboard.quickEdit')}
+              title={t('dashboard.quickEdit')}
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onUndoRecent}
+              disabled={undoBusy}
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-600 shadow-sm transition-colors hover:bg-rose-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label={t('dashboard.undoLast')}
+              title={t('dashboard.undoLast')}
+            >
+              {undoBusy ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <Undo2 className="h-4 w-4" />
+              )}
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -547,9 +658,19 @@ export function DashboardView() {
   const milkStash = useHomeStore((state) => state.milkStash);
   const upsertFeedingSession = useHomeStore((state) => state.upsertFeedingSession);
   const removeFeedingSession = useHomeStore((state) => state.removeFeedingSession);
+  const upsertPumpSession = useHomeStore((state) => state.upsertPumpSession);
+  const removePumpSession = useHomeStore((state) => state.removePumpSession);
+  const upsertBottleSession = useHomeStore((state) => state.upsertBottleSession);
+  const removeBottleSession = useHomeStore((state) => state.removeBottleSession);
   const upsertSleepSession = useHomeStore((state) => state.upsertSleepSession);
   const removeSleepSession = useHomeStore((state) => state.removeSleepSession);
+  const addOptimisticDiaperChange = useHomeStore((state) => state.addOptimisticDiaperChange);
+  const removeDiaperChange = useHomeStore((state) => state.removeDiaperChange);
   const [smartActionBusy, setSmartActionBusy] = useState<SmartSuggestionActionKind | null>(null);
+  const [editingActivity, setEditingActivity] = useState<DashboardRecentActivity | null>(null);
+  const [undoConfirmationActivity, setUndoConfirmationActivity] =
+    useState<DashboardRecentActivity | null>(null);
+  const [undoBusyId, setUndoBusyId] = useState<string | null>(null);
   const [suggestionNowMs, setSuggestionNowMs] = useState(() => Date.now());
 
   useEffect(() => {
@@ -816,14 +937,32 @@ export function DashboardView() {
     ]
   );
 
-  const smartSuggestionActionLabel = useMemo(() => {
-    if (smartSuggestion?.actionLabel) {
-      return smartSuggestion.actionLabel;
-    }
+  const latestEditableActivity = useMemo(
+    () =>
+      getLatestEditableActivity({
+        feedingSessions,
+        pumpSessions,
+        bottleSessions,
+        sleepSessions,
+        diaperChanges,
+      }),
+    [feedingSessions, pumpSessions, bottleSessions, sleepSessions, diaperChanges]
+  );
 
+  const recentActivityPresentation = useMemo(
+    () =>
+      latestEditableActivity
+        ? getRecentActivityPresentation(latestEditableActivity, t, new Date(suggestionNowMs))
+        : null,
+    [latestEditableActivity, suggestionNowMs, t]
+  );
+
+  const smartSuggestionActionLabel = useMemo(() => {
     switch (smartSuggestion?.actionKind) {
       case 'start-feeding':
-        return t('dashboard.startFeed');
+        return smartSuggestion.actionLabel
+          ? t('dashboard.startFeedFirst')
+          : t('dashboard.startFeed');
       case 'open-feed':
         return t('dashboard.logBottle');
       case 'start-sleep':
@@ -950,6 +1089,124 @@ export function DashboardView() {
     user,
   ]);
 
+  const upsertRecentActivity = useCallback((activity: DashboardRecentActivity) => {
+    if (useHomeStore.getState().activeBabyId !== activity.session.babyId) return;
+
+    switch (activity.sessionType) {
+      case 'breastfeeding':
+        upsertFeedingSession(activity.session);
+        break;
+      case 'pump':
+        upsertPumpSession(activity.session);
+        break;
+      case 'bottle':
+        upsertBottleSession(activity.session);
+        break;
+      case 'sleep':
+        upsertSleepSession(activity.session);
+        break;
+      case 'diaper':
+        addOptimisticDiaperChange(activity.session);
+        break;
+    }
+  }, [
+    addOptimisticDiaperChange,
+    upsertBottleSession,
+    upsertFeedingSession,
+    upsertPumpSession,
+    upsertSleepSession,
+  ]);
+
+  const removeRecentActivity = useCallback((activity: DashboardRecentActivity) => {
+    switch (activity.sessionType) {
+      case 'breastfeeding':
+        removeFeedingSession(activity.session.id);
+        break;
+      case 'pump':
+        removePumpSession(activity.session.id);
+        break;
+      case 'bottle':
+        removeBottleSession(activity.session.id);
+        break;
+      case 'sleep':
+        removeSleepSession(activity.session.id);
+        break;
+      case 'diaper':
+        removeDiaperChange(activity.session.id);
+        break;
+    }
+  }, [
+    removeBottleSession,
+    removeDiaperChange,
+    removeFeedingSession,
+    removePumpSession,
+    removeSleepSession,
+  ]);
+
+  const restoreRecentActivity = useCallback(async (activity: DashboardRecentActivity) => {
+    try {
+      const restoredActivity = await restoreDashboardRecentActivity(activity);
+      upsertRecentActivity(restoredActivity);
+      toast.success(t('dashboard.activityRestored'));
+    } catch (error) {
+      console.error('Error restoring recent dashboard activity:', error);
+      toast.error(t('dashboard.restoreFailed'));
+    }
+  }, [t, upsertRecentActivity]);
+
+  const handleUndoLatestActivity = useCallback(async (activity: DashboardRecentActivity) => {
+    if (undoBusyId) return;
+
+    setUndoBusyId(activity.session.id);
+    setEditingActivity((current) =>
+      current?.session.id === activity.session.id ? null : current
+    );
+    removeRecentActivity(activity);
+
+    try {
+      await deleteDashboardRecentActivity(activity);
+
+      toast.withUndo(
+        t('dashboard.activityUndone'),
+        () => {
+          void restoreRecentActivity(activity);
+        },
+        7000,
+        t('common.restore')
+      );
+    } catch (error) {
+      upsertRecentActivity(activity);
+      console.error('Error undoing recent dashboard activity:', error);
+      toast.error(t('dashboard.undoFailed'));
+    } finally {
+      setUndoBusyId(null);
+      setUndoConfirmationActivity(null);
+    }
+  }, [
+    removeRecentActivity,
+    restoreRecentActivity,
+    t,
+    undoBusyId,
+    upsertRecentActivity,
+  ]);
+
+  const primaryTimer = activeTimers[0] ?? null;
+  const primaryActionLabel = primaryTimer
+    ? t('dashboard.continueActivity', { activity: primaryTimer.title })
+    : smartSuggestionActionLabel ?? t('dashboard.openFeeding');
+  const primaryActionBusy = !primaryTimer && smartActionBusy === smartSuggestion?.actionKind;
+  const handlePrimaryAction = useCallback(() => {
+    if (primaryTimer) {
+      navigate(primaryTimer.route);
+      return;
+    }
+    if (smartSuggestion?.actionKind) {
+      void handleSmartSuggestionAction();
+      return;
+    }
+    navigate('/feed');
+  }, [handleSmartSuggestionAction, navigate, primaryTimer, smartSuggestion?.actionKind]);
+
   if (babies.length === 0) {
     return <NoBabiesHeader />;
   }
@@ -989,9 +1246,21 @@ export function DashboardView() {
         {smartSuggestion && (
           <SmartSuggestionCard
             suggestion={smartSuggestion}
-            actionLabel={smartSuggestionActionLabel}
-            actionBusy={smartActionBusy === smartSuggestion.actionKind}
-            onAction={smartSuggestionActionLabel ? handleSmartSuggestionAction : undefined}
+            actionLabel={primaryActionLabel}
+            actionBusy={primaryActionBusy}
+            onAction={handlePrimaryAction}
+            recentActivity={recentActivityPresentation}
+            undoBusy={undoBusyId !== null}
+            onEditRecent={
+              latestEditableActivity
+                ? () => setEditingActivity(latestEditableActivity)
+                : undefined
+            }
+            onUndoRecent={
+              latestEditableActivity
+                ? () => setUndoConfirmationActivity(latestEditableActivity)
+                : undefined
+            }
           />
         )}
 
@@ -1144,6 +1413,27 @@ export function DashboardView() {
         {/* Bottom spacing */}
         <div className="h-4" />
       </div>
+
+      {editingActivity && (
+        <EditSessionModal
+          key={`${editingActivity.sessionType}-${editingActivity.session.id}`}
+          isOpen={true}
+          onClose={() => setEditingActivity(null)}
+          sessionType={editingActivity.sessionType}
+          session={editingActivity.session}
+        />
+      )}
+
+      {undoConfirmationActivity && (
+        <UndoActivityDialog
+          activityLabel={
+            getRecentActivityPresentation(undoConfirmationActivity, t, new Date()).label
+          }
+          busy={undoBusyId === undoConfirmationActivity.session.id}
+          onCancel={() => setUndoConfirmationActivity(null)}
+          onConfirm={() => void handleUndoLatestActivity(undoConfirmationActivity)}
+        />
+      )}
     </div>
   );
 }

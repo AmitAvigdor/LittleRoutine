@@ -1817,7 +1817,34 @@ export async function deletePumpSession(sessionId: string): Promise<void> {
 }
 
 export async function deleteBottleSession(sessionId: string): Promise<void> {
-  await deleteDoc(doc(db, 'bottleSessions', sessionId));
+  const sessionRef = doc(db, 'bottleSessions', sessionId);
+
+  await runTransaction(db, async (transaction) => {
+    const sessionSnap = await transaction.get(sessionRef);
+    if (!sessionSnap.exists()) return;
+
+    const session = convertTimestamps(sessionSnap.data()) as BottleSession;
+    if (session.milkStashId) {
+      const stashRef = doc(db, 'milkStash', session.milkStashId);
+      const stashSnap = await transaction.get(stashRef);
+
+      if (stashSnap.exists()) {
+        const stash = convertTimestamps(stashSnap.data()) as MilkStash;
+        if (stash.babyId === session.babyId) {
+          transaction.update(stashRef, {
+            volume:
+              stash.volume +
+              convertVolume(session.volume, session.volumeUnit, stash.volumeUnit),
+            isUsed: false,
+            usedDate: null,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      }
+    }
+
+    transaction.delete(sessionRef);
+  });
 }
 
 export async function deleteDiaperChange(changeId: string): Promise<void> {
