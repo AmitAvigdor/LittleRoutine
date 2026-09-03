@@ -1,11 +1,13 @@
 import { Outlet } from 'react-router-dom';
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { onSnapshotsInSync } from 'firebase/firestore';
 import { BottomNav } from './BottomNav';
 import { useAppStore } from '@/stores/appStore';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useHomeDataSync } from '@/features/dashboard/homeDataSync';
 import { subscribeToBabies, subscribeToSettings, getOrCreateSettings } from '@/lib/firestore';
+import { db } from '@/lib/firestoreClient';
 import { useNotifications } from '@/hooks/useNotifications';
 import { clsx } from 'clsx';
 
@@ -21,12 +23,19 @@ export function MainLayout() {
     isLoadingSettings,
     setLoadingBabies,
     setLoadingSettings,
+    setPendingWrites,
     dataRefreshVersion,
   } = useAppStore();
 
   // Initialize notifications/reminders system
   useNotifications();
   useHomeDataSync(user?.uid ?? null, selectedBabyId);
+
+  useEffect(() => {
+    return onSnapshotsInSync(db, () => {
+      setPendingWrites(false);
+    });
+  }, [setPendingWrites]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('night-mode-root', nightMode);
@@ -88,7 +97,22 @@ export function MainLayout() {
       )}
     >
       <main className="max-w-lg mx-auto">
-        <Outlet key={dataRefreshVersion} />
+        <Suspense
+          fallback={
+            <div
+              className="min-h-[calc(100dvh-5rem)] flex items-center justify-center"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="text-center text-gray-500">
+                <div className="w-10 h-10 border-4 border-primary-100 border-t-primary-500 rounded-full animate-spin mx-auto mb-3" />
+                <p>{t('common.loading')}</p>
+              </div>
+            </div>
+          }
+        >
+          <Outlet key={dataRefreshVersion} />
+        </Suspense>
       </main>
       <BottomNav />
     </div>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { format, parseISO } from 'date-fns';
@@ -6,9 +6,6 @@ import { he } from 'date-fns/locale';
 import { Milk, Baby, Clock, Apple } from 'lucide-react';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { SegmentedControl } from '@/components/ui/Select';
-import { BreastfeedingView } from './BreastfeedingView';
-import { BottleView } from './BottleView';
-import { SolidFoodsView } from '@/features/nutrition/SolidFoodsView';
 import { getSolidFoodTimelineTimestamp } from '@/features/nutrition/solidFoodUtils';
 import { EditSessionModal } from '@/components/ui/EditSessionModal';
 import { MoodIndicator } from '@/components/ui/MoodSelector';
@@ -16,7 +13,22 @@ import { useAppStore } from '@/stores/appStore';
 import { subscribeToFeedingSessions, subscribeToBottleSessions, subscribeToSolidFoods } from '@/lib/firestore';
 import { FeedingSession, BottleSession, SolidFood, BREAST_SIDE_CONFIG, BOTTLE_CONTENT_CONFIG, FOOD_CATEGORY_CONFIG, formatDuration } from '@/types';
 
+const BreastfeedingView = lazy(() => import('./BreastfeedingView').then((module) => ({ default: module.BreastfeedingView })));
+const BottleView = lazy(() => import('./BottleView').then((module) => ({ default: module.BottleView })));
+const SolidFoodsView = lazy(() => import('@/features/nutrition/SolidFoodsView').then((module) => ({ default: module.SolidFoodsView })));
+
 type FeedingTab = 'breast' | 'bottle' | 'solids';
+
+function FeedingModeLoading() {
+  const { t } = useTranslation();
+
+  return (
+    <div className="h-64 flex items-center justify-center" role="status" aria-live="polite">
+      <div className="w-9 h-9 border-4 border-gray-100 border-t-primary-500 rounded-full animate-spin" />
+      <span className="sr-only">{t('common.loading')}</span>
+    </div>
+  );
+}
 
 export function FeedingHub() {
   const { t, i18n } = useTranslation();
@@ -199,7 +211,7 @@ export function FeedingHub() {
 
         {/* Tab Content */}
         {selectedBaby && (
-          <>
+          <Suspense fallback={<FeedingModeLoading />}>
             {activeTab === 'breast' && <BreastfeedingView baby={selectedBaby} />}
             {activeTab === 'bottle' && <BottleView baby={selectedBaby} />}
             {activeTab === 'solids' && (
@@ -211,7 +223,7 @@ export function FeedingHub() {
                 onEditFoodOpened={clearSelectedSolidFoodId}
               />
             )}
-          </>
+          </Suspense>
         )}
 
         {/* Combined Recent Feedings */}

@@ -4,7 +4,7 @@ import {
   getDownloadURL,
   deleteObject,
 } from 'firebase/storage';
-import { storage } from './firebase';
+import { storage } from './storageClient';
 
 // Compress image before upload
 async function compressImage(file: File, maxWidth = 1200, quality = 0.8): Promise<Blob> {

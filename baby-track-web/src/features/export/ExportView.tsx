@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppStore } from '@/stores/appStore';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firestoreClient';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { FileText, Download, FileJson, Table } from 'lucide-react';
 import { clsx } from 'clsx';

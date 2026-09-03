@@ -14,7 +14,7 @@ import {
   arrayUnion,
   writeBatch,
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { db } from './firestoreClient';
 import { useAppStore } from '@/stores/appStore';
 
 // Helper to mark pending writes for offline indicator
