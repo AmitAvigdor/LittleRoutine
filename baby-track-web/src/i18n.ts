@@ -46,6 +46,11 @@ const resources = {
         stats: 'Stats',
         more: 'More',
       },
+      stats: {
+        loadOlder: 'Load older entries',
+        loadingOlder: 'Loading older entries...',
+        loadOlderError: 'Older entries could not be loaded. Please try again.',
+      },
       auth: {
         title: 'LittleRoutine',
         subtitle: "Track your baby's daily journey",
@@ -529,6 +534,11 @@ const resources = {
         diaper: 'חיתול',
         stats: 'נתונים',
         more: 'עוד',
+      },
+      stats: {
+        loadOlder: 'טעינת רשומות ישנות יותר',
+        loadingOlder: 'טוען רשומות ישנות...',
+        loadOlderError: 'לא הצלחנו לטעון רשומות ישנות. אפשר לנסות שוב.',
       },
       auth: {
         title: 'LittleRoutine',

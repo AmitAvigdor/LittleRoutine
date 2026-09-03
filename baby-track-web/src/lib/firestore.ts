@@ -8,11 +8,18 @@ import {
   getDocs,
   query,
   where,
+  orderBy,
+  documentId,
+  limit as limitQuery,
+  startAfter,
   onSnapshot,
   runTransaction,
   Timestamp,
   arrayUnion,
   writeBatch,
+  type DocumentData,
+  type QueryConstraint,
+  type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { db } from './firestoreClient';
 import { useAppStore } from '@/stores/appStore';
@@ -67,12 +74,106 @@ function convertTimestamps<T extends object>(data: T): T {
   return result as T;
 }
 
-// Default limit for queries to prevent loading too much data
-const DEFAULT_QUERY_LIMIT = 100;
+export const DEFAULT_QUERY_LIMIT = 100;
 
-// Generic subscribe function - uses only where clauses, sorts client-side
-// Now supports optional limit parameter for pagination
-function subscribeToCollectionSimple<T>(
+export interface CollectionPageCursor {
+  sortValue: unknown;
+  documentId: string;
+}
+
+export interface CollectionPage<T> {
+  items: T[];
+  nextCursor: CollectionPageCursor | null;
+  hasMore: boolean;
+}
+
+interface ActivityCollectionTypes {
+  feedingSessions: FeedingSession;
+  pumpSessions: PumpSession;
+  bottleSessions: BottleSession;
+  sleepSessions: SleepSession;
+  diaperChanges: DiaperChange;
+  playSessions: PlaySession;
+  walkSessions: WalkSession;
+}
+
+export type ActivityCollectionKey = keyof ActivityCollectionTypes;
+
+const activityCollectionConfigs: Record<ActivityCollectionKey, { sortField: string }> = {
+  feedingSessions: { sortField: 'startTime' },
+  pumpSessions: { sortField: 'startTime' },
+  bottleSessions: { sortField: 'timestamp' },
+  sleepSessions: { sortField: 'startTime' },
+  diaperChanges: { sortField: 'timestamp' },
+  playSessions: { sortField: 'startTime' },
+  walkSessions: { sortField: 'startTime' },
+};
+
+function mapDocuments<T>(documents: QueryDocumentSnapshot<DocumentData>[]): T[] {
+  return documents.map((docSnap) => ({
+    id: docSnap.id,
+    ...convertTimestamps(docSnap.data()),
+  })) as T[];
+}
+
+function buildCollectionQuery(
+  collectionPath: string,
+  whereField: string,
+  whereValue: string,
+  sortField: string,
+  sortDirection: 'asc' | 'desc',
+  queryLimit: number,
+  cursor?: CollectionPageCursor | null
+) {
+  const constraints: QueryConstraint[] = [
+    where(whereField, '==', whereValue),
+    orderBy(sortField, sortDirection),
+    orderBy(documentId(), sortDirection),
+  ];
+
+  if (cursor) {
+    constraints.push(startAfter(cursor.sortValue, cursor.documentId));
+  }
+  constraints.push(limitQuery(queryLimit));
+
+  return query(collection(db, collectionPath), ...constraints);
+}
+
+function subscribeWithClientSortFallback<T>(
+  collectionPath: string,
+  whereField: string,
+  whereValue: string,
+  sortField: string,
+  sortDirection: 'asc' | 'desc',
+  callback: (items: T[]) => void,
+  queryLimit: number
+): () => void {
+  const fallbackQuery = query(collection(db, collectionPath), where(whereField, '==', whereValue));
+
+  return onSnapshot(fallbackQuery, (snapshot) => {
+    const items = mapDocuments<T>(snapshot.docs);
+    items.sort((a, b) => {
+      const aVal = (a as Record<string, unknown>)[sortField] as string;
+      const bVal = (b as Record<string, unknown>)[sortField] as string;
+      const dateDifference = new Date(aVal).getTime() - new Date(bVal).getTime();
+
+      if (dateDifference === 0) {
+        const idDifference = String((a as { id?: string }).id).localeCompare(String((b as { id?: string }).id));
+        return sortDirection === 'desc' ? -idDifference : idDifference;
+      }
+      if (sortDirection === 'desc') {
+        return -dateDifference;
+      }
+      return dateDifference;
+    });
+    callback(items.slice(0, queryLimit));
+  }, (error) => {
+    console.error(`Error subscribing to ${collectionPath} fallback:`, error);
+    callback([]);
+  });
+}
+
+function subscribeToCollection<T>(
   collectionPath: string,
   whereField: string,
   whereValue: string,
@@ -81,30 +182,94 @@ function subscribeToCollectionSimple<T>(
   callback: (items: T[]) => void,
   queryLimit: number = DEFAULT_QUERY_LIMIT
 ): () => void {
-  // Note: We fetch more than the limit to allow client-side sorting to work correctly
-  // The actual limit is applied after sorting
-  const q = query(collection(db, collectionPath), where(whereField, '==', whereValue));
-  return onSnapshot(q, (snapshot) => {
-    const items = snapshot.docs.map((docSnap) => ({
-      id: docSnap.id,
-      ...convertTimestamps(docSnap.data()),
-    })) as T[];
-    // Sort client-side
-    items.sort((a, b) => {
-      const aVal = (a as Record<string, unknown>)[sortField] as string;
-      const bVal = (b as Record<string, unknown>)[sortField] as string;
-      if (sortDirection === 'desc') {
-        return new Date(bVal).getTime() - new Date(aVal).getTime();
-      }
-      return new Date(aVal).getTime() - new Date(bVal).getTime();
-    });
-    // Apply limit after sorting to get the most relevant items
-    const limitedItems = queryLimit > 0 ? items.slice(0, queryLimit) : items;
-    callback(limitedItems);
+  const optimizedQuery = buildCollectionQuery(
+    collectionPath,
+    whereField,
+    whereValue,
+    sortField,
+    sortDirection,
+    queryLimit
+  );
+  let isActive = true;
+  let fallbackUnsubscribe: (() => void) | null = null;
+
+  const unsubscribe = onSnapshot(optimizedQuery, (snapshot) => {
+    callback(mapDocuments<T>(snapshot.docs));
   }, (error) => {
+    if (error.code === 'failed-precondition' && isActive) {
+      console.warn(`Index for ${collectionPath} is not ready; using temporary client-side sorting.`);
+      fallbackUnsubscribe = subscribeWithClientSortFallback(
+        collectionPath,
+        whereField,
+        whereValue,
+        sortField,
+        sortDirection,
+        callback,
+        queryLimit
+      );
+      return;
+    }
+
     console.error(`Error subscribing to ${collectionPath}:`, error);
     callback([]);
   });
+
+  return () => {
+    isActive = false;
+    unsubscribe();
+    fallbackUnsubscribe?.();
+  };
+}
+
+async function getCollectionPage<T>(
+  collectionPath: string,
+  whereField: string,
+  whereValue: string,
+  sortField: string,
+  cursor: CollectionPageCursor | null,
+  pageSize: number
+): Promise<CollectionPage<T>> {
+  const safePageSize = Math.max(1, Math.min(pageSize, DEFAULT_QUERY_LIMIT));
+  const pageQuery = buildCollectionQuery(
+    collectionPath,
+    whereField,
+    whereValue,
+    sortField,
+    'desc',
+    safePageSize + 1,
+    cursor
+  );
+  const snapshot = await getDocs(pageQuery);
+  const hasMore = snapshot.docs.length > safePageSize;
+  const pageDocuments = snapshot.docs.slice(0, safePageSize);
+  const lastDocument = pageDocuments.at(-1);
+
+  return {
+    items: mapDocuments<T>(pageDocuments),
+    hasMore,
+    nextCursor: hasMore && lastDocument
+      ? {
+          sortValue: lastDocument.get(sortField),
+          documentId: lastDocument.id,
+        }
+      : null,
+  };
+}
+
+export function getActivityPage<K extends ActivityCollectionKey>(
+  collectionPath: K,
+  babyId: string,
+  cursor: CollectionPageCursor | null = null,
+  pageSize = 50
+): Promise<CollectionPage<ActivityCollectionTypes[K]>> {
+  return getCollectionPage<ActivityCollectionTypes[K]>(
+    collectionPath,
+    'babyId',
+    babyId,
+    activityCollectionConfigs[collectionPath].sortField,
+    cursor,
+    pageSize
+  );
 }
 
 // ============ BABIES ============
@@ -496,15 +661,17 @@ export async function createFeedingSession(
 
 export function subscribeToFeedingSessions(
   babyId: string,
-  callback: (sessions: FeedingSession[]) => void
+  callback: (sessions: FeedingSession[]) => void,
+  queryLimit = DEFAULT_QUERY_LIMIT
 ): () => void {
-  return subscribeToCollectionSimple<FeedingSession>(
+  return subscribeToCollection<FeedingSession>(
     'feedingSessions',
     'babyId',
     babyId,
     'startTime',
     'desc',
-    callback
+    callback,
+    queryLimit
   );
 }
 
@@ -635,15 +802,17 @@ export async function createPumpSession(
 
 export function subscribeToPumpSessions(
   babyId: string,
-  callback: (sessions: PumpSession[]) => void
+  callback: (sessions: PumpSession[]) => void,
+  queryLimit = DEFAULT_QUERY_LIMIT
 ): () => void {
-  return subscribeToCollectionSimple<PumpSession>(
+  return subscribeToCollection<PumpSession>(
     'pumpSessions',
     'babyId',
     babyId,
     'startTime',
     'desc',
-    callback
+    callback,
+    queryLimit
   );
 }
 
@@ -733,15 +902,17 @@ export async function createBottleSessionFromMilkStash(
 
 export function subscribeToBottleSessions(
   babyId: string,
-  callback: (sessions: BottleSession[]) => void
+  callback: (sessions: BottleSession[]) => void,
+  queryLimit = DEFAULT_QUERY_LIMIT
 ): () => void {
-  return subscribeToCollectionSimple<BottleSession>(
+  return subscribeToCollection<BottleSession>(
     'bottleSessions',
     'babyId',
     babyId,
     'timestamp',
     'desc',
-    callback
+    callback,
+    queryLimit
   );
 }
 
@@ -1013,15 +1184,17 @@ export async function endSleepSession(
 
 export function subscribeToSleepSessions(
   babyId: string,
-  callback: (sessions: SleepSession[]) => void
+  callback: (sessions: SleepSession[]) => void,
+  queryLimit = DEFAULT_QUERY_LIMIT
 ): () => void {
-  return subscribeToCollectionSimple<SleepSession>(
+  return subscribeToCollection<SleepSession>(
     'sleepSessions',
     'babyId',
     babyId,
     'startTime',
     'desc',
-    callback
+    callback,
+    queryLimit
   );
 }
 
@@ -1048,15 +1221,17 @@ export async function createDiaperChange(
 
 export function subscribeToDiaperChanges(
   babyId: string,
-  callback: (changes: DiaperChange[]) => void
+  callback: (changes: DiaperChange[]) => void,
+  queryLimit = DEFAULT_QUERY_LIMIT
 ): () => void {
-  return subscribeToCollectionSimple<DiaperChange>(
+  return subscribeToCollection<DiaperChange>(
     'diaperChanges',
     'babyId',
     babyId,
     'timestamp',
     'desc',
-    callback
+    callback,
+    queryLimit
   );
 }
 
@@ -1088,15 +1263,17 @@ export async function createGrowthEntry(
 
 export function subscribeToGrowthEntries(
   babyId: string,
-  callback: (entries: GrowthEntry[]) => void
+  callback: (entries: GrowthEntry[]) => void,
+  queryLimit = DEFAULT_QUERY_LIMIT
 ): () => void {
-  return subscribeToCollectionSimple<GrowthEntry>(
+  return subscribeToCollection<GrowthEntry>(
     'growthEntries',
     'babyId',
     babyId,
     'date',
     'desc',
-    callback
+    callback,
+    queryLimit
   );
 }
 
@@ -1135,15 +1312,17 @@ export async function markMilestoneAchieved(
 
 export function subscribeToMilestones(
   babyId: string,
-  callback: (milestones: Milestone[]) => void
+  callback: (milestones: Milestone[]) => void,
+  queryLimit = DEFAULT_QUERY_LIMIT
 ): () => void {
-  return subscribeToCollectionSimple<Milestone>(
+  return subscribeToCollection<Milestone>(
     'milestones',
     'babyId',
     babyId,
     'createdAt',
     'desc',
-    callback
+    callback,
+    queryLimit
   );
 }
 
@@ -1198,15 +1377,17 @@ export async function deleteMedicine(medicineId: string): Promise<void> {
 
 export function subscribeToMedicines(
   babyId: string,
-  callback: (medicines: Medicine[]) => void
+  callback: (medicines: Medicine[]) => void,
+  queryLimit = DEFAULT_QUERY_LIMIT
 ): () => void {
-  return subscribeToCollectionSimple<Medicine>(
+  return subscribeToCollection<Medicine>(
     'medicines',
     'babyId',
     babyId,
     'createdAt',
     'desc',
-    callback
+    callback,
+    queryLimit
   );
 }
 
@@ -1263,15 +1444,17 @@ export async function completeOneTimeMedicine(
 
 export function subscribeToMedicineLogs(
   medicineId: string,
-  callback: (logs: MedicineLog[]) => void
+  callback: (logs: MedicineLog[]) => void,
+  queryLimit = DEFAULT_QUERY_LIMIT
 ): () => void {
-  return subscribeToCollectionSimple<MedicineLog>(
+  return subscribeToCollection<MedicineLog>(
     'medicineLogs',
     'medicineId',
     medicineId,
     'timestamp',
     'desc',
-    callback
+    callback,
+    queryLimit
   );
 }
 
@@ -1311,15 +1494,17 @@ export async function markVaccinationAdministered(
 
 export function subscribeToVaccinations(
   babyId: string,
-  callback: (vaccinations: Vaccination[]) => void
+  callback: (vaccinations: Vaccination[]) => void,
+  queryLimit = DEFAULT_QUERY_LIMIT
 ): () => void {
-  return subscribeToCollectionSimple<Vaccination>(
+  return subscribeToCollection<Vaccination>(
     'vaccinations',
     'babyId',
     babyId,
     'scheduledDate',
     'asc',
-    callback
+    callback,
+    queryLimit
   );
 }
 
@@ -1358,15 +1543,17 @@ export async function updateTeethingEvent(
 
 export function subscribeToTeethingEvents(
   babyId: string,
-  callback: (events: TeethingEvent[]) => void
+  callback: (events: TeethingEvent[]) => void,
+  queryLimit = DEFAULT_QUERY_LIMIT
 ): () => void {
-  return subscribeToCollectionSimple<TeethingEvent>(
+  return subscribeToCollection<TeethingEvent>(
     'teethingEvents',
     'babyId',
     babyId,
     'createdAt',
     'desc',
-    callback
+    callback,
+    queryLimit
   );
 }
 
@@ -1397,15 +1584,17 @@ export async function createSolidFood(
 
 export function subscribeToSolidFoods(
   babyId: string,
-  callback: (foods: SolidFood[]) => void
+  callback: (foods: SolidFood[]) => void,
+  queryLimit = DEFAULT_QUERY_LIMIT
 ): () => void {
-  return subscribeToCollectionSimple<SolidFood>(
+  return subscribeToCollection<SolidFood>(
     'solidFoods',
     'babyId',
     babyId,
     'date',
     'desc',
-    callback
+    callback,
+    queryLimit
   );
 }
 
@@ -1447,15 +1636,17 @@ export async function createDiaryEntry(
 
 export function subscribeToDiaryEntries(
   babyId: string,
-  callback: (entries: DiaryEntry[]) => void
+  callback: (entries: DiaryEntry[]) => void,
+  queryLimit = DEFAULT_QUERY_LIMIT
 ): () => void {
-  return subscribeToCollectionSimple<DiaryEntry>(
+  return subscribeToCollection<DiaryEntry>(
     'diaryEntries',
     'babyId',
     babyId,
     'date',
     'desc',
-    callback
+    callback,
+    queryLimit
   );
 }
 
@@ -1494,15 +1685,17 @@ export async function resolvePediatricianNote(
 
 export function subscribeToPediatricianNotes(
   babyId: string,
-  callback: (notes: PediatricianNote[]) => void
+  callback: (notes: PediatricianNote[]) => void,
+  queryLimit = DEFAULT_QUERY_LIMIT
 ): () => void {
-  return subscribeToCollectionSimple<PediatricianNote>(
+  return subscribeToCollection<PediatricianNote>(
     'pediatricianNotes',
     'babyId',
     babyId,
     'date',
     'desc',
-    callback
+    callback,
+    queryLimit
   );
 }
 
@@ -1956,15 +2149,17 @@ export async function endPlaySession(
 
 export function subscribeToPlaySessions(
   babyId: string,
-  callback: (sessions: PlaySession[]) => void
+  callback: (sessions: PlaySession[]) => void,
+  queryLimit = DEFAULT_QUERY_LIMIT
 ): () => void {
-  return subscribeToCollectionSimple<PlaySession>(
+  return subscribeToCollection<PlaySession>(
     'playSessions',
     'babyId',
     babyId,
     'startTime',
     'desc',
-    callback
+    callback,
+    queryLimit
   );
 }
 
@@ -2083,15 +2278,17 @@ export async function endWalkSession(
 
 export function subscribeToWalkSessions(
   babyId: string,
-  callback: (sessions: WalkSession[]) => void
+  callback: (sessions: WalkSession[]) => void,
+  queryLimit = DEFAULT_QUERY_LIMIT
 ): () => void {
-  return subscribeToCollectionSimple<WalkSession>(
+  return subscribeToCollection<WalkSession>(
     'walkSessions',
     'babyId',
     babyId,
     'startTime',
     'desc',
-    callback
+    callback,
+    queryLimit
   );
 }
 

@@ -4,6 +4,7 @@ import { format, parseISO } from 'date-fns';
 import { clsx } from 'clsx';
 import { Header, NoBabiesHeader } from '@/components/layout/Header';
 import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { SegmentedControl } from '@/components/ui/Select';
 import { useAppStore } from '@/stores/appStore';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -23,6 +24,8 @@ import {
   Moon,
   Sun,
   Info,
+  ChevronDown,
+  LoaderCircle,
 } from 'lucide-react';
 import {
   Bar,
@@ -865,7 +868,13 @@ export function StatsView() {
   const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
 
   const volumeUnit = settings?.preferredVolumeUnit || 'oz';
-  const statsData = useStatsData(selectedBaby?.id ?? null);
+  const {
+    data: statsData,
+    hasMore,
+    isLoadingMore,
+    loadMoreError,
+    loadMore,
+  } = useStatsData(selectedBaby?.id ?? null);
 
   const dateRange = useMemo(() => getDateRange(timeFilter), [timeFilter]);
 
@@ -1506,6 +1515,27 @@ export function StatsView() {
               </Card>
             )}
           </>
+        )}
+
+        {hasMore && (viewMode === 'history' || (viewMode === 'stats' && timeFilter === 'all')) && (
+          <div className="flex flex-col items-center gap-2 py-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={loadMore}
+              disabled={isLoadingMore}
+            >
+              {isLoadingMore ? (
+                <LoaderCircle className="w-4 h-4 me-2 animate-spin" />
+              ) : (
+                <ChevronDown className="w-4 h-4 me-2" />
+              )}
+              {isLoadingMore ? t('stats.loadingOlder') : t('stats.loadOlder')}
+            </Button>
+            {loadMoreError && (
+              <p className="text-sm text-red-600" role="alert">{t('stats.loadOlderError')}</p>
+            )}
+          </div>
         )}
       </div>
     </div>
